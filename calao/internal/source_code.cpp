@@ -6,65 +6,70 @@
  * this file except in compliance with the License. You may obtain a copy of the License at                           *
  * http://www.mozilla.org/MPL/.                                                                                       *
  *                                                                                                                    *
- * Created: 24/05/2020                                                                                                *
+ * Created: 18/07/2019                                                                                                *
  *                                                                                                                    *
  * Purpose: see header.                                                                                               *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#include <limits>
-#include <calao/error.hpp>
-#include <calao/internal/code.hpp>
+#include <calao/file.hpp>
+#include <calao/internal/source_code.hpp>
 
 namespace calao {
 
-intptr_t Code::add_integer_constant(intptr_t i)
+SourceCode::SourceCode()
 {
-	return add_constant(integer_pool, i);
+
 }
 
-intptr_t Code::add_double_constant(double n)
+void SourceCode::load_file(const String &path)
 {
-	return add_constant(float_pool, n);
+    File infile(path, File::Mode::Read);
+    m_lines = infile.read_lines();
+    this->m_path = path;
 }
 
-intptr_t Code::add_string_constant(String s)
+void SourceCode::load_code(const String &code)
 {
-	return add_constant(string_pool, std::move(s));
+    m_lines = code.split("\n");
+    // The splitter is stripped when splitting a string, so we need to put it back.
+    for (auto &ln : m_lines)
+    {
+        ln.append('\n');
+    }
+
+    m_path.clear();
 }
 
-void Code::add_line(intptr_t line_no)
+String SourceCode::filename() const
 {
-	constexpr auto max_lines = (std::numeric_limits<uint16_t>::max)();
-
-	if (unlikely(line_no > max_lines)) {
-		throw error("Source file too long: a file can contain at most % lines", max_lines);
-	}
-
-	if (lines.empty() || lines.back().first != line_no)
-	{
-		lines.emplace_back(uint16_t(line_no), 1);
-	}
-	else
-	{
-		lines.back().second++;
-	}
+    return m_path.empty() ? String("string buffer") : m_path;
 }
 
-int Code::get_line(int offset) const
+String SourceCode::get_line(intptr_t index) const
 {
-	int count = 0;
+    return m_lines[index];
+}
 
-	for (auto ln : lines)
-	{
-		count += ln.second;
+intptr_t SourceCode::size() const
+{
+    return m_lines.size();
+}
 
-		if (offset < count) {
-			return ln.first;
-		}
-	}
+void SourceCode::report_error(const char *error_type, intptr_t line_no, const std::string &hint)
+{
+    assert(line_no > 0);
+    String line = m_lines[line_no];
+    line.rtrim();
+    auto message = utils::format("[%] File \"%\" at line %\n\t%", error_type, this->filename(), line_no, line);
 
-	throw error("[Internal error] Cannot determine line number: invalid offset %", offset);
+    if (!hint.empty())
+    {
+        message.append("\nHint: ");
+        message.append(hint);
+    }
+
+    throw error(message);
 }
 
 } // namespace calao

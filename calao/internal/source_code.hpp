@@ -6,65 +6,57 @@
  * this file except in compliance with the License. You may obtain a copy of the License at                           *
  * http://www.mozilla.org/MPL/.                                                                                       *
  *                                                                                                                    *
- * Created: 24/05/2020                                                                                                *
+ * Created: 18/07/2019                                                                                                *
  *                                                                                                                    *
- * Purpose: see header.                                                                                               *
+ * Purpose: represents a chunk of source code, loaded from memory or from a text file.                                *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#include <limits>
-#include <calao/error.hpp>
-#include <calao/internal/code.hpp>
+#ifndef CALAO_SOURCE_CODE_HPP
+#define CALAO_SOURCE_CODE_HPP
+
+#include <calao/string.hpp>
 
 namespace calao {
 
-intptr_t Code::add_integer_constant(intptr_t i)
+class SourceCode final
 {
-	return add_constant(integer_pool, i);
-}
+public:
 
-intptr_t Code::add_double_constant(double n)
-{
-	return add_constant(float_pool, n);
-}
+    SourceCode();
 
-intptr_t Code::add_string_constant(String s)
-{
-	return add_constant(string_pool, std::move(s));
-}
+    String filename() const;
 
-void Code::add_line(intptr_t line_no)
-{
-	constexpr auto max_lines = (std::numeric_limits<uint16_t>::max)();
+    void dispose() { delete this; }
 
-	if (unlikely(line_no > max_lines)) {
-		throw error("Source file too long: a file can contain at most % lines", max_lines);
-	}
+    bool empty() const { return m_lines.empty(); }
 
-	if (lines.empty() || lines.back().first != line_no)
-	{
-		lines.emplace_back(uint16_t(line_no), 1);
-	}
-	else
-	{
-		lines.back().second++;
-	}
-}
+    const String &path() const { return m_path; }
 
-int Code::get_line(int offset) const
-{
-	int count = 0;
+    // Set source code from a file on disk
+    void load_file(const String &path);
 
-	for (auto ln : lines)
-	{
-		count += ln.second;
+    // Set source code from a string
+    void load_code(const String &code);
 
-		if (offset < count) {
-			return ln.first;
-		}
-	}
+    String get_line(intptr_t index) const;
 
-	throw error("[Internal error] Cannot determine line number: invalid offset %", offset);
-}
+    intptr_t size() const;
+
+    // This is used by AST visitors. It is less detailed than an error reported by the scanner
+    // since we can't use the token's position, but it's better than nothing...
+    void report_error(const char *error_type, intptr_t line_no,  const std::string &hint = std::string());
+
+private:
+
+    // Current file (empty if memory buffer)
+    String m_path;
+
+    // Current file
+    Array<String> m_lines;
+
+};
 
 } // namespace calao
+
+#endif // CALAO_SOURCE_CODE_HPP

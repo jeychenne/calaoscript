@@ -75,6 +75,10 @@ void Variant::retain()
 	{
 		as.obj->retain();
 	}
+	else if (this->is_alias())
+	{
+		as.alias->retain();
+	}
 }
 
 void Variant::release()
@@ -86,6 +90,10 @@ void Variant::release()
 	else if (this->is_object())
 	{
 		as.obj->release();
+	}
+	else if (this->is_alias())
+	{
+		as.alias->release();
 	}
 }
 

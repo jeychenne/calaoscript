@@ -12,6 +12,7 @@
  *                                                                                                                    *
  **********************************************************************************************************************/
 
+#include <cfenv>
 #include <cstdio>
 #include <ctime>
 #include <calao/runtime.hpp>
@@ -108,6 +109,11 @@ void Runtime::push(double n)
 	new(var()) Variant(n);
 }
 
+void Runtime::push_int(intptr_t n)
+{
+	new(var()) Variant(n);
+}
+
 void Runtime::push(bool b)
 {
 	new(var()) Variant(b);
@@ -157,40 +163,325 @@ void Runtime::check_underflow()
 
 void Runtime::pop(int n)
 {
-	while (n-- > 0)
+	auto limit = top - n;
+
+	if (unlikely(limit < stack.begin()))
 	{
-		check_underflow();
-		--top;
+		// Clean up stack
+		while (top > stack.begin())
+		{
+			(--top)->~Variant();
+		}
+		throw error("[Internal error] Stack underflow");
+	}
+
+	while (top > limit)
+	{
+		(--top)->~Variant();
+	}
+}
+
+Variant & Runtime::get_top(int n)
+{
+	return *(top + n);
+}
+
+void Runtime::negate()
+{
+	auto &var = get_top();
+
+	if (var.is_integer())
+	{
+		intptr_t value = - unsafe_cast<intptr_t>(var);
+		pop();
+		push_int(value);
+	}
+	else if (var.is_float())
+	{
+		double value = - unsafe_cast<double>(var);
+		pop();
+		push(value);
+	}
+	else
+	{
+		throw error("[Type error] Negation operator expected a Number, got a %", var.class_name());
+	}
+}
+
+void Runtime::math_op(char op)
+{
+	auto &v1 = get_top(-2);
+	auto &v2 = get_top(-1);
+	std::feclearexcept(FE_ALL_EXCEPT);
+
+	if (v1.is_number() && v2.is_number())
+	{
+		switch (op)
+		{
+			case '+':
+			{
+				if (v1.is_integer() && v2.is_integer())
+				{
+					auto x = cast<intptr_t>(v1);
+					auto y = cast<intptr_t>(v2);
+					pop(2);
+					auto result = x + y;
+					check_math_error();
+					push_int(result);
+				}
+				else
+				{
+					auto x = v1.get_number();
+					auto y = v2.get_number();
+					pop(2);
+					auto result = x + y;
+					check_math_error();
+					push(result);
+				}
+				return;
+			}
+			case '-':
+			{
+				if (v1.is_integer() && v2.is_integer())
+				{
+					auto x = cast<intptr_t>(v1);
+					auto y = cast<intptr_t>(v2);
+					pop(2);
+					auto result = x - y;
+					check_math_error();
+					push_int(result);
+				}
+				else
+				{
+					auto x = v1.get_number();
+					auto y = v2.get_number();
+					pop(2);
+					auto result = x - y;
+					check_math_error();
+					push(result);
+				}
+				return;
+			}
+			case '*':
+			{
+				if (v1.is_integer() && v2.is_integer())
+				{
+					auto x = cast<intptr_t>(v1);
+					auto y = cast<intptr_t>(v2);
+					pop(2);
+					auto result = x * y;
+					check_math_error();
+					push_int(result);
+				}
+				else
+				{
+					auto x = v1.get_number();
+					auto y = v2.get_number();
+					pop(2);
+					auto result = x * y;
+					check_math_error();
+					push(result);
+				}
+				return;
+			}
+			case '/':
+			{
+				auto x = v1.get_number();
+				auto y = v2.get_number();
+				pop(2);
+				auto result = x / y;
+				check_math_error();
+				push(result);
+				return;
+			}
+			default:
+				break;
+		}
+	}
+
+	pop(2);
+	throw error("[Type error] Cannot apply math operator to values which are not numbers");
+}
+
+void Runtime::check_math_error()
+{
+	if (fetestexcept(FE_OVERFLOW | FE_UNDERFLOW | FE_DIVBYZERO | FE_INVALID))
+	{
+		if (fetestexcept(FE_OVERFLOW)) {
+			throw error("[Math error] Number overflow");
+		}
+		if (fetestexcept(FE_UNDERFLOW)) {
+			throw error("[Math error] Number underflow");
+		}
+		if (fetestexcept(FE_DIVBYZERO)) {
+			throw error("[Math error] Division by zero");
+		}
+		if (fetestexcept(FE_INVALID)) {
+			throw error("[Math error] Undefined number");
+		}
+	}
+}
+
+void Runtime::interpret(const Code &code)
+{
+	ip = code.data();
+
+	while (true)
+	{
+		auto op = static_cast<Opcode>(*ip++);
+
+		switch (op)
+		{
+			case Opcode::Add:
+			{
+				math_op('+');
+				break;
+			}
+			case Opcode::Divide:
+			{
+				math_op('/');
+				break;
+			}
+			case Opcode::Multiply:
+			{
+				math_op('*');
+				break;
+			}
+			case Opcode::Negate:
+			{
+				negate();
+				break;
+			}
+			case Opcode::PushBoolean:
+			{
+				bool value = bool(*ip++);
+				push(value);
+				break;
+			}
+			case Opcode::PushFloat:
+			{
+				double value = code.get_float(*ip++);
+				push(value);
+				break;
+			}
+			case Opcode::PushInteger:
+			{
+				intptr_t value = code.get_integer(*ip++);
+				push_int(value);
+				break;
+			}
+			case Opcode::PushSmallInt:
+			{
+				push_int(*ip++);
+				break;
+			}
+			case Opcode::PushString:
+			{
+				String value = code.get_string(*ip++);
+				push(std::move(value));
+				break;
+			}
+			case Opcode::Return:
+				return;
+			case Opcode::Subtract:
+			{
+				math_op('-');
+				break;
+			}
+			default:
+				throw error("[Internal error] Invalid opcode: %", (int)op);
+		}
 	}
 }
 
 void Runtime::disassemble(const Code &code, const String &name)
 {
-	printf("== %s ==", name.data());
+	printf("==================== %s ====================\n", name.data());
+	printf("offset    line   instruction    operands   comments\n");
 	size_t size = code.size();
 
-	for (size_t offset = 0; offset < size; offset++)
+	for (size_t offset = 0; offset < size; )
 	{
-		disassemble_instruction(code, offset);
+		offset += disassemble_instruction(code, offset);
 	}
-
 }
 
-void Runtime::disassemble_instruction(const Code &code, size_t offset)
+size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 {
 	auto op = static_cast<Opcode>(code[offset]);
-	printf("%04zu ", offset);
+	printf("%6zu   %5d   ", offset, code.get_line(offset));
 
 	switch (op)
 	{
+		case Opcode::Add:
+		{
+			printf("ADD\n");
+			return 1;
+		}
+		case Opcode::Divide:
+		{
+			printf("DIVIDE\n");
+			return 1;
+		}
+		case Opcode::Multiply:
+		{
+			printf("MULTIPLY\n");
+			return 1;
+		}
+		case Opcode::Negate:
+		{
+			printf("NEGATE\n");
+			return 1;
+		}
+		case Opcode::PushBoolean:
+		{
+			int value = code[offset+1];
+			auto str = value ? "true" : "false";
+			printf("PUSH_BOOLEAN   %-5d      ; %s\n", value, str);
+			return 2;
+		}
+		case Opcode::PushFloat:
+		{
+			int index = code[offset+1];
+			double value = code.get_float(index);
+			printf("PUSH_FLOAT     %-5d      ; %f\n", index, value);
+			return 2;
+		}
+		case Opcode::PushInteger:
+		{
+			int index = code[offset+1];
+			intptr_t value = code.get_integer(index);
+			printf("PUSH_INTEGER   %-5d      ; %" PRIdPTR "\n", index, value);
+			return 2;
+		}
+		case Opcode::PushSmallInt:
+		{
+			int value = code[offset+1];
+			printf("PUSH_SMALL_INT %-5d\n", value);
+			return 2;
+		}
+		case Opcode::PushString:
+		{
+			int index = code[offset+1];
+			String value = code.get_string(index);
+			printf("PUSH_STRING    %-5d      ; \"%s\"\n", index, value.data());
+			return 2;
+		}
 		case Opcode::Return:
 		{
-			printf("RETURN");
-			break;
+			printf("RETURN\n");
+			return 1;
+		}
+		case Opcode::Subtract:
+		{
+			printf("SUBTRACT\n");
+			return 1;
 		}
 		default:
 			printf("Unknown opcode %d", static_cast<int>(op));
 	}
+
+	return 1;
 }
 
 

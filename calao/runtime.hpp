@@ -157,7 +157,7 @@ public:
 
 	// Push an integer onto the stack. This method doesn't overload push() because there would be an
 	// ambiguity between double and intptr_t when pushing an integer literal, on platforms where int != intptr_t.
-	void push_int(intptr_t n) { push(double(n)); }
+	void push_int(intptr_t n);
 
 	// Push boolean onto the stack.
 	void push(bool b);
@@ -177,6 +177,10 @@ public:
 		new(var()) Variant(std::move(value));
 	}
 
+	Variant & get_top(int n = -1);
+
+	void interpret(const Code &code);
+
 	void disassemble(const Code &code, const String &name);
 
 private:
@@ -195,7 +199,13 @@ private:
 
 	Variant *var();
 
-	void disassemble_instruction(const Code &code, size_t offset);
+	size_t disassemble_instruction(const Code &code, size_t offset);
+
+	void negate();
+
+	void math_op(char op);
+
+	static void check_math_error();
 
 	// Garbage collector.
 	Recycler gc;
@@ -211,6 +221,9 @@ private:
 
 	// End of the stack array.
 	Variant *limit;
+
+	// Instruction pointer
+	const Instruction *ip;
 
 	static size_t hash_seed;
 	static bool initialized;
