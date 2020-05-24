@@ -1,0 +1,188 @@
+/**********************************************************************************************************************
+ *                                                                                                                    *
+ * Copyright (C) 2019-2020 Julien Eychenne <jeychenne@gmail.com>                                                      *
+ *                                                                                                                    *
+ * The contents of this file are subject to the Mozilla Public License Version 2.0 (the "License"); you may not use   *
+ * this file except in compliance with the License. You may obtain a copy of the License at                           *
+ * http://www.mozilla.org/MPL/.                                                                                       *
+ *                                                                                                                    *
+ * Created: 20/02/2019                                                                                                *
+ *                                                                                                                    *
+ * Purpose: type traits.                                                                                              *
+ *                                                                                                                    *
+ **********************************************************************************************************************/
+
+#ifndef CALAO_TRAITS_HPP
+#define CALAO_TRAITS_HPP
+
+#include <type_traits>
+#include <calao/definitions.hpp>
+
+namespace calao {
+
+class Object;
+class Class;
+class String;
+class File;
+class Regex;
+class Variant;
+
+// Dummy base class for Float and Integer
+class Number {};
+
+
+namespace traits {
+
+// Type that may contain cyclic references
+template<typename T> struct maybe_cyclic : std::true_type
+{
+
+};
+
+
+template<> struct maybe_cyclic<String> : std::false_type
+{
+
+};
+
+template<> struct maybe_cyclic<File> : std::false_type
+{
+
+};
+
+template<> struct maybe_cyclic<Regex> : std::false_type
+{
+
+};
+
+template<> struct maybe_cyclic<Class> : std::false_type
+{
+
+};
+
+//----------------------------------------------------------------------------------------------------------------------
+
+template<typename T> struct is_collectable
+{
+	static constexpr bool value = !std::is_scalar<T>::value && maybe_cyclic<T>::value;
+};
+
+#if 0
+template<typename T> struct is_collectable<std::vector<T>>
+{
+	static constexpr bool value = is_collectable<T>::value;
+};
+
+template<typename T> struct is_collectable<std::set<T>>
+{
+	static constexpr bool value = is_collectable<T>::value;
+};
+
+template<typename T, typename U> struct is_collectable<std::unordered_map<T, U>>
+{
+	static constexpr bool value = is_collectable<T>::value || is_collectable<U>::value;
+};
+#endif
+
+
+//----------------------------------------------------------------------------------------------------------------------
+
+template<typename T> struct is_clonable : std::true_type
+{
+
+};
+
+template<> struct is_clonable<File> : std::false_type
+{ };
+
+template<> struct is_clonable<Regex> : std::false_type
+{ };
+
+template<> struct is_clonable<Class> : std::false_type
+{ };
+
+//----------------------------------------------------------------------------------------------------------------------
+
+template<typename T> struct is_safely_movable
+{
+	static constexpr bool value = std::is_trivially_move_constructible<T>::value;
+};
+
+template<> struct is_safely_movable<String> : std::true_type
+{
+
+};
+
+// FIXME: circumvent error CV2139 with MSVC
+//  "an undefined class is not allowed as an argument to compiler intrinsic type trait 'trait'"
+template<> struct is_safely_movable<Variant> : std::false_type
+{
+
+};
+
+
+//----------------------------------------------------------------------------------------------------------------------
+
+template<typename T>
+struct is_boxed : std::true_type { };
+
+template<>
+struct is_boxed<bool> : std::false_type { };
+
+template<>
+struct is_boxed<intptr_t> : std::false_type { };
+
+template<>
+struct is_boxed<double> : std::false_type { };
+
+template<>
+struct is_boxed<Number> : std::false_type { };
+
+template<>
+struct is_boxed<String> : std::false_type { };
+
+template<>
+struct is_boxed<Class> : std::false_type { };
+
+// Abstract type, but we need to create a class for it since it is the base of all classes.
+template<>
+struct is_boxed<Object> : std::false_type { };
+
+//----------------------------------------------------------------------------------------------------------------------
+
+// Credits to: https://stackoverflow.com/a/39348287
+namespace detail {
+template<class X, class Y, class Op>
+struct op_valid_impl
+{
+	template<class U, class L, class R>
+	static auto test(int) -> decltype(std::declval<U>()(std::declval<L>(), std::declval<R>()),
+			void(), std::true_type());
+
+	template<class U, class L, class R>
+	static auto test(...) -> std::false_type;
+
+	using type = decltype(test<Op, X, Y>(0));
+
+};
+} // namespace detail
+
+template<class X, class Y, class Op>
+using is_operator_valid = typename detail::op_valid_impl<X, Y, Op>::type;
+
+
+template<typename T>
+using is_equatable = is_operator_valid<T,T,std::equal_to<>>;
+
+template<typename T>
+using is_hashable = std::is_default_constructible<std::hash<T>>;
+
+//----------------------------------------------------------------------------------------------------------------------
+
+template<typename T>
+using bare_type = std::remove_cv<typename std::remove_reference<T>::type>;
+
+
+}} // calao::traits
+
+#endif // CALAO_TRAITS_HPP

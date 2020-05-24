@@ -1,0 +1,11 @@
+test
+.vs
+.vscode
+.idea
+.directory
+out
+docs/_build
+CMakeLists.txt.user
+cmake-build-debug
+cmake-build-release
+Output
