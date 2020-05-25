@@ -17,6 +17,7 @@
 #define CALAO_RUNTIME_HPP
 
 #include <type_traits>
+#include <unordered_set>
 #include <calao/string.hpp>
 #include <calao/class.hpp>
 #include <calao/meta.hpp>
@@ -97,8 +98,6 @@ public:
 	Runtime();
 
 	~Runtime();
-
-	static size_t random_seed();
 
 	template<typename T>
 	Class *create_type(const char *name, Class *base)
@@ -187,6 +186,8 @@ public:
 
 	void do_file(const String &path);
 
+	String intern_string(const String &s);
+
 private:
 
 	friend class Collectable;
@@ -239,8 +240,8 @@ private:
 	// Compiles source code to byte code for the runtime.
 	Compiler compiler;
 
-	// Global hash seed, shared across runtimes.
-	static size_t hash_seed;
+	// Interned strings.
+	std::unordered_set<String> strings;
 
 	// Global initialization.
 	static bool initialized;

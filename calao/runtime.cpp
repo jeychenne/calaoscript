@@ -18,23 +18,23 @@
 #include <calao/runtime.hpp>
 #include <calao/regex.hpp>
 #include <calao/file.hpp>
+#include <calao/utils/helpers.hpp>
 
 namespace calao {
 
 static const int STACK_SIZE = 1024;
 
-size_t Runtime::hash_seed = 0;
 bool Runtime::initialized = false;
 
 
 Runtime::Runtime() :
-	stack(STACK_SIZE, Variant())
+		stack(STACK_SIZE, Variant()), compiler(this)
 {
 	srand(time(nullptr));
 
 	if (! initialized)
 	{
-		hash_seed = (size_t) rand();
+		utils::init_random_seed();
 		Token::initialize();
 		initialized = true;
 	}
@@ -60,11 +60,6 @@ void calao::Runtime::add_candidate(Collectable *obj)
 void calao::Runtime::remove_candidate(Collectable *obj)
 {
 	gc.remove_candidate(obj);
-}
-
-size_t Runtime::random_seed()
-{
-	return hash_seed;
 }
 
 void Runtime::create_builtins()
@@ -688,6 +683,12 @@ int Runtime::get_current_line() const
 {
 	auto offset = int(ip - 1 - code->data());
 	return code->get_line(offset);
+}
+
+String Runtime::intern_string(const String &s)
+{
+	auto result = strings.insert(s);
+	return *result.first;
 }
 
 

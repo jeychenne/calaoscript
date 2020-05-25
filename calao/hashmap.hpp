@@ -84,9 +84,11 @@ public:
 
 		iterator(Hashmap *map, size_type pos)
 		{
-			while (!map->node(pos)->used() && pos <= map->capacity())
+			if (!map->empty())
 			{
-				++pos;
+				while (!map->node(pos)->used() && pos <= map->capacity()) {
+					++pos;
+				}
 			}
 			this->pos = pos;
 			this->map = map;
@@ -114,7 +116,7 @@ public:
 		{
 			auto tmp(*this);
 			do { ++pos; } while (!map->node(pos)->used() && pos <= map->capacity());
-			return *this;
+			return tmp;
 		}
 
 		value_type & operator*() {
@@ -360,12 +362,12 @@ public:
 
 	iterator find(const key_type &key)
 	{
-		return lookup(key);
+		return this->empty() ? this->end() : lookup(key);
 	}
 
 	const_iterator find(const key_type &key) const
 	{
-		return const_cast<Hashmap*>(this)->lookup(key);
+		return this->empty() ? this->cend() : const_cast<Hashmap*>(this)->lookup(key);
 	}
 
 	bool contains(const key_type &key) const

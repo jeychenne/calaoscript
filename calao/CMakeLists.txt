@@ -54,7 +54,9 @@ endif()
 ##  BUILD RUNTIME  ##
 #####################
 
-add_definitions(-DCALAO_STD_UNORDERED_MAP)
+# Uncomment this line to use std::unordered_map instead of Calao's default hashmap.
+# add_definitions(-DCALAO_STD_UNORDERED_MAP)
+
 include_directories("..")
 
 if(WIN32)

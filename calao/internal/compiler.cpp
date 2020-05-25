@@ -13,10 +13,11 @@
  **********************************************************************************************************************/
 
 #include <calao/internal/compiler.hpp>
+#include <calao/runtime.hpp>
 
 namespace calao {
 
-Compiler::Compiler()
+Compiler::Compiler(Runtime *rt) : runtime(rt)
 {
 #define FUNC(F) [this]() { F(); }
 
@@ -366,7 +367,8 @@ void Compiler::parse_float()
 
 void Compiler::parse_string()
 {
-	auto index = code->add_string_constant(previous_token.spelling);
+	auto s = runtime->intern_string(previous_token.spelling);
+	auto index = code->add_string_constant(std::move(s));
 	emit(Opcode::PushString, index);
 }
 

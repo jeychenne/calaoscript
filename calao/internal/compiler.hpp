@@ -23,11 +23,14 @@
 
 namespace calao {
 
+class Runtime;
+
+
 class Compiler final
 {
 public:
 
-	Compiler();
+	Compiler(Runtime *rt);
 
 	std::unique_ptr<Code> do_file(const String &path);
 
@@ -117,6 +120,9 @@ private:
 
 	// Rules for the Pratt parser.
 	std::vector<ParseRule> rules;
+
+	// Pointer to the runtime, for string interning.
+	Runtime *runtime;
 };
 
 } // namespace calao
