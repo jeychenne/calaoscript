@@ -29,6 +29,7 @@ using Instruction = uint16_t;
 enum class Opcode : Instruction
 {
 	Add,
+	Concat,
 	Divide,
 	Equal,
 	Greater,

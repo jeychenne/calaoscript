@@ -267,6 +267,11 @@ Token Scanner::advance()
         scan_string(U'"');
         return Token(Token::Lexeme::StringLiteral, m_spelling, m_line_no);
     }
+    case U'\'':
+	{
+		scan_string(U'\'');
+		return Token(Token::Lexeme::StringLiteral, m_spelling, m_line_no);
+	}
     case Token::ETX:
     {
         // Don't accept token since we reached the end.

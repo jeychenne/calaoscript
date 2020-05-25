@@ -370,7 +370,10 @@ String Variant::to_string(bool quote) const
 	{
 		case Datatype::String:
 		{
-			return unsafe_cast<String>(*this);
+			auto s = unsafe_cast<String>(*this);
+			if (quote) { s.prepend('"'); s.append('"'); }
+
+			return s;
 		}
 		case Datatype::Object:
 		{

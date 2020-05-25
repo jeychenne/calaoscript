@@ -42,7 +42,7 @@ private:
 		And,         // and
 		Equality,    // == !=
 		Comparison,  // < > <= >=
-		Term,        // + -
+		Term,        // + - &
 		Factor,      // * / %
 		Power,       // ^
 		Unary,       // not -
@@ -99,6 +99,8 @@ private:
 	void parse_integer();
 
 	void parse_float();
+
+	void parse_string();
 
 	void parse_literal();
 

@@ -369,6 +369,14 @@ void Runtime::interpret(const Code &code)
 				math_op('+');
 				break;
 			}
+			case Opcode::Concat:
+			{
+				auto s = peek(-2).to_string();
+				s.append(peek(-1).to_string());
+				pop(2);
+				push(std::move(s));
+				break;
+			}
 			case Opcode::Divide:
 			{
 				math_op('/');
@@ -548,6 +556,10 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		case Opcode::Add:
 		{
 			return print_simple_instruction("ADD");
+		}
+		case Opcode::Concat:
+		{
+			return print_simple_instruction("CONCAT");
 		}
 		case Opcode::Divide:
 		{

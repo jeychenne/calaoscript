@@ -66,7 +66,7 @@ Compiler::Compiler()
 
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // OpAssign
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // OpCompare
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // OpConcat
+		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Term }, // OpConcat
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // OpDec
 		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Equality }, // OpEqual
 		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Comparison }, // OpGreaterEqual
@@ -96,7 +96,7 @@ Compiler::Compiler()
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Identifier
 		{ FUNC(parse_integer), ParseFunc(), Precedence::None }, // IntegerLiteral
 		{ FUNC(parse_float), ParseFunc(), Precedence::None }, // FloatLiteral
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // StringLiteral
+		{ FUNC(parse_string), ParseFunc(), Precedence::None }, // StringLiteral
 
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Eot
 	};
@@ -260,6 +260,11 @@ void Compiler::parse_binary_expression()
 	// Emit the operator instruction.
 	switch (op)
 	{
+		case Lexeme::OpConcat:
+		{
+			emit(Opcode::Concat);
+			break;
+		}
 		case Lexeme::OpEqual:
 		{
 			emit(Opcode::Equal);
@@ -357,6 +362,12 @@ void Compiler::parse_float()
 
 	auto index = code->add_float_constant(value);
 	emit(Opcode::PushFloat, index);
+}
+
+void Compiler::parse_string()
+{
+	auto index = code->add_string_constant(previous_token.spelling);
+	emit(Opcode::PushString, index);
 }
 
 Compiler::ParseRule *Compiler::get_rule(Compiler::Lexeme lex)
