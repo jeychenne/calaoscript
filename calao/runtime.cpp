@@ -297,6 +297,34 @@ void Runtime::math_op(char op)
 				push(result);
 				return;
 			}
+			case '^':
+			{
+				auto x = v1.get_number();
+				auto y = v2.get_number();
+				pop(2);
+				auto result = pow(x, y);
+				check_float_error();
+				push(result);
+				return;
+			}
+			case '%':
+			{
+				if (v1.is_integer() && v2.is_integer())
+				{
+					auto x = cast<intptr_t>(v1);
+					auto y = cast<intptr_t>(v2);
+					pop(2);
+					push_int(x % y);
+				}
+				else
+				{
+					auto x = v1.get_number();
+					auto y = v2.get_number();
+					pop(2);
+					push(std::fmod(x, y));
+				}
+				return;
+			}
 			default:
 				break;
 		}
@@ -391,6 +419,11 @@ void Runtime::interpret(const Code &code)
 				push(value);
 				break;
 			}
+			case Opcode::Modulus:
+			{
+				math_op('%');
+				break;
+			}
 			case Opcode::Multiply:
 			{
 				math_op('*');
@@ -415,6 +448,11 @@ void Runtime::interpret(const Code &code)
 				bool value = (v1 != v2);
 				pop(2);
 				push(value);
+				break;
+			}
+			case Opcode::Power:
+			{
+				math_op('^');
 				break;
 			}
 			case Opcode::PushBoolean:
@@ -535,6 +573,10 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		{
 			return print_simple_instruction("LESS_EQUAL");
 		}
+		case Opcode::Modulus:
+		{
+			return print_simple_instruction("MODULUS");
+		}
 		case Opcode::Multiply:
 		{
 			return print_simple_instruction("MULTIPLY");
@@ -550,6 +592,10 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		case Opcode::NotEqual:
 		{
 			return print_simple_instruction("NOT_EQUAL");
+		}
+		case Opcode::Power:
+		{
+			return print_simple_instruction("POWER");
 		}
 		case Opcode::PushBoolean:
 		{

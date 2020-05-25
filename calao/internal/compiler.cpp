@@ -285,19 +285,29 @@ void Compiler::parse_binary_expression()
 			emit(Opcode::LessEqual);
 			break;
 		}
-		case Lexeme::OpPlus:
-		{
-			emit(Opcode::Add);
-			break;
-		}
 		case Lexeme::OpMinus:
 		{
 			emit(Opcode::Subtract);
 			break;
 		}
+		case Lexeme::OpMod:
+		{
+			emit(Opcode::Modulus);
+			break;
+		}
 		case Lexeme::OpNotEqual:
 		{
 			emit(Opcode::NotEqual);
+			break;
+		}
+		case Lexeme::OpPlus:
+		{
+			emit(Opcode::Add);
+			break;
+		}
+		case Lexeme::OpPower:
+		{
+			emit(Opcode::Power);
 			break;
 		}
 		case Lexeme::OpSlash:

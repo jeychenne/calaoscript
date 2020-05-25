@@ -334,6 +334,16 @@ Token Scanner::advance()
 	    accept();
 	    return Token(Token::Lexeme::OpSlash, "/", m_line_no);
     }
+    case U'^':
+	{
+		accept();
+		return Token(Token::Lexeme::OpPower, "^", m_line_no);
+	}
+   	case U'%':
+	{
+		accept();
+		return Token(Token::Lexeme::OpMod, "%", m_line_no);
+	}
     case U'&':
     {
 	    accept();
