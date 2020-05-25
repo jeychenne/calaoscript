@@ -26,6 +26,7 @@
 #include <calao/variant.hpp>
 #include <calao/list.hpp>
 #include <calao/table.hpp>
+#include <calao/dictionary.hpp>
 #include <calao/internal/compiler.hpp>
 
 namespace calao {
@@ -242,6 +243,9 @@ private:
 
 	// Interned strings.
 	std::unordered_set<String> strings;
+
+	// Global variables.
+	Dictionary<Variant> globals;
 
 	// Global initialization.
 	static bool initialized;

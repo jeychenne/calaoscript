@@ -30,6 +30,7 @@ enum class Opcode : Instruction
 {
 	Add,
 	Concat,
+	GetGlobal,
 	Divide,
 	Equal,
 	Greater,
@@ -41,7 +42,9 @@ enum class Opcode : Instruction
 	Negate,
 	Not,
 	NotEqual,
+	Pop,
 	Power,
+	Print,
 	PushBoolean,
 	PushFalse,
 	PushFloat,
@@ -52,6 +55,7 @@ enum class Opcode : Instruction
 	PushString,
 	PushTrue,
 	Return,
+	SetGlobal,
 	Subtract,
 };
 

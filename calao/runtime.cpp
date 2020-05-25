@@ -386,6 +386,16 @@ void Runtime::interpret(const Code &code)
 				push(value);
 				break;
 			}
+			case Opcode::GetGlobal:
+			{
+				auto name = code.get_string(*ip++);
+				auto it = globals.find(name);
+				if (it == globals.end()) {
+					throw RuntimeError(get_current_line(), "Undefined variable \"%\"", name);
+				}
+				push(it->second);
+				break;
+			}
 			case Opcode::Greater:
 			{
 				auto &v2 = peek(-1);
@@ -453,9 +463,21 @@ void Runtime::interpret(const Code &code)
 				push(value);
 				break;
 			}
+			case Opcode::Pop:
+			{
+				pop();
+				break;
+			}
 			case Opcode::Power:
 			{
 				math_op('^');
+				break;
+			}
+			case Opcode::Print:
+			{
+				auto s = peek().to_string();
+				utils::printf(s);
+				printf("\n");
 				break;
 			}
 			case Opcode::PushBoolean:
@@ -512,6 +534,13 @@ void Runtime::interpret(const Code &code)
 				this->code = nullptr;
 				return;
 			}
+			case Opcode::SetGlobal:
+			{
+				auto name = code.get_string(*ip++);
+				globals[name] = std::move(peek());
+				pop();
+				break;
+			}
 			case Opcode::Subtract:
 			{
 				math_op('-');
@@ -564,6 +593,13 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		{
 			return print_simple_instruction("EQUAL");
 		}
+		case Opcode::GetGlobal:
+		{
+			int index = code[offset+1];
+			String value = code.get_string(index);
+			printf("GET_GLOBAL     %-5d      ; %s\n", index, value.data());
+			return 2;
+		}
 		case Opcode::Greater:
 		{
 			return print_simple_instruction("GREATER");
@@ -600,9 +636,17 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		{
 			return print_simple_instruction("NOT_EQUAL");
 		}
+		case Opcode::Pop:
+		{
+			return print_simple_instruction("POP");
+		}
 		case Opcode::Power:
 		{
 			return print_simple_instruction("POWER");
+		}
+		case Opcode::Print:
+		{
+			return print_simple_instruction("PRINT");
 		}
 		case Opcode::PushBoolean:
 		{
@@ -658,6 +702,13 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		{
 			return print_simple_instruction("RETURN");
 		}
+		case Opcode::SetGlobal:
+		{
+			int index = code[offset+1];
+			String value = code.get_string(index);
+			printf("SET_GLOBAL     %-5d      ; %s\n", index, value.data());
+			return 2;
+		}
 		case Opcode::Subtract:
 		{
 			return print_simple_instruction("SUBTRACT");
@@ -674,9 +725,6 @@ void Runtime::do_file(const String &path)
 	auto code = compiler.do_file(path);
 	disassemble(*code, "test");
 	interpret(*code);
-	auto &v = peek();
-	auto s = v.to_string(check_type<String>(v));
-	printf("------------------------\nValue on the stack: %s\n", s.data());
 }
 
 int Runtime::get_current_line() const

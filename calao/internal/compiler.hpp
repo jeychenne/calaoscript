@@ -71,9 +71,11 @@ private:
 	bool check(Lexeme lex);
 
 	// Move to the next token only if the current token is 'c'. Returns true if we moved.
-	bool skip(Lexeme lex);
+	bool accept(Lexeme lex);
 
 	void expect(Lexeme lex);
+
+	void expect_separator();
 
 	void report_error(const std::string &hint, const char *error_type = "Syntax");
 
@@ -84,10 +86,6 @@ private:
 	void emit(Opcode op, Instruction i);
 
 	std::unique_ptr<Code> parse();
-
-	void parse_statements();
-
-	void parse_statement();
 
 	void parse_grouping();
 
@@ -106,6 +104,24 @@ private:
 	void parse_string();
 
 	void parse_literal();
+
+	void parse_statement();
+
+	void parse_print_statement();
+
+	void parse_expression_statement();
+
+	void parse_var_declaration();
+
+	Instruction parse_var_name();
+
+	Instruction add_identifier_constant(const String &ident);
+
+	void define_variable(Instruction global);
+
+	void parse_variable();
+
+	void parse_named_variable(const String &name);
 
 	ParseRule *get_rule(Lexeme lex);
 

@@ -53,6 +53,7 @@ Compiler::Compiler(Runtime *rt) : runtime(rt)
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Opt
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Option
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Or
+		{ ParseFunc(), ParseFunc(), Precedence::None }, // Print
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Pass
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Ref
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Return
@@ -68,11 +69,9 @@ Compiler::Compiler(Runtime *rt) : runtime(rt)
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // OpAssign
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // OpCompare
 		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Term }, // OpConcat
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // OpDec
 		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Equality }, // OpEqual
 		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Comparison }, // OpGreaterEqual
 		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Comparison }, // OpGreaterThan
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // OpInc
 		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Comparison }, // OpLessEqual
 		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Comparison }, // OpLessThan
 		{ FUNC(parse_unary_expression), FUNC(parse_binary_expression), Precedence::Term }, // OpMinus
@@ -84,22 +83,23 @@ Compiler::Compiler(Runtime *rt) : runtime(rt)
 		{ ParseFunc(), FUNC(parse_binary_expression), Precedence::Factor }, // OpStar
 
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Comma
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // Colon
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // Dot
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // Colon
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // Dot
 		{ FUNC(parse_grouping), ParseFunc(), Precedence::None }, // LParen
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // RParen
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // LCurl
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // RCurl
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // LSquare
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // RSquare
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // Semicolon
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // RParen
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // LCurl
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // RCurl
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // LSquare
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // RSquare
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // Semicolon
 
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // Identifier
-		{ FUNC(parse_integer), ParseFunc(), Precedence::None }, // IntegerLiteral
-		{ FUNC(parse_float), ParseFunc(), Precedence::None }, // FloatLiteral
-		{ FUNC(parse_string), ParseFunc(), Precedence::None }, // StringLiteral
+		{ FUNC(parse_variable), ParseFunc(), Precedence::None }, // Identifier
+		{ FUNC(parse_integer),  ParseFunc(), Precedence::None }, // IntegerLiteral
+		{ FUNC(parse_float),    ParseFunc(), Precedence::None }, // FloatLiteral
+		{ FUNC(parse_string),   ParseFunc(), Precedence::None }, // StringLiteral
 
-		{ ParseFunc(), ParseFunc(), Precedence::None }, // Eot
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // Eol
+		{ ParseFunc(),          ParseFunc(), Precedence::None }, // Eot
 	};
 #undef FUNC
 }
@@ -126,12 +126,22 @@ void Compiler::expect(Lexeme lex)
 	advance();
 }
 
+void Compiler::expect_separator()
+{
+	if (token.is_separator()) {
+		advance();
+	}
+	else {
+		report_error("Expected a new line or a semicolon");
+	}
+}
+
 bool Compiler::check(Lexeme lex)
 {
 	return token.is(lex);
 }
 
-bool Compiler::skip(Lexeme lex)
+bool Compiler::accept(Lexeme lex)
 {
 	if (check(lex))
 	{
@@ -173,27 +183,29 @@ std::unique_ptr<Code> Compiler::parse()
 {
 	code = std::make_unique<Code>();
 	advance();
-	parse_expression();
-	expect(Lexeme::Eot);
+
+	while (!accept(Lexeme::Eot)) {
+		parse_statement();
+	}
 	emit(Opcode::Return);
 
 	return std::move(code);
 }
 
-void Compiler::parse_statements()
-{
-	parse_statement();
-
-//	while (! token.is_block_end())
-//	{
-//		parse_statement();
-//		skip();
-//	}
-}
-
 void Compiler::parse_statement()
 {
-	parse_expression();
+	if (accept(Lexeme::Print))
+	{
+		parse_print_statement();
+	}
+	else if (accept(Lexeme::Var))
+	{
+		parse_var_declaration();
+	}
+	else
+	{
+		parse_expression_statement();
+	}
 }
 
 void Compiler::parse_grouping()
@@ -403,6 +415,73 @@ void Compiler::parse_literal()
 		}
 		default:
 			break;
+	}
+}
+
+void Compiler::parse_print_statement()
+{
+	parse_expression();
+	emit(Opcode::Print);
+	expect_separator();
+}
+
+void Compiler::parse_expression_statement()
+{
+	parse_expression();
+	emit(Opcode::Pop);
+	expect_separator();
+}
+
+void Compiler::parse_var_declaration()
+{
+	auto global = parse_var_name();
+
+	if (accept(Lexeme::OpAssign))
+	{
+		parse_expression();
+	}
+	else
+	{
+		emit(Opcode::PushNull);
+	}
+	define_variable(global);
+	expect_separator();
+}
+
+Instruction Compiler::parse_var_name()
+{
+	expect(Lexeme::Identifier);
+	return add_identifier_constant(previous_token.spelling);
+}
+
+Instruction Compiler::add_identifier_constant(const String &ident)
+{
+	auto s = runtime->intern_string(ident);
+	return code->add_string_constant(s);
+}
+
+void Compiler::define_variable(Instruction global)
+{
+	emit(Opcode::SetGlobal, global);
+}
+
+void Compiler::parse_variable()
+{
+	parse_named_variable(previous_token.spelling);
+}
+
+void Compiler::parse_named_variable(const String &name)
+{
+	auto arg = add_identifier_constant(name);
+
+	if (accept(Lexeme::OpAssign))
+	{
+		parse_expression();
+		emit(Opcode::SetGlobal, arg);
+	}
+	else
+	{
+		emit(Opcode::GetGlobal, arg);
 	}
 }
 

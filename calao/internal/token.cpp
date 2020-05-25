@@ -54,6 +54,7 @@ static Array<String> token_names = {
         "option",
         "or",
         "pass",
+        "print",
         "ref",
         "return",
         "super",
@@ -67,11 +68,9 @@ static Array<String> token_names = {
         "=",
         "<=>",
         "&",
-        "--",
         "==",
         ">=",
         ">",
-        "++",
         "<=",
         "<",
         "-",
@@ -95,6 +94,7 @@ static Array<String> token_names = {
         "integer literal",
         "float literal",
         "string literal",
+        "end of line",
         "end of text"
 };
 

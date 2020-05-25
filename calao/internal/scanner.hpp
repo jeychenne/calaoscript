@@ -83,6 +83,9 @@ private:
     void scan_digits();
 
     void scan_string(char32_t end);
+
+	// Same as isspace(), but does not consider '\n' as a space since it's used by the parser.
+	static bool check_space(char32_t c);
 };
 
 } // namespace calao

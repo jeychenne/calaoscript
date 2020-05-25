@@ -59,6 +59,7 @@ struct Token final
 		Option,
 		Or,
 		Pass,
+		Print,
 		Ref,
 		Return,
 		Super,
@@ -73,11 +74,9 @@ struct Token final
 		OpAssign,
 		OpCompare,
 		OpConcat,
-		OpDec,
 		OpEqual,
 		OpGreaterEqual,
 		OpGreaterThan,
-		OpInc,
 		OpLessEqual,
 		OpLessThan,
 		OpMinus,
@@ -104,6 +103,7 @@ struct Token final
 		FloatLiteral,
 		StringLiteral,
 
+		Eol, // end of line
 		Eot // end of text
 	};
 	
@@ -131,6 +131,8 @@ struct Token final
 
 	bool is_block_end() const;
 
+	bool is_separator() const { return id == Lexeme::Eol || id == Lexeme::Semicolon || id == Lexeme::Eot; }
+
 	bool is(Lexeme c) const { return id == c; }
 
 	static void initialize();
@@ -138,7 +140,6 @@ struct Token final
 	static String get_name(Lexeme c);
 
 	String get_name() const;
-
 
 	String spelling;
 

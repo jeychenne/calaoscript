@@ -103,7 +103,7 @@ void Scanner::read_line()
 void Scanner::skip_white()
 {
 
-    while (isspace((int) m_char))
+    while (check_space(m_char))
     {
         read_char();
     }
@@ -262,6 +262,11 @@ Token Scanner::advance()
             return Token(m_spelling, m_line_no, false);
         }
     }
+    case U'\n':
+	{
+		accept();
+		return Token(Token::Lexeme::Eol, String(), m_line_no);
+	}
     case U'"':
     {
         scan_string(U'"');
@@ -310,23 +315,11 @@ Token Scanner::advance()
     case U'+':
     {
     	accept();
-    	if (m_char == '+')
-	    {
-    		accept();
-    		return Token(Token::Lexeme::OpInc, "INC", m_line_no);
-	    }
-
     	return Token(Token::Lexeme::OpPlus, "+", m_line_no);
     }
     case U'-':
     {
 	    accept();
-	    if (m_char == '-')
-	    {
-		    accept();
-		    return Token(Token::Lexeme::OpDec, "DEC", m_line_no);
-	    }
-
 	    return Token(Token::Lexeme::OpMinus, "-", m_line_no);
     }
     case U'*':
@@ -474,4 +467,18 @@ void Scanner::report_error(const std::string &hint, intptr_t offset, const char 
 	throw RuntimeError(m_line_no, message);
 }
 
+bool Scanner::check_space(char32_t c)
+{
+	switch (c)
+	{
+		case ' ':
+		case '\t':
+		case '\r':
+		case '\f':
+		case '\v':
+			return true;
+		default:
+			return false;
+	}
+}
 } // namespace calao
