@@ -25,7 +25,7 @@
 #include <calao/variant.hpp>
 #include <calao/list.hpp>
 #include <calao/table.hpp>
-#include <calao/internal/code.hpp>
+#include <calao/internal/compiler.hpp>
 
 namespace calao {
 
@@ -149,7 +149,9 @@ public:
 		}
 	}
 
-	// Push undefined on stack, return address.
+	void push_null();
+
+	// Push null on stack, return address.
 	Variant &push();
 
 	// Push number on stack.
@@ -177,11 +179,13 @@ public:
 		new(var()) Variant(std::move(value));
 	}
 
-	Variant & get_top(int n = -1);
+	Variant & peek(int n = -1);
 
 	void interpret(const Code &code);
 
 	void disassemble(const Code &code, const String &name);
+
+	void do_file(const String &path);
 
 private:
 
@@ -201,11 +205,15 @@ private:
 
 	size_t disassemble_instruction(const Code &code, size_t offset);
 
+	size_t print_simple_instruction(const char *name);
+
 	void negate();
 
 	void math_op(char op);
 
-	static void check_math_error();
+	static void check_float_error();
+
+	int get_current_line() const;
 
 	// Garbage collector.
 	Recycler gc;
@@ -222,10 +230,19 @@ private:
 	// End of the stack array.
 	Variant *limit;
 
-	// Instruction pointer
+	// Instruction pointer.
 	const Instruction *ip;
 
+	// Currently executing code chunk.
+	const Code *code = nullptr;
+
+	// Compiles source code to byte code for the runtime.
+	Compiler compiler;
+
+	// Global hash seed, shared across runtimes.
 	static size_t hash_seed;
+
+	// Global initialization.
 	static bool initialized;
 };
 

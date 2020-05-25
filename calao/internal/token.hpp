@@ -24,8 +24,8 @@ struct Token final
 	// end of text character in ASCII
 	static const char32_t ETX = 3;
 
-	// Tokens of the language
-	enum class Code
+	// Tokens of the language. Don't forget to update the token names and the compiler's constructor if you modify this enum.
+	enum class Lexeme
 	{
 		Unknown = 0,
 		And,
@@ -51,6 +51,7 @@ struct Token final
 		In,
 		Inherits,
 		Method,
+		Nan,
 		New,
 		Not,
 		Null,
@@ -59,7 +60,6 @@ struct Token final
 		Or,
 		Pass,
 		Ref,
-		Repeat,
 		Return,
 		Super,
 		Then,
@@ -74,7 +74,6 @@ struct Token final
 		OpCompare,
 		OpConcat,
 		OpDec,
-		OpDiv,
 		OpEqual,
 		OpGreaterEqual,
 		OpGreaterThan,
@@ -86,6 +85,7 @@ struct Token final
 		OpNotEqual,
 		OpPlus,
 		OpPower,
+		OpSlash,
 		OpStar,
 
 		Comma,
@@ -100,10 +100,10 @@ struct Token final
 		Semicolon,
 
 		Identifier,
-		NumberLiteral,
+		IntegerLiteral,
+		FloatLiteral,
 		StringLiteral,
 
-		Eol, // end of line
 		Eot // end of text
 	};
 	
@@ -115,7 +115,7 @@ struct Token final
 
 	Token(const String &spelling, intptr_t line, bool ident);
 
-	Token(Code type, const String &spelling, intptr_t line);
+	Token(Lexeme type, const String &spelling, intptr_t line);
 
 	~Token() = default;
 
@@ -123,46 +123,28 @@ struct Token final
 
 	Token &operator=(Token &&) = default;
 
-	intptr_t size() const { return (id == Code::Eol or id == Code::Eot) ? 0 : spelling.size(); }
+	intptr_t size() const { return id == Lexeme::Eot ? 0 : spelling.size(); }
 
-	bool is_eot() const {return id == Code::Eot; }
+	bool is_eot() const {return id == Lexeme::Eot; }
 
 	String to_string() const;
 
-	bool is_separator() const { return id == Code::Eol || id == Code::Semicolon; }
-
 	bool is_block_end() const;
 
-	bool is(Code c) const { return id == c; }
+	bool is(Lexeme c) const { return id == c; }
 
 	static void initialize();
 
-	static String get_name(Code c);
+	static String get_name(Lexeme c);
 
 	String get_name() const;
-
-	bool is_binary_op() const;
-
-	static int get_precedence(Code t);
-
-	int get_precedence() const;
-
-	bool is_right_associative() const;
-
-	static int highest_precedence();
-
-	static bool is_right_associative(Code t);
-
-	bool is_command_separator() const { return id == Code::Eol || id == Code::Semicolon; }
-
-	bool is_unary_op() const;
 
 
 	String spelling;
 
 	intptr_t line_no = 0;
 
-	Code id = Code::Unknown;
+	Lexeme id = Lexeme::Unknown;
 
 };
 

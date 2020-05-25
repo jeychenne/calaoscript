@@ -54,6 +54,7 @@ endif()
 ##  BUILD RUNTIME  ##
 #####################
 
+add_definitions(-DCALAO_STD_UNORDERED_MAP)
 include_directories("..")
 
 if(WIN32)

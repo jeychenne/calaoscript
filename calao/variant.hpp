@@ -133,6 +133,8 @@ public:
 
 	String to_string(bool quote = false) const;
 
+	bool to_boolean() const;
+
 	size_t hash() const;
 
 	double get_number() const;

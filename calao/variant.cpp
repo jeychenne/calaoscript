@@ -346,6 +346,24 @@ bool Variant::operator!=(const Variant &other) const
 	return not (*this == other);
 }
 
+bool Variant::to_boolean() const
+{
+	// There are only 3 values that evaluate to false: null, false and nan. Everything else is true.
+	switch (m_data_type)
+	{
+		case Datatype::Boolean:
+			return unsafe_cast<bool>(*this);
+		case Datatype::Null:
+			return false;
+		case Datatype::Float:
+			return !std::isnan(unsafe_cast<double>(*this));
+		case Datatype::Alias:
+			return resolve().to_boolean();
+		default:
+			return true;
+	}
+}
+
 String Variant::to_string(bool quote) const
 {
 	switch (m_data_type)

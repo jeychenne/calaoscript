@@ -21,32 +21,41 @@ using namespace calao;
 int main()
 {
 	Runtime rt;
-	Code code;
-	auto i = code.add_double_constant(3.14);
-	code.emit(1, Opcode::PushFloat, i);
-	code.add_string_constant("hello");
-	i = code.add_string_constant("world");
-	code.emit(124, Opcode::PushString, i);
-	code.emit(124, Opcode::PushBoolean, 1);
-	code.emit(125, Opcode::PushSmallInt, 413);
-	code.emit(125, Opcode::Negate);
-	i = code.add_integer_constant(8);
-	code.emit(125, Opcode::PushInteger, i);
-	code.emit(125, Opcode::Add);
-	code.emit(126, Opcode::PushSmallInt, 0);
-	code.emit(126, Opcode::Divide);
-	code.emit(130, Opcode::Return);
 
 	try
 	{
-		rt.disassemble(code, "test");
-		rt.interpret(code);
-		auto &v = rt.get_top();
-		std::cout << cast<intptr_t>(v) << std::endl;
+		rt.do_file("/home/julien/Temp/hello.calao");
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 	}
+
+//	Code code;
+//	auto i = code.add_float_constant(3.14);
+//	code.emit(1, Opcode::PushFloat, i);
+//	code.add_string_constant("hello");
+//	i = code.add_string_constant("world");
+//	code.emit(124, Opcode::PushString, i);
+//	code.emit(124, Opcode::PushBoolean, 1);
+//	code.emit(125, Opcode::PushSmallInt, 413);
+//	code.emit(125, Opcode::Negate);
+//	i = code.add_integer_constant(8);
+//	code.emit(125, Opcode::PushInteger, i);
+//	code.emit(125, Opcode::Add);
+//	code.emit(126, Opcode::PushSmallInt, 0);
+//	code.emit(126, Opcode::Divide);
+//	code.emit(130, Opcode::Return);
+//
+//	try
+//	{
+//		rt.disassemble(code, "test");
+//		rt.interpret(code);
+//		auto &v = rt.peek();
+//		std::cout << cast<intptr_t>(v) << std::endl;
+//	}
+//	catch (std::exception &e) {
+//		std::cerr << e.what() << std::endl;
+//	}
 
 //	Variant v("hello, world!");
 //	intptr_t i = 141;

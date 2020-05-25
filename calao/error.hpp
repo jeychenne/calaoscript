@@ -44,6 +44,42 @@ std::runtime_error error(const char *msg)
 
 std::runtime_error error(const String &msg);
 
+
+//---------------------------------------------------------------------------------------------------------------------
+
+// Error from the scripting engine
+class RuntimeError : public std::runtime_error
+{
+public:
+
+	template<typename T, typename... Args>
+	RuntimeError(intptr_t line, const char *fmt, const T &value, Args... args) :
+		std::runtime_error(utils::format(fmt, value, args...)), line(line)
+	{
+
+	}
+
+	RuntimeError(intptr_t line, const std::string &s) :
+		std::runtime_error(s), line(line)
+	{
+
+	}
+
+	RuntimeError(intptr_t line, const char *s) :
+		std::runtime_error(s), line(line)
+	{
+
+	}
+
+	RuntimeError(intptr_t line, const String &s);
+
+	intptr_t line_no() const { return line; }
+
+private:
+
+	intptr_t line;
+};
+
 } // namespace calao
 
 #endif // CALAO_ERROR_HPP

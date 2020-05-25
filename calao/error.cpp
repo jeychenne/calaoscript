@@ -22,4 +22,9 @@ std::runtime_error error(const String &msg)
 	return error(msg.data());
 }
 
+RuntimeError::RuntimeError(intptr_t line, const String &s) :
+	std::runtime_error(s.data()), line(line)
+{
+
+}
 } // namespace calao

@@ -35,6 +35,7 @@ Runtime::Runtime() :
 	if (! initialized)
 	{
 		hash_seed = (size_t) rand();
+		Token::initialize();
 		initialized = true;
 	}
 
@@ -97,6 +98,11 @@ void Runtime::create_builtins()
 	assert(object_class->get_class() != nullptr);
 	assert(class_class->get_class() != nullptr);
 	assert((Class::get<Class>()) != nullptr);
+}
+
+void Runtime::push_null()
+{
+	new(var()) Variant();
 }
 
 Variant &Runtime::push()
@@ -181,14 +187,14 @@ void Runtime::pop(int n)
 	}
 }
 
-Variant & Runtime::get_top(int n)
+Variant & Runtime::peek(int n)
 {
 	return *(top + n);
 }
 
 void Runtime::negate()
 {
-	auto &var = get_top();
+	auto &var = peek();
 
 	if (var.is_integer())
 	{
@@ -210,8 +216,8 @@ void Runtime::negate()
 
 void Runtime::math_op(char op)
 {
-	auto &v1 = get_top(-2);
-	auto &v2 = get_top(-1);
+	auto &v1 = peek(-2);
+	auto &v2 = peek(-1);
 	std::feclearexcept(FE_ALL_EXCEPT);
 
 	if (v1.is_number() && v2.is_number())
@@ -225,9 +231,10 @@ void Runtime::math_op(char op)
 					auto x = cast<intptr_t>(v1);
 					auto y = cast<intptr_t>(v2);
 					pop(2);
-					auto result = x + y;
-					check_math_error();
-					push_int(result);
+					if ((x < 0.0) == (y < 0.0) && std::abs(y) > (std::numeric_limits<intptr_t>::max)() - std::abs(x)) {
+						throw RuntimeError(get_current_line(), "[Math error] Integer overflow");
+					}
+					push_int(x+y);
 				}
 				else
 				{
@@ -235,7 +242,7 @@ void Runtime::math_op(char op)
 					auto y = v2.get_number();
 					pop(2);
 					auto result = x + y;
-					check_math_error();
+					check_float_error();
 					push(result);
 				}
 				return;
@@ -247,9 +254,7 @@ void Runtime::math_op(char op)
 					auto x = cast<intptr_t>(v1);
 					auto y = cast<intptr_t>(v2);
 					pop(2);
-					auto result = x - y;
-					check_math_error();
-					push_int(result);
+					push_int(x - y);
 				}
 				else
 				{
@@ -257,7 +262,7 @@ void Runtime::math_op(char op)
 					auto y = v2.get_number();
 					pop(2);
 					auto result = x - y;
-					check_math_error();
+					check_float_error();
 					push(result);
 				}
 				return;
@@ -269,9 +274,7 @@ void Runtime::math_op(char op)
 					auto x = cast<intptr_t>(v1);
 					auto y = cast<intptr_t>(v2);
 					pop(2);
-					auto result = x * y;
-					check_math_error();
-					push_int(result);
+					push_int(x * y);
 				}
 				else
 				{
@@ -279,7 +282,7 @@ void Runtime::math_op(char op)
 					auto y = v2.get_number();
 					pop(2);
 					auto result = x * y;
-					check_math_error();
+					check_float_error();
 					push(result);
 				}
 				return;
@@ -290,7 +293,7 @@ void Runtime::math_op(char op)
 				auto y = v2.get_number();
 				pop(2);
 				auto result = x / y;
-				check_math_error();
+				check_float_error();
 				push(result);
 				return;
 			}
@@ -303,7 +306,7 @@ void Runtime::math_op(char op)
 	throw error("[Type error] Cannot apply math operator to values which are not numbers");
 }
 
-void Runtime::check_math_error()
+void Runtime::check_float_error()
 {
 	if (fetestexcept(FE_OVERFLOW | FE_UNDERFLOW | FE_DIVBYZERO | FE_INVALID))
 	{
@@ -324,6 +327,7 @@ void Runtime::check_math_error()
 
 void Runtime::interpret(const Code &code)
 {
+	this->code = &code;
 	ip = code.data();
 
 	while (true)
@@ -342,6 +346,51 @@ void Runtime::interpret(const Code &code)
 				math_op('/');
 				break;
 			}
+			case Opcode::Equal:
+			{
+				auto &v2 = peek(-1);
+				auto &v1 = peek(-2);
+				bool value = (v1 == v2);
+				pop(2);
+				push(value);
+				break;
+			}
+			case Opcode::Greater:
+			{
+				auto &v2 = peek(-1);
+				auto &v1 = peek(-2);
+				bool value = (v1.compare(v2) > 0);
+				pop(2);
+				push(value);
+				break;
+			}
+			case Opcode::GreaterEqual:
+			{
+				auto &v2 = peek(-1);
+				auto &v1 = peek(-2);
+				bool value = (v1.compare(v2) >= 0);
+				pop(2);
+				push(value);
+				break;
+			}
+			case Opcode::Less:
+			{
+				auto &v2 = peek(-1);
+				auto &v1 = peek(-2);
+				bool value = (v1.compare(v2) < 0);
+				pop(2);
+				push(value);
+				break;
+			}
+			case Opcode::LessEqual:
+			{
+				auto &v2 = peek(-1);
+				auto &v1 = peek(-2);
+				bool value = (v1.compare(v2) <= 0);
+				pop(2);
+				push(value);
+				break;
+			}
 			case Opcode::Multiply:
 			{
 				math_op('*');
@@ -352,10 +401,31 @@ void Runtime::interpret(const Code &code)
 				negate();
 				break;
 			}
+			case Opcode::Not:
+			{
+				bool value = peek().to_boolean();
+				pop();
+				push(!value);
+				break;
+			}
+			case Opcode::NotEqual:
+			{
+				auto &v2 = peek(-1);
+				auto &v1 = peek(-2);
+				bool value = (v1 != v2);
+				pop(2);
+				push(value);
+				break;
+			}
 			case Opcode::PushBoolean:
 			{
 				bool value = bool(*ip++);
 				push(value);
+				break;
+			}
+			case Opcode::PushFalse:
+			{
+				push(false);
 				break;
 			}
 			case Opcode::PushFloat:
@@ -370,9 +440,19 @@ void Runtime::interpret(const Code &code)
 				push_int(value);
 				break;
 			}
+			case Opcode::PushNan:
+			{
+				push(std::nan(""));
+				break;
+			}
+			case Opcode::PushNull:
+			{
+				push_null();
+				break;
+			}
 			case Opcode::PushSmallInt:
 			{
-				push_int(*ip++);
+				push_int((int16_t) *ip++);
 				break;
 			}
 			case Opcode::PushString:
@@ -381,8 +461,16 @@ void Runtime::interpret(const Code &code)
 				push(std::move(value));
 				break;
 			}
+			case Opcode::PushTrue:
+			{
+				push(true);
+				break;
+			}
 			case Opcode::Return:
+			{
+				this->code = nullptr;
 				return;
+			}
 			case Opcode::Subtract:
 			{
 				math_op('-');
@@ -406,6 +494,12 @@ void Runtime::disassemble(const Code &code, const String &name)
 	}
 }
 
+size_t Runtime::print_simple_instruction(const char *name)
+{
+	printf("%s\n", name);
+	return 1;
+}
+
 size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 {
 	auto op = static_cast<Opcode>(code[offset]);
@@ -415,23 +509,47 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 	{
 		case Opcode::Add:
 		{
-			printf("ADD\n");
-			return 1;
+			return print_simple_instruction("ADD");
 		}
 		case Opcode::Divide:
 		{
-			printf("DIVIDE\n");
-			return 1;
+			return print_simple_instruction("DIVIDE");
+		}
+		case Opcode::Equal:
+		{
+			return print_simple_instruction("EQUAL");
+		}
+		case Opcode::Greater:
+		{
+			return print_simple_instruction("GREATER");
+		}
+		case Opcode::GreaterEqual:
+		{
+			return print_simple_instruction("GREATER_EQUAL");
+		}
+		case Opcode::Less:
+		{
+			return print_simple_instruction("LESS");
+		}
+		case Opcode::LessEqual:
+		{
+			return print_simple_instruction("LESS_EQUAL");
 		}
 		case Opcode::Multiply:
 		{
-			printf("MULTIPLY\n");
-			return 1;
+			return print_simple_instruction("MULTIPLY");
 		}
 		case Opcode::Negate:
 		{
-			printf("NEGATE\n");
-			return 1;
+			return print_simple_instruction("NEGATE");
+		}
+		case Opcode::Not:
+		{
+			return print_simple_instruction("NOT");
+		}
+		case Opcode::NotEqual:
+		{
+			return print_simple_instruction("NOT_EQUAL");
 		}
 		case Opcode::PushBoolean:
 		{
@@ -439,6 +557,10 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 			auto str = value ? "true" : "false";
 			printf("PUSH_BOOLEAN   %-5d      ; %s\n", value, str);
 			return 2;
+		}
+		case Opcode::PushFalse:
+		{
+			return print_simple_instruction("PUSH_FALSE");
 		}
 		case Opcode::PushFloat:
 		{
@@ -454,9 +576,17 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 			printf("PUSH_INTEGER   %-5d      ; %" PRIdPTR "\n", index, value);
 			return 2;
 		}
+		case Opcode::PushNan:
+		{
+			return print_simple_instruction("PUSH_NAN");
+		}
+		case Opcode::PushNull:
+		{
+			return print_simple_instruction("PUSH_NULL");
+		}
 		case Opcode::PushSmallInt:
 		{
-			int value = code[offset+1];
+			int value = (int16_t) code[offset+1];
 			printf("PUSH_SMALL_INT %-5d\n", value);
 			return 2;
 		}
@@ -467,21 +597,39 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 			printf("PUSH_STRING    %-5d      ; \"%s\"\n", index, value.data());
 			return 2;
 		}
+		case Opcode::PushTrue:
+		{
+			return print_simple_instruction("PUSH_TRUE");
+		}
 		case Opcode::Return:
 		{
-			printf("RETURN\n");
-			return 1;
+			return print_simple_instruction("RETURN");
 		}
 		case Opcode::Subtract:
 		{
-			printf("SUBTRACT\n");
-			return 1;
+			return print_simple_instruction("SUBTRACT");
 		}
 		default:
 			printf("Unknown opcode %d", static_cast<int>(op));
 	}
 
 	return 1;
+}
+
+void Runtime::do_file(const String &path)
+{
+	auto code = compiler.do_file(path);
+	disassemble(*code, "test");
+	interpret(*code);
+	auto &v = peek();
+	auto s = v.to_string(check_type<String>(v));
+	printf("------------------------\nValue on the stack: %s\n", s.data());
+}
+
+int Runtime::get_current_line() const
+{
+	auto offset = int(ip - 1 - code->data());
+	return code->get_line(offset);
 }
 
 

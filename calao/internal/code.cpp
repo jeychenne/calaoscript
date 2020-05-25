@@ -18,17 +18,17 @@
 
 namespace calao {
 
-intptr_t Code::add_integer_constant(intptr_t i)
+Instruction Code::add_integer_constant(intptr_t i)
 {
 	return add_constant(integer_pool, i);
 }
 
-intptr_t Code::add_double_constant(double n)
+Instruction Code::add_float_constant(double n)
 {
 	return add_constant(float_pool, n);
 }
 
-intptr_t Code::add_string_constant(String s)
+Instruction Code::add_string_constant(String s)
 {
 	return add_constant(string_pool, std::move(s));
 }

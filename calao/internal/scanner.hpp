@@ -33,7 +33,7 @@ public:
     // Set source code from a string
     void load_string(const String &code);
 
-    Token read_token();
+    Token advance();
 
     void report_error(const std::string &hint, intptr_t offset = 0, const char *error_type = "Syntax");
 

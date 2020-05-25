@@ -17,22 +17,6 @@
 
 namespace calao {
 
-// Same as isspace(), but does not consider '\n' as a space since it's used by the parser.
-static bool check_space(char32_t c)
-{
-    switch (c)
-    {
-    case ' ':
-    case '\t':
-    case '\r':
-    case '\f':
-    case '\v':
-        return true;
-    default:
-        return false;
-    }
-}
-
 Scanner::Scanner() :
     m_source(std::make_shared<SourceCode>())
 {
@@ -119,7 +103,7 @@ void Scanner::read_line()
 void Scanner::skip_white()
 {
 
-    while (check_space(m_char))
+    while (isspace((int) m_char))
     {
         read_char();
     }
@@ -215,7 +199,7 @@ void Scanner::scan_string(char32_t end)
 
 
 // Read one token from the source code
-Token Scanner::read_token()
+Token Scanner::advance()
 {
     RETRY:
     m_spelling.clear();
@@ -239,7 +223,7 @@ Token Scanner::read_token()
         {
             accept();
             // Allow '$'*, so that users can for instance create their own `init$$` symbol if they want to.
-            while (m_char == '$')
+            while (m_char == U'$')
             { accept(); }
         }
 
@@ -256,9 +240,10 @@ Token Scanner::read_token()
         {
             accept();
             scan_digits();
+			return Token(Token::Lexeme::FloatLiteral, m_spelling, m_line_no);
         }
 
-        return Token(Token::Code::NumberLiteral, m_spelling, m_line_no);
+        return Token(Token::Lexeme::IntegerLiteral, m_spelling, m_line_no);
     }
 
     switch (m_char)
@@ -280,47 +265,42 @@ Token Scanner::read_token()
     case U'"':
     {
         scan_string(U'"');
-        return Token(Token::Code::StringLiteral, m_spelling, m_line_no);
-    }
-    case U'\n':
-    {
-        accept();
-        return Token(Token::Code::Eol, "EOL", m_line_no);
+        return Token(Token::Lexeme::StringLiteral, m_spelling, m_line_no);
     }
     case Token::ETX:
     {
         // Don't accept token since we reached the end.
-        return Token(Token::Code::Eot, "EOT", m_line_no);
+        return Token(Token::Lexeme::Eot, "EOT", m_line_no);
     }
     case U'(':
     {
 	    accept();
-    	return Token(Token::Code::LParen, "(", m_line_no);
+    	return Token(Token::Lexeme::LParen, "(", m_line_no);
     }
     case U')':
     {
 	    accept();
-	    return Token(Token::Code::RParen, ")", m_line_no);
+	    return Token(Token::Lexeme::RParen, ")", m_line_no);
     }
     case U'{':
     {
 	    accept();
-	    return Token(Token::Code::LCurl, "{", m_line_no);
+	    return Token(Token::Lexeme::LCurl, "{", m_line_no);
     }
     case U'}':
     {
 	    accept();
-	    return Token(Token::Code::RCurl, "}", m_line_no);
+	    return Token(Token::Lexeme::RCurl, "}", m_line_no);
     }
     case U'[':
     {
 	    accept();
-	    return Token(Token::Code::LSquare, "[", m_line_no);
+	    return Token(Token::Lexeme::LSquare, "[", m_line_no);
     }
     case U']':
     {
 	    accept();
-	    return Token(Token::Code::RSquare, "]", m_line_no);
+	    return Token(Token::Lexeme::RSquare, "]", m_line_no);
     }
     case U'+':
     {
@@ -328,10 +308,10 @@ Token Scanner::read_token()
     	if (m_char == '+')
 	    {
     		accept();
-    		return Token(Token::Code::OpInc, "INC", m_line_no);
+    		return Token(Token::Lexeme::OpInc, "INC", m_line_no);
 	    }
 
-    	return Token(Token::Code::OpPlus, "+", m_line_no);
+    	return Token(Token::Lexeme::OpPlus, "+", m_line_no);
     }
     case U'-':
     {
@@ -339,45 +319,45 @@ Token Scanner::read_token()
 	    if (m_char == '-')
 	    {
 		    accept();
-		    return Token(Token::Code::OpDec, "DEC", m_line_no);
+		    return Token(Token::Lexeme::OpDec, "DEC", m_line_no);
 	    }
 
-	    return Token(Token::Code::OpMinus, "-", m_line_no);
+	    return Token(Token::Lexeme::OpMinus, "-", m_line_no);
     }
     case U'*':
     {
 	    accept();
-	    return Token(Token::Code::OpStar, "*", m_line_no);
+	    return Token(Token::Lexeme::OpStar, "*", m_line_no);
     }
     case U'/':
     {
 	    accept();
-	    return Token(Token::Code::OpDiv, "/", m_line_no);
+	    return Token(Token::Lexeme::OpSlash, "/", m_line_no);
     }
     case U'&':
     {
 	    accept();
-	    return Token(Token::Code::OpConcat, "&", m_line_no);
+	    return Token(Token::Lexeme::OpConcat, "&", m_line_no);
     }
     case U',':
     {
 	    accept();
-	    return Token(Token::Code::Comma, ",", m_line_no);
+	    return Token(Token::Lexeme::Comma, ",", m_line_no);
     }
     case U';':
     {
 	    accept();
-	    return Token(Token::Code::Semicolon, ";", m_line_no);
+	    return Token(Token::Lexeme::Semicolon, ";", m_line_no);
     }
     case U':':
     {
 	    accept();
-	    return Token(Token::Code::Colon, ":", m_line_no);
+	    return Token(Token::Lexeme::Colon, ":", m_line_no);
     }
     case U'.':
     {
         accept();
-        return Token(Token::Code::Dot, ".", m_line_no);
+        return Token(Token::Lexeme::Dot, ".", m_line_no);
     }
     case U'#':
     {
@@ -393,7 +373,7 @@ Token Scanner::read_token()
         if (m_char == U'=')
         {
             accept();
-            return Token(Token::Code::OpNotEqual, m_spelling, m_line_no);
+            return Token(Token::Lexeme::OpNotEqual, m_spelling, m_line_no);
         }
 
         report_error("invalid token");
@@ -410,16 +390,16 @@ Token Scanner::read_token()
             if (m_char == U'>')
             {
                 accept();
-                return Token(Token::Code::OpCompare, m_spelling, m_line_no);
+                return Token(Token::Lexeme::OpCompare, m_spelling, m_line_no);
             }
             else
             {
-                return Token(Token::Code::OpLessEqual, m_spelling, m_line_no);
+                return Token(Token::Lexeme::OpLessEqual, m_spelling, m_line_no);
             }
         }
         else
         {
-            return Token(Token::Code::OpLessThan, m_spelling, m_line_no);
+            return Token(Token::Lexeme::OpLessThan, m_spelling, m_line_no);
         }
     }
     case U'>':
@@ -429,11 +409,11 @@ Token Scanner::read_token()
         if (m_char == U'=')
         {
             accept();
-            return Token(Token::Code::OpGreaterEqual, m_spelling, m_line_no);
+            return Token(Token::Lexeme::OpGreaterEqual, m_spelling, m_line_no);
         }
         else
         {
-            return Token(Token::Code::OpGreaterThan, m_spelling, m_line_no);
+            return Token(Token::Lexeme::OpGreaterThan, m_spelling, m_line_no);
         }
     }
 
@@ -476,7 +456,7 @@ void Scanner::report_error(const std::string &hint, intptr_t offset, const char 
 		message.append(hint);
 	}
 
-	throw error(message);
+	throw RuntimeError(m_line_no, message);
 }
 
 } // namespace calao

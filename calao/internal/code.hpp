@@ -30,15 +30,26 @@ enum class Opcode : Instruction
 {
 	Add,
 	Divide,
+	Equal,
+	Greater,
+	GreaterEqual,
+	Less,
+	LessEqual,
 	Multiply,
 	Negate,
+	Not,
+	NotEqual,
 	PushBoolean,
-	PushInteger,
+	PushFalse,
 	PushFloat,
+	PushInteger,
+	PushNan,
+	PushNull,
 	PushSmallInt,
 	PushString,
+	PushTrue,
 	Return,
-	Subtract
+	Subtract,
 };
 
 
@@ -52,6 +63,10 @@ class Code final
 public:
 
 	Code() = default;
+
+	Code(const Code &) = delete;
+
+	Code(Code &&) = default;
 
 	~Code() = default;
 
@@ -69,11 +84,11 @@ public:
 
 	size_t size() const { return code.size(); }
 
-	intptr_t add_integer_constant(intptr_t i);
+	Instruction add_integer_constant(intptr_t i);
 
-	intptr_t add_double_constant(double n);
+	Instruction add_float_constant(double n);
 
-	intptr_t add_string_constant(String s);
+	Instruction add_string_constant(String s);
 
 	double get_float(intptr_t i) const { return float_pool[i]; }
 
@@ -86,17 +101,20 @@ public:
 private:
 
 	template<class T>
-	intptr_t add_constant(std::vector<T> &vec, T value)
+	Instruction add_constant(std::vector<T> &vec, T value)
 	{
 		auto it = std::find(vec.begin(), vec.end(), value);
 
 		if (it == vec.end())
 		{
+			if (unlikely(vec.size() == (std::numeric_limits<Instruction>::max)())) {
+				throw error("Maximum number of constants exceeded");
+			}
 			vec.push_back(std::move(value));
-			return intptr_t(vec.size() - 1);
+			return Instruction(vec.size() - 1);
 		}
 
-		return intptr_t(std::distance(vec.begin(), it));
+		return Instruction(std::distance(vec.begin(), it));
 	}
 
 	void add_line(intptr_t line_no);
