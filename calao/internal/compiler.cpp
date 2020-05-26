@@ -19,7 +19,7 @@ namespace calao {
 
 Compiler::Compiler(Runtime *rt) : runtime(rt)
 {
-#define FUNC(F) [this]() { F(); }
+#define FUNC(F) [this](bool can_assign) { F(can_assign); }
 
 	rules = {
 		{ ParseFunc(), ParseFunc(), Precedence::None }, // Unknown
@@ -202,13 +202,17 @@ void Compiler::parse_statement()
 	{
 		parse_var_declaration();
 	}
+	else if (token.is_separator())
+	{
+		advance(); // blank line or empty statement
+	}
 	else
 	{
 		parse_expression_statement();
 	}
 }
 
-void Compiler::parse_grouping()
+void Compiler::parse_grouping(bool)
 {
 	parse_expression();
 	expect(Lexeme::RParen);
@@ -219,7 +223,7 @@ void Compiler::parse_expression()
 	parse_precedence(Precedence::Assignment);
 }
 
-void Compiler::parse_unary_expression()
+void Compiler::parse_unary_expression(bool)
 {
 	auto op = previous_token.id;
 	parse_precedence(Precedence::Unary);
@@ -249,19 +253,23 @@ void Compiler::parse_precedence(Compiler::Precedence prec)
 	if (! prefix_rule) {
 		report_error("Expected an expression");
 	}
-	prefix_rule();
-
+	bool can_assign = (prec <= Precedence::Assignment);
+	prefix_rule(can_assign);
 
 	while (prec <= get_rule(token.id)->precedence)
 	{
 		advance();
 		auto &infix_rule = get_rule(previous_token.id)->infix;
 		assert(infix_rule);
-		infix_rule();
+		infix_rule(can_assign);
+	}
+
+	if (can_assign && accept(Lexeme::OpAssign)) {
+		report_error("Invalid assignment target");
 	}
 }
 
-void Compiler::parse_binary_expression()
+void Compiler::parse_binary_expression(bool)
 {
 	auto op = previous_token.id;
 
@@ -343,7 +351,7 @@ void Compiler::parse_binary_expression()
   }
 }
 
-void Compiler::parse_integer()
+void Compiler::parse_integer(bool)
 {
 	bool ok = false;
 	intptr_t value = previous_token.spelling.to_int(&ok);
@@ -364,7 +372,7 @@ void Compiler::parse_integer()
 	}
 }
 
-void Compiler::parse_float()
+void Compiler::parse_float(bool)
 {
 	bool ok = false;
 	double value = previous_token.spelling.to_float(&ok);
@@ -377,7 +385,7 @@ void Compiler::parse_float()
 	emit(Opcode::PushFloat, index);
 }
 
-void Compiler::parse_string()
+void Compiler::parse_string(bool)
 {
 	auto s = runtime->intern_string(previous_token.spelling);
 	auto index = code->add_string_constant(std::move(s));
@@ -389,7 +397,7 @@ Compiler::ParseRule *Compiler::get_rule(Compiler::Lexeme lex)
 	return &rules[static_cast<int>(lex)];
 }
 
-void Compiler::parse_literal()
+void Compiler::parse_literal(bool)
 {
 	switch (previous_token.id)
 	{
@@ -428,7 +436,9 @@ void Compiler::parse_print_statement()
 void Compiler::parse_expression_statement()
 {
 	parse_expression();
-	emit(Opcode::Pop);
+	// FIXME: I don't think we want to pop expressions off the stack. We can clean up the stack when we finalize a stack frame.
+	//  But if we do, we need to make sure other operations don't pop the value beforehand.
+	//emit(Opcode::Pop);
 	expect_separator();
 }
 
@@ -462,19 +472,19 @@ Instruction Compiler::add_identifier_constant(const String &ident)
 
 void Compiler::define_variable(Instruction global)
 {
-	emit(Opcode::SetGlobal, global);
+	emit(Opcode::DefineGlobal, global);
 }
 
-void Compiler::parse_variable()
+void Compiler::parse_variable(bool can_assign)
 {
-	parse_named_variable(previous_token.spelling);
+	parse_named_variable(previous_token.spelling, can_assign);
 }
 
-void Compiler::parse_named_variable(const String &name)
+void Compiler::parse_named_variable(const String &name, bool can_assign)
 {
 	auto arg = add_identifier_constant(name);
 
-	if (accept(Lexeme::OpAssign))
+	if (can_assign && accept(Lexeme::OpAssign))
 	{
 		parse_expression();
 		emit(Opcode::SetGlobal, arg);

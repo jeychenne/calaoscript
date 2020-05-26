@@ -199,7 +199,7 @@ void Scanner::scan_string(char32_t end)
 
 
 // Read one token from the source code
-Token Scanner::advance()
+Token Scanner::read_token()
 {
     RETRY:
     m_spelling.clear();
@@ -480,5 +480,30 @@ bool Scanner::check_space(char32_t c)
 		default:
 			return false;
 	}
+}
+
+Token Scanner::advance()
+{
+	while (tokens.empty() || !tokens.back().is_separator())
+	{
+		tokens.push_back(read_token());
+	}
+
+	auto t = std::move(tokens.front());
+	tokens.pop_front();
+
+	return t;
+}
+
+bool Scanner::lookahead(Token::Lexeme lex) const
+{
+	for (auto &t : tokens)
+	{
+		if (t.id == lex) {
+			return true;
+		}
+	}
+
+	return false;
 }
 } // namespace calao

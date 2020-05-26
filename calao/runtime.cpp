@@ -158,7 +158,7 @@ void Runtime::check_underflow()
 {
 	if (this->top == this->stack.begin())
 	{
-		throw error("[Internal error] Stack underflow");
+		throw RuntimeError(get_current_line(), "[Internal error] Stack underflow");
 	}
 }
 
@@ -173,7 +173,7 @@ void Runtime::pop(int n)
 		{
 			(--top)->~Variant();
 		}
-		throw error("[Internal error] Stack underflow");
+		throw RuntimeError(get_current_line(), "[Internal error] Stack underflow");
 	}
 
 	while (top > limit)
@@ -326,7 +326,8 @@ void Runtime::math_op(char op)
 	}
 
 	pop(2);
-	throw error("[Type error] Cannot apply math operator to values which are not numbers");
+	char opstring[2] = { op, '\0' };
+	throw RuntimeError(get_current_line(), "[Type error] Cannot apply math operator '%' to % and %", opstring, v1.class_name(), v2.class_name());
 }
 
 void Runtime::check_float_error()
@@ -370,6 +371,16 @@ void Runtime::interpret(const Code &code)
 				s.append(peek(-1).to_string());
 				pop(2);
 				push(std::move(s));
+				break;
+			}
+			case Opcode::DefineGlobal:
+			{
+				auto name = code.get_string(*ip++);
+				if (globals.find(name) != globals.end()) {
+					throw RuntimeError(get_current_line(), "Global variable \"%\" is already defined", name);
+				}
+				globals.insert({name, std::move(peek())});
+				pop();
 				break;
 			}
 			case Opcode::Divide:
@@ -537,7 +548,11 @@ void Runtime::interpret(const Code &code)
 			case Opcode::SetGlobal:
 			{
 				auto name = code.get_string(*ip++);
-				globals[name] = std::move(peek());
+				auto it = globals.find(name);
+				if (it == globals.end()) {
+					throw RuntimeError(get_current_line(), "Undefined variable \"%\"", name);
+				}
+				it->second = std::move(peek());
 				pop();
 				break;
 			}
@@ -584,6 +599,13 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		case Opcode::Concat:
 		{
 			return print_simple_instruction("CONCAT");
+		}
+		case Opcode::DefineGlobal:
+		{
+			int index = code[offset+1];
+			String value = code.get_string(index);
+			printf("DEFINE_GLOBAL  %-5d      ; %s\n", index, value.data());
+			return 2;
 		}
 		case Opcode::Divide:
 		{

@@ -26,6 +26,9 @@ int main()
 	{
 		rt.do_file("/home/julien/Temp/hello.calao");
 	}
+	catch (RuntimeError &e) {
+		std::cerr << "Line " << e.line_no() << ": " << e.what() << std::endl;
+	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 	}

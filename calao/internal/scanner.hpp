@@ -16,6 +16,7 @@
 #ifndef CALAO_SCANNER_HPP
 #define CALAO_SCANNER_HPP
 
+#include <deque>
 #include <calao/internal/token.hpp>
 #include <calao/internal/source_code.hpp>
 
@@ -35,6 +36,8 @@ public:
 
     Token advance();
 
+    bool lookahead(Token::Lexeme lex) const;
+
     void report_error(const std::string &hint, intptr_t offset = 0, const char *error_type = "Syntax");
 
     intptr_t line_no() const { return m_line_no; }
@@ -45,7 +48,12 @@ public:
 
 private:
 
+	// Source code (from a file or string).
     std::shared_ptr<SourceCode> m_source;
+
+    // List of tokens for the current line.
+    // This is used for look-ahead, which is needed by our single-pass compiler.
+    std::deque<Token> tokens;
 
     // Current word (accumulates code points)
     String m_spelling;
@@ -61,6 +69,8 @@ private:
 
     // Current code point
     char32_t m_char;
+
+    Token read_token();
 
     void reset();
 

@@ -53,7 +53,7 @@ private:
 		Primary
 	};
 
-	using ParseFunc = std::function<void()>;
+	using ParseFunc = std::function<void(bool)>;
 
 	struct ParseRule
 	{
@@ -87,23 +87,23 @@ private:
 
 	std::unique_ptr<Code> parse();
 
-	void parse_grouping();
+	void parse_grouping(bool can_assign);
 
 	void parse_expression();
 
-	void parse_unary_expression();
+	void parse_unary_expression(bool can_assign);
 
-	void parse_binary_expression();
+	void parse_binary_expression(bool can_assign);
 
 	void parse_precedence(Precedence prec);
 
-	void parse_integer();
+	void parse_integer(bool can_assign);
 
-	void parse_float();
+	void parse_float(bool can_assign);
 
-	void parse_string();
+	void parse_string(bool can_assign);
 
-	void parse_literal();
+	void parse_literal(bool can_assign);
 
 	void parse_statement();
 
@@ -119,9 +119,9 @@ private:
 
 	void define_variable(Instruction global);
 
-	void parse_variable();
+	void parse_variable(bool can_assign);
 
-	void parse_named_variable(const String &name);
+	void parse_named_variable(const String &name, bool can_assign);
 
 	ParseRule *get_rule(Lexeme lex);
 

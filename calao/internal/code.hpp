@@ -30,6 +30,7 @@ enum class Opcode : Instruction
 {
 	Add,
 	Concat,
+	DefineGlobal,
 	GetGlobal,
 	Divide,
 	Equal,

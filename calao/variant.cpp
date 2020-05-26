@@ -415,7 +415,15 @@ String Variant::to_string(bool quote) const
 
 Variant &Variant::operator=(Variant &&other) noexcept
 {
-	swap(other);
+	if (this->is_alias())
+	{
+		this->as.alias->variant.swap(other);
+	}
+	else
+	{
+		swap(other);
+	}
+
 	return *this;
 }
 
@@ -424,7 +432,14 @@ Variant &Variant::operator=(const Variant &other) noexcept
 	if (this != &other)
 	{
 		Variant tmp(other);
-		swap(tmp);
+		if (this->is_alias())
+		{
+			this->as.alias->variant.swap(tmp);
+		}
+		else
+		{
+			swap(tmp);
+		}
 	}
 
 	return *this;
