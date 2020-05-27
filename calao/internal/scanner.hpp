@@ -34,9 +34,8 @@ public:
     // Set source code from a string
     void load_string(const String &code);
 
-    Token advance();
+    Token read_token();
 
-    bool lookahead(Token::Lexeme lex) const;
 
     void report_error(const std::string &hint, intptr_t offset = 0, const char *error_type = "Syntax");
 
@@ -69,8 +68,6 @@ private:
 
     // Current code point
     char32_t m_char;
-
-    Token read_token();
 
     void reset();
 

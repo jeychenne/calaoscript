@@ -19,6 +19,8 @@
 #include <functional>
 #include <vector>
 #include <calao/typed_object.hpp>
+#include <calao/variant.hpp>
+#include <calao/internal/code.hpp>
 
 namespace calao {
 
@@ -29,12 +31,14 @@ class CallInfo;
 using ParamBitset = std::bitset<64>;
 
 // A native C++ callback.
-using NativeCallback = std::function<void(Runtime&, CallInfo&)>;
+using NativeCallback = std::function<Variant(CallInfo &)>;
 
 // A Routine is an internal data type used to represent one particular signature for a function. Each function has at least
 // one routine, and each routine is owned by at least one function.
 struct Routine
 {
+	Routine() = default; // routine without parameters
+
 	Routine(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg, int max_arg);
 
 	virtual ~Routine() = default;
@@ -51,7 +55,7 @@ struct Routine
 	ParamBitset ref_flags;
 
 	// Minimum and maximum number of arguments.
-	int min_argc, max_argc;
+	int min_argc = 0, max_argc = 0;
 };
 
 // A routine implemented in C++
@@ -64,12 +68,17 @@ struct NativeRoutine : public Routine
 	NativeCallback callback;
 };
 
-#if 0
+
 struct ScriptRoutine : public Routine
 {
+	ScriptRoutine();
+
+	ScriptRoutine(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg, int max_arg);
+
 	void call(Runtime &, CallInfo &) override;
+
+	Code code;
 };
-#endif
 
 
 //----------------------------------------------------------------------------------------------------------------------

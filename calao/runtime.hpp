@@ -27,7 +27,10 @@
 #include <calao/list.hpp>
 #include <calao/table.hpp>
 #include <calao/dictionary.hpp>
+#include <calao/internal/parser.hpp>
+#include <calao/internal/code.hpp>
 #include <calao/internal/compiler.hpp>
+#include <calao/internal/call.hpp>
 
 namespace calao {
 
@@ -237,6 +240,9 @@ private:
 
 	// Currently executing code chunk.
 	const Code *code = nullptr;
+
+	// Parses source code to an AST.
+	Parser parser;
 
 	// Compiles source code to byte code for the runtime.
 	Compiler compiler;

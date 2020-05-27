@@ -28,7 +28,7 @@ bool Runtime::initialized = false;
 
 
 Runtime::Runtime() :
-		stack(STACK_SIZE, Variant()), compiler(this)
+		stack(STACK_SIZE, Variant()), parser(this)
 {
 	srand(time(nullptr));
 
@@ -365,6 +365,15 @@ void Runtime::interpret(const Code &code)
 				math_op('+');
 				break;
 			}
+			case Opcode::Compare:
+			{
+				auto &v1 = peek(-2);
+				auto &v2 = peek(-1);
+				int result = v1.compare(v2);
+				pop(2);
+				push_int(result);
+				break;
+			}
 			case Opcode::Concat:
 			{
 				auto s = peek(-2).to_string();
@@ -488,6 +497,12 @@ void Runtime::interpret(const Code &code)
 			{
 				auto s = peek().to_string();
 				utils::printf(s);
+				break;
+			}
+			case Opcode::PrintLine:
+			{
+				auto s = peek().to_string();
+				utils::printf(s);
 				printf("\n");
 				break;
 			}
@@ -596,6 +611,10 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		{
 			return print_simple_instruction("ADD");
 		}
+		case Opcode::Compare:
+		{
+			return print_simple_instruction("COMPARE");
+		}
 		case Opcode::Concat:
 		{
 			return print_simple_instruction("CONCAT");
@@ -669,6 +688,10 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		case Opcode::Print:
 		{
 			return print_simple_instruction("PRINT");
+		}
+		case Opcode::PrintLine:
+		{
+			return print_simple_instruction("PRINT_LINE");
 		}
 		case Opcode::PushBoolean:
 		{
@@ -744,9 +767,11 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 
 void Runtime::do_file(const String &path)
 {
-	auto code = compiler.do_file(path);
-	disassemble(*code, "test");
-	interpret(*code);
+	auto ast = parser.parse_file(path);
+	auto routine = compiler.compile(std::move(ast));
+	disassemble(routine->code, "test");
+	CallInfo call;
+	routine->call(*this, call);
 }
 
 int Runtime::get_current_line() const

@@ -67,4 +67,26 @@ int Code::get_line(int offset) const
 	throw error("[Internal error] Cannot determine line number: invalid offset %", offset);
 }
 
+Instruction Code::add_local(String name, int depth)
+{
+	for (auto it = locals.rbegin(); it != locals.rend(); it++)
+	{
+		if (it->depth > depth) {
+			break;
+		}
+		if (it->name == name) {
+			throw error("[Name error] Variable \"%\" is already defined in the current scope", name);
+		}
+	}
+	locals.push_back({std::move(name), depth});
+
+	return Instruction(locals.size() - 1);
+}
+
+void Code::emit_return()
+{
+	intptr_t index = lines.empty() ? intptr_t(0) : intptr_t(lines.back().first);
+	emit(index, Opcode::Return);
+}
+
 } // namespace calao

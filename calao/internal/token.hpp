@@ -131,7 +131,7 @@ struct Token final
 
 	bool is_block_end() const;
 
-	bool is_separator() const { return id == Lexeme::Eol || id == Lexeme::Semicolon || id == Lexeme::Eot; }
+	bool is_separator() const { return id == Lexeme::Eol || id == Lexeme::Semicolon; }
 
 	bool is(Lexeme c) const { return id == c; }
 

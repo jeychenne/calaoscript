@@ -8,61 +8,74 @@
  *                                                                                                                    *
  * Created: 27/05/2020                                                                                                *
  *                                                                                                                    *
- * Purpose: the compiler turns an AST into an executable routine.                                                     *
+ * Purpose: see header.                                                                                               *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-
-#ifndef CALAO_COMPILER_HPP
-#define CALAO_COMPILER_HPP
-
-#include <memory>
-#include <calao/function.hpp>
 #include <calao/internal/ast.hpp>
+
+#define VISIT(NODE) v.visit_##NODE(this);
 
 namespace calao {
 
-class Compiler final : public AstVisitor
+void calao::UnaryExpression::visit(AstVisitor &v)
 {
-public:
+	VISIT(unary);
+}
 
-	Compiler() = default;
+void BinaryExpression::visit(AstVisitor &v)
+{
+	VISIT(binary);
+}
 
-	std::shared_ptr<ScriptRoutine> compile(AutoAst ast);
+void ConstantLiteral::visit(AstVisitor &v)
+{
+	VISIT(constant);
+}
 
-	void visit_constant(ConstantLiteral *node) override;
-	void visit_integer(IntegerLiteral *node) override;
-	void visit_float(FloatLiteral *node) override;
-	void visit_string(StringLiteral *node) override;
-	void visit_unary(UnaryExpression *node) override;
-	void visit_binary(BinaryExpression *node) override;
-	void visit_statements(StatementList *node) override;
-	void visit_declaration(Declaration *node) override;
-	void visit_print_statement(PrintStatement *node) override;
-	void visit_call(CallExpression *node) override;
-	void visit_variable(Variable *node) override;
-	void visit_assignment(Assignment *node) override;
+void FloatLiteral::visit(AstVisitor &v)
+{
+	VISIT(float);
+}
 
-private:
+void IntegerLiteral::visit(AstVisitor &v)
+{
+	VISIT(integer);
+}
 
-	// Routine being compiled.
-	std::shared_ptr<ScriptRoutine> routine;
+void StringLiteral::visit(AstVisitor &v)
+{
+	VISIT(string);
+}
 
-	void initialize();
+void StatementList::visit(AstVisitor &v)
+{
+	VISIT(statements);
+}
 
-	void finalize();
+void Declaration::visit(AstVisitor &v)
+{
+	VISIT(declaration);
+}
 
-	void open_scope();
+void PrintStatement::visit(AstVisitor &v)
+{
+	VISIT(print_statement);
+}
 
-	void close_scope();
+void CallExpression::visit(AstVisitor &v)
+{
+	VISIT(call);
+}
 
-	// Code of the routine being compiled.
-	Code *code = nullptr;
+void Variable::visit(AstVisitor &v)
+{
+	VISIT(variable);
+}
 
-	// Keep track of scopes.
-	int current_scope = 0;
-};
-
+void Assignment::visit(AstVisitor &v)
+{
+	VISIT(assignment);
+}
 } // namespace calao
-
-#endif // CALAO_COMPILER_HPP
+#undef VISIT

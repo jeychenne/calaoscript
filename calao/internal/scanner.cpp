@@ -216,7 +216,7 @@ Token Scanner::read_token()
             accept();
         }
 
-        // Identifier can end with '$'. This is used for "special" symbols, normally used for implementation details.
+        // Variable can end with '$'. This is used for "special" symbols, normally used for implementation details.
         // Special methods, such as the init$ constructor, end with this character. Private instance members should also
         // end with '$', although this is not enforced.
         if (m_char == U'$')
@@ -482,28 +482,4 @@ bool Scanner::check_space(char32_t c)
 	}
 }
 
-Token Scanner::advance()
-{
-	while (tokens.empty() || !tokens.back().is_separator())
-	{
-		tokens.push_back(read_token());
-	}
-
-	auto t = std::move(tokens.front());
-	tokens.pop_front();
-
-	return t;
-}
-
-bool Scanner::lookahead(Token::Lexeme lex) const
-{
-	for (auto &t : tokens)
-	{
-		if (t.id == lex) {
-			return true;
-		}
-	}
-
-	return false;
-}
 } // namespace calao

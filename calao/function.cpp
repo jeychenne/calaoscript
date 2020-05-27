@@ -13,6 +13,7 @@
  **********************************************************************************************************************/
 
 #include <calao/function.hpp>
+#include <calao/runtime.hpp>
 
 namespace calao {
 
@@ -22,4 +23,34 @@ Routine::Routine(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_
 
 }
 
+NativeRoutine::NativeRoutine(NativeCallback cb, std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg,
+							 int max_arg) : Routine(std::move(sig), ref_flags, min_arg, max_arg), callback(std::move(cb))
+{
+
+}
+
+void NativeRoutine::call(Runtime &, CallInfo &)
+{
+
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+
+
+ScriptRoutine::ScriptRoutine() : Routine()
+{
+
+}
+
+ScriptRoutine::ScriptRoutine(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg, int max_arg) :
+	Routine(std::move(sig), ref_flags, min_arg, max_arg)
+{
+
+}
+
+void ScriptRoutine::call(Runtime &rt, CallInfo &)
+{
+	rt.interpret(code);
+}
 } // namespace calao

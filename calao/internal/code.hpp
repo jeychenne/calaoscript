@@ -19,6 +19,7 @@
 #include <utility>
 #include <vector>
 #include <calao/string.hpp>
+#include <calao/internal/ast.hpp>
 
 namespace calao {
 
@@ -29,6 +30,7 @@ using Instruction = uint16_t;
 enum class Opcode : Instruction
 {
 	Add,
+	Compare,
 	Concat,
 	DefineGlobal,
 	GetGlobal,
@@ -46,6 +48,7 @@ enum class Opcode : Instruction
 	Pop,
 	Power,
 	Print,
+	PrintLine,
 	PushBoolean,
 	PushFalse,
 	PushFloat,
@@ -70,6 +73,12 @@ class Code final
 
 public:
 
+	struct Local
+	{
+		String name;
+		int depth;
+	};
+
 	Code() = default;
 
 	Code(const Code &) = delete;
@@ -84,6 +93,8 @@ public:
 
 	void emit(intptr_t line_no, Opcode op, Instruction i) { emit(line_no, op); emit(line_no, i); }
 
+	void emit_return();
+
 	const Instruction *data() const { return code.data(); }
 
 	const Instruction *end() const { return code.data() + code.size(); }
@@ -97,6 +108,8 @@ public:
 	Instruction add_float_constant(double n);
 
 	Instruction add_string_constant(String s);
+
+	Instruction add_local(String name, int depth);
 
 	double get_float(intptr_t i) const { return float_pool[i]; }
 
@@ -138,6 +151,9 @@ private:
 	std::vector<double> float_pool;
 	std::vector<intptr_t> integer_pool;
 	std::vector<String> string_pool;
+
+	// Local variables.
+	std::vector<Local> locals;
 };
 
 } // namespace calao
