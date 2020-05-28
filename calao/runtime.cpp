@@ -407,6 +407,14 @@ void Runtime::interpret(const Routine &routine)
 				push(std::move(s));
 				break;
 			}
+			case Opcode::DecrementLocal:
+			{
+				int index = *ip++;
+				auto &v = current_frame->locals[index];
+				assert(v.is_integer());
+				unsafe_cast<intptr_t>(v)--;
+				break;
+			}
 			case Opcode::DefineGlobal:
 			{
 				auto name = routine.get_string(*ip++);
@@ -470,6 +478,14 @@ void Runtime::interpret(const Routine &routine)
 				bool value = (v1.compare(v2) >= 0);
 				pop(2);
 				push(value);
+				break;
+			}
+			case Opcode::IncrementLocal:
+			{
+				int index = *ip++;
+				auto &v = current_frame->locals[index];
+				assert(v.is_integer());
+				unsafe_cast<intptr_t>(v)++;
 				break;
 			}
 			case Opcode::Jump:
@@ -702,6 +718,12 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("CONCAT         %-5d\n", narg);
 			return 2;
 		}
+		case Opcode::DecrementLocal:
+		{
+			int index = routine.code[offset + 1];
+			printf("DEC_LOCAL      %-5d\n", index);
+			return 2;
+		}
 		case Opcode::DefineGlobal:
 		{
 			int index = routine.code[offset + 1];
@@ -745,6 +767,12 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		case Opcode::GreaterEqual:
 		{
 			return print_simple_instruction("GREATER_EQUAL");
+		}
+		case Opcode::IncrementLocal:
+		{
+			int index = routine.code[offset + 1];
+			printf("INC_LOCAL      %-5d\n", index);
+			return 2;
 		}
 		case Opcode::Jump:
 		{
@@ -919,8 +947,8 @@ String Runtime::intern_string(const String &s)
 
 void Runtime::push_stack_frame(int nlocal)
 {
-	frames.push_back(std::make_unique<StackFrame>());
-	current_frame = frames.back().get();
+	current_frame = frame_pool.newElement();
+	frames.push_back(current_frame);
 	// Add 1 for the return value, which will sit at the beginning of the frame
 	ensure_capacity(nlocal + 1);
 	current_frame->base = top;
@@ -936,8 +964,9 @@ void Runtime::pop_stack_frame()
 	auto n = int(top - current_frame->locals);
 	assert(n >= 0);
 	pop(n);
+	frame_pool.deleteElement(current_frame);
 	frames.pop_back();
-	current_frame = frames.empty() ? nullptr : frames.back().get();
+	current_frame = frames.empty() ? nullptr : frames.back();
 }
 
 

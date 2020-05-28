@@ -31,6 +31,7 @@
 #include <calao/internal/code.hpp>
 #include <calao/internal/compiler.hpp>
 #include <calao/internal/call.hpp>
+#include <calao/third_party/memory_pool.hpp>
 
 namespace calao {
 
@@ -194,7 +195,7 @@ public:
 
 private:
 
-	struct StackFrame
+	struct CallFrame
 	{
 		// Beginning of the frame.
 		Variant *base;
@@ -270,10 +271,13 @@ private:
 	// Global variables.
 	Dictionary<Variant> globals;
 
-	// Stack of stack frames.
-	std::vector<std::unique_ptr<StackFrame>> frames;
+	// Memory pool for stack frames.
+	acay::MemoryPool<CallFrame, 64 * sizeof(CallFrame)> frame_pool;
 
-	StackFrame *current_frame = nullptr;
+	// Stack of call frames.
+	std::vector<CallFrame*> frames;
+
+	CallFrame *current_frame = nullptr;
 
 	// Global initialization.
 	static bool initialized;

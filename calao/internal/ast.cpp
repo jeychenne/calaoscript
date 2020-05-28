@@ -102,5 +102,15 @@ void WhileStatement::visit(AstVisitor &v)
 {
 	VISIT(while_statement);
 }
+
+void ForStatement::visit(AstVisitor &v)
+{
+	VISIT(for_statement);
+}
+
+void LoopExitStatement::visit(AstVisitor &v)
+{
+	VISIT(loop_exit);
+}
 } // namespace calao
 #undef VISIT

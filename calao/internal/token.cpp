@@ -58,6 +58,7 @@ static Array<String> token_names = {
         "print",
         "ref",
         "return",
+        "step",
         "super",
         "then",
         "this",

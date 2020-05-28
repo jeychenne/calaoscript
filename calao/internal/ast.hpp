@@ -232,6 +232,26 @@ struct WhileStatement final : public Ast
 	AutoAst cond, block;
 };
 
+struct ForStatement final : public Ast
+{
+	ForStatement(int line, AutoAst var, AutoAst e1, AutoAst e2, AutoAst e3, AutoAst block, bool down) :
+		Ast(line), var(std::move(var)), start(std::move(e1)), end(std::move(e2)), step(std::move(e3)), block(std::move(block)), down(down) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst var, start, end, step, block;
+	bool down;
+};
+
+struct LoopExitStatement final : public Ast
+{
+	LoopExitStatement(int line, Lexeme lex) : Ast(line), lex(lex) { }
+
+	void visit(AstVisitor &v) override;
+
+	Lexeme lex;
+};
+
 //---------------------------------------------------------------------------------------------------------------------
 
 class AstVisitor
@@ -257,6 +277,8 @@ public:
 	virtual void visit_if_condition(IfCondition *node) = 0;
 	virtual void visit_if_statement(IfStatement *node) = 0;
 	virtual void visit_while_statement(WhileStatement *node) = 0;
+	virtual void visit_for_statement(ForStatement *node) = 0;
+	virtual void visit_loop_exit(LoopExitStatement *node) = 0;
 };
 
 } // namespace calao

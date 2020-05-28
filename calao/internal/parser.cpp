@@ -141,9 +141,21 @@ AutoAst Parser::parse_statement()
 	{
 		return parse_while_statement();
 	}
+	else if (accept(Lexeme::For))
+	{
+		return parse_for_statement();
+	}
 	else if (accept(Lexeme::Do))
 	{
-		return parse_statements();
+		return parse_statements(true);
+	}
+	else if (accept(Lexeme::Break))
+	{
+		return make<LoopExitStatement>(Lexeme::Break);
+	}
+	else if (accept(Lexeme::Continue))
+	{
+		return make<LoopExitStatement>(Lexeme::Continue);
 	}
 	else if (accept(Lexeme::Assert))
 	{
@@ -155,7 +167,7 @@ AutoAst Parser::parse_statement()
 	}
 }
 
-AutoAst Parser::parse_statements()
+AutoAst Parser::parse_statements(bool open_scope)
 {
 	trace_ast();
 	AstList block;
@@ -169,7 +181,7 @@ AutoAst Parser::parse_statements()
 	}
 	accept(Lexeme::End);
 
-	return std::make_unique<StatementList>(line, std::move(block), true);
+	return std::make_unique<StatementList>(line, std::move(block), open_scope);
 }
 
 AutoAst Parser::parse_if_block()
@@ -214,7 +226,7 @@ AutoAst Parser::parse_expression_statement()
 AutoAst Parser::parse_expression()
 {
 	trace_ast();
-	return parse_or_expression();
+	return parse_conditional_expression();
 }
 
 AutoAst Parser::parse_declaration(bool local)
@@ -434,6 +446,12 @@ AutoAst Parser::parse_primary_expression()
 		accept();
 		return make<ConstantLiteral>(value);
 	}
+	else if (accept(Lexeme::LParen))
+	{
+		auto e = parse_expression();
+		expect(Lexeme::RParen, "in parenthesized expression");
+		return e;
+	}
 
 	report_error("Invalid primary expression");
 	return nullptr;
@@ -514,9 +532,62 @@ AutoAst Parser::parse_while_statement()
 	auto line = get_line();
 	auto e = parse_expression();
 	expect(Lexeme::Do, "in while statement");
-	auto block = parse_statements();
+	auto block = parse_statements(true);
 
 	return std::make_unique<WhileStatement>(line, std::move(e), std::move(block));
+}
+
+AutoAst Parser::parse_for_statement()
+{
+	constexpr const char *hint = "in for loop";
+	auto line = get_line();
+	AutoAst e1, e2, e3;
+	bool down = false;
+	// var keyword is optional
+	accept(Lexeme::Var);
+	auto var = parse_identifier(hint);
+	expect(Lexeme::OpAssign, hint);
+	e1 = parse_expression();
+
+	if (accept(Lexeme::To))
+	{
+		e2 = parse_expression();
+	}
+	else if (accept(Lexeme::Downto))
+	{
+		e2 = parse_expression();
+		down = true;
+	}
+	else
+	{
+		report_error("Expected 'to' or 'downto' in for loop");
+	}
+
+	if (accept(Lexeme::Step)) {
+		e3 = parse_expression();
+	}
+	expect(Lexeme::Do, hint);
+	// Don't open a scope for the block: we will open it ourselves so that we can include the loop variable in it.
+	auto block = parse_statements(false);
+
+	return std::make_unique<ForStatement>(line, std::move(var), std::move(e1), std::move(e2), std::move(e3), std::move(block), down);
+}
+
+AutoAst Parser::parse_conditional_expression()
+{
+	trace_ast();
+	auto e = parse_or_expression();
+	if (accept(Lexeme::If))
+	{
+
+		AstList if_cond;
+		if_cond.push_back(make<IfCondition>(parse_expression(), std::move(e)));
+		expect(Lexeme::Else, "in conditional expression");
+		auto else_block = parse_expression();
+		e = make<IfStatement>(std::move(if_cond), std::move(else_block));
+	}
+
+	return e;
 }
 
 } // namespace calao

@@ -17,6 +17,7 @@
 #define CALAO_COMPILER_HPP
 
 #include <memory>
+#include <vector>
 #include <calao/function.hpp>
 #include <calao/internal/ast.hpp>
 
@@ -47,6 +48,8 @@ public:
 	void visit_if_condition(IfCondition *node) override;
 	void visit_if_statement(IfStatement *node) override;
 	void visit_while_statement(WhileStatement *node) override;
+	void visit_for_statement(ForStatement *node) override;
+	void visit_loop_exit(LoopExitStatement *node) override;
 
 private:
 
@@ -63,8 +66,22 @@ private:
 
 	std::pair<int,int> get_scope() const;
 
+	void backpatch_breaks(int previous);
+
+	void backpatch_continues(int previous);
+
 	// Code of the routine being compiled.
 	Code *code = nullptr;
+
+	// For each block that may contain breaks, we set break_count to 0. Whenever a break is found,
+	// the counter is incremented and the address to be backpatched is pushed onto break_jumps. At
+	// the end of the block, we reset the counter and backpatch the required number of addresses.
+	std::vector<int> break_jumps;
+	int break_count = 0;
+
+	// "continue" statements follow the same logic as breaks.
+	std::vector<int> continue_jumps;
+	int continue_count = 0;
 
 	// Keep track of scopes.
 	int current_scope = 0;

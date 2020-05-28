@@ -63,6 +63,7 @@ struct Token final
 		Print,
 		Ref,
 		Return,
+		Step,
 		Super,
 		Then,
 		This,

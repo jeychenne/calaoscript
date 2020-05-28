@@ -67,13 +67,15 @@ private:
 
 	AutoAst parse_statement();
 
-	AutoAst parse_statements();
+	AutoAst parse_statements(bool open_scope);
 
 	AutoAst parse_print_statement();
 
 	AutoAst parse_expression_statement();
 
 	AutoAst parse_expression();
+
+	AutoAst parse_conditional_expression();
 
 	AutoAst parse_declaration(bool local);
 
@@ -112,6 +114,8 @@ private:
 	AutoAst parse_if_block();
 
 	AutoAst parse_while_statement();
+
+	AutoAst parse_for_statement();
 
 	// Instance of the scanner (reads one token at a time).
 	Scanner scanner;

@@ -76,6 +76,7 @@ file(GLOB SOURCE_FILES
         utils/*.cpp utils/*.hpp
         third_party/utf8proc/utf8proc.c
         third_party/utf8proc/utf8proc.h
+        third_party/memory_pool.hpp
 )
 
 add_library(calao-runtime STATIC ${SOURCE_FILES})

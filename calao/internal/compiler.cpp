@@ -411,12 +411,120 @@ void Compiler::visit_if_statement(IfStatement *node)
 
 void Compiler::visit_while_statement(WhileStatement *node)
 {
+	int previous_break_count = break_count;
+	break_count = 0;
 	int loop_start = code->get_current_offset();
 	node->cond->visit(*this);
 	int exit_jump = code->emit_jump(node->line_no, Opcode::JumpFalse);
 	node->block->visit(*this);
 	code->emit_jump(node->line_no, Opcode::Jump, loop_start);
 	code->backpatch(exit_jump);
+	backpatch_breaks(previous_break_count);
+}
+
+void Compiler::visit_for_statement(ForStatement *node)
+{
+	auto scope = open_scope();
+	int previous_break_count = break_count;
+	int previous_continue_count = continue_count;
+	break_count = continue_count = 0;
+
+	// Initialize loop variable
+	auto ident = dynamic_cast<Variable*>(node->var.get());
+	node->start->visit(*this);
+	auto var_index = routine->add_local(ident->name, current_scope, scope_depth);
+	EMIT(Opcode::DefineLocal, var_index);
+
+	// Evaluate end condition once and store it in a hidden variable.
+	node->end->visit(*this);
+	auto end_index = routine->add_local("$end", current_scope, scope_depth);
+	EMIT(Opcode::DefineLocal, end_index);
+
+	// Evaluate step condition if it was provided and store it in a hidden variable;
+	// otherwise, we use special-purpose instructions to increment/decrement the counter.
+	Instruction step_index = (std::numeric_limits<Instruction>::max)();
+
+	if (node->step)
+	{
+		node->step->visit(*this);
+		step_index = routine->add_local("$step", current_scope, scope_depth);
+		EMIT(Opcode::DefineLocal, step_index);
+	}
+
+	// The loop starts here.
+	int loop_start = code->get_current_offset();
+
+	// End condition.
+	EMIT(Opcode::GetLocal, var_index);
+	EMIT(Opcode::GetLocal, end_index);
+	auto cmp = node->down ? Opcode::Less : Opcode::Greater;
+	EMIT(cmp);
+	int jump_end = code->emit_jump(node->line_no, Opcode::JumpTrue);
+
+	// Compile block
+	node->block->visit(*this);
+
+	backpatch_continues(previous_continue_count);
+	// Update counter
+	if (node->step)
+	{
+		EMIT(Opcode::GetLocal, var_index);
+		EMIT(Opcode::GetLocal, step_index);
+		auto op = node->down ? Opcode::Subtract : Opcode::Add;
+		EMIT(op);
+		EMIT(Opcode::SetLocal, var_index);
+	}
+	else
+	{
+		auto op = node->down ? Opcode::DecrementLocal : Opcode::IncrementLocal;
+		EMIT(op, var_index);
+	}
+
+	// Go back to the beginning of the loop.
+	code->emit_jump(node->line_no, Opcode::Jump, loop_start);
+	code->backpatch(jump_end);
+	backpatch_breaks(previous_break_count);
+
+	close_scope(scope);
+}
+
+void Compiler::backpatch_breaks(int previous)
+{
+	for (int i = 0; i < break_count; i++)
+	{
+		int addr = break_jumps.back();
+		break_jumps.pop_back();
+		code->backpatch(addr);
+	}
+	break_count = previous;
+}
+
+void Compiler::visit_loop_exit(LoopExitStatement *node)
+{
+	int addr = code->emit_jump(node->line_no, Opcode::Jump);
+
+	if (node->lex == Lexeme::Break)
+	{
+		break_jumps.push_back(addr);
+		break_count++;
+	}
+	else
+	{
+		assert(node->lex == Lexeme::Continue);
+		continue_jumps.push_back(addr);
+		continue_count++;
+	}
+}
+
+void Compiler::backpatch_continues(int previous)
+{
+	for (int i = 0; i < continue_count; i++)
+	{
+		int addr = continue_jumps.back();
+		continue_jumps.pop_back();
+		code->backpatch(addr);
+	}
+	continue_count = previous;
 }
 
 
