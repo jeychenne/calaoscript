@@ -23,10 +23,16 @@ namespace calao {
 
 using Lexeme = Token::Lexeme;
 
-std::shared_ptr<ScriptRoutine> Compiler::compile(AutoAst ast)
+std::shared_ptr<Routine> Compiler::compile(AutoAst ast)
 {
 	initialize();
+	code->emit(ast->line_no, Opcode::NewFrame, 0);
+	int offset = code->get_backpatch_offset();
+	int previous_scope = open_scope(); // open module
 	ast->visit(*this);
+	close_scope(previous_scope);
+	// Fix number of locals.
+	code->backpatch(offset, routine->local_count());
 	finalize();
 
 	return std::move(this->routine);
@@ -34,8 +40,9 @@ std::shared_ptr<ScriptRoutine> Compiler::compile(AutoAst ast)
 
 void Compiler::initialize()
 {
+	scope_id = 0;
 	current_scope = 0;
-	routine = std::make_shared<ScriptRoutine>();
+	routine = std::make_shared<Routine>();
 	code = &routine->code;
 }
 
@@ -45,14 +52,19 @@ void Compiler::finalize()
 	code = nullptr;
 }
 
-void Compiler::open_scope()
+int Compiler::open_scope()
 {
-	++current_scope;
+	int previous = current_scope;
+	current_scope = ++scope_id;
+	++scope_depth;
+
+	return previous;
 }
 
-void Compiler::close_scope()
+void Compiler::close_scope(int previous)
 {
-	--current_scope;
+	--scope_depth;
+	current_scope = previous;
 }
 
 void Compiler::visit_constant(ConstantLiteral *node)
@@ -88,20 +100,20 @@ void Compiler::visit_integer(IntegerLiteral *node)
 	}
 	else
 	{
-		auto index = code->add_integer_constant(value);
+		auto index = routine->add_integer_constant(value);
 		EMIT(Opcode::PushInteger, index);
 	}
 }
 
 void Compiler::visit_float(FloatLiteral *node)
 {
-	auto index = code->add_float_constant(node->value);
+	auto index = routine->add_float_constant(node->value);
 	EMIT(Opcode::PushFloat, index);
 }
 
 void Compiler::visit_string(StringLiteral *node)
 {
-	auto index = code->add_string_constant(std::move(node->value));
+	auto index = routine->add_string_constant(std::move(node->value));
 	EMIT(Opcode::PushString, index);
 }
 
@@ -178,9 +190,13 @@ void Compiler::visit_binary(BinaryExpression *node)
 
 void Compiler::visit_statements(StatementList *node)
 {
+	int scope;
+	if (node->open_scope) scope = open_scope();
+
 	for (auto &stmt : node->statements) {
 		stmt->visit(*this);
 	}
+	if (node->open_scope) close_scope(scope);
 }
 
 void Compiler::visit_declaration(Declaration *node)
@@ -198,8 +214,24 @@ void Compiler::visit_declaration(Declaration *node)
 	else {
 		node->rhs.front()->visit(*this);
 	}
-	auto global = code->add_string_constant(ident->name);
-	EMIT(Opcode::DefineGlobal, global);
+
+	if (node->local || scope_depth > 1)
+	{
+		try
+		{
+			auto index = routine->add_local(ident->name, current_scope, scope_depth);
+			EMIT(Opcode::DefineLocal, index);
+		}
+		catch (std::runtime_error &e)
+		{
+			THROW(e.what());
+		}
+	}
+	else
+	{
+		auto index = routine->add_string_constant(ident->name);
+		EMIT(Opcode::DefineGlobal, index);
+	}
 }
 
 void Compiler::visit_print_statement(PrintStatement *node)
@@ -216,8 +248,17 @@ void Compiler::visit_call(CallExpression *node)
 
 void Compiler::visit_variable(Variable *node)
 {
-	auto var = code->add_string_constant(node->name);
-	EMIT(Opcode::GetGlobal, var);
+	// Try to find a local variable, otherwise try to get a global.
+	auto index = routine->find_local(node->name, current_scope);
+	if (index)
+	{
+		EMIT(Opcode::GetLocal, *index);
+	}
+	else
+	{
+		auto var = routine->add_string_constant(node->name);
+		EMIT(Opcode::GetGlobal, var);
+	}
 }
 
 void Compiler::visit_assignment(Assignment *node)
@@ -227,8 +268,39 @@ void Compiler::visit_assignment(Assignment *node)
 		THROW("[Syntax error] Expected a variable name in assignment");
 	}
 	node->rhs->visit(*this);
-	auto arg = code->add_string_constant(var->name);
-	EMIT(Opcode::SetGlobal, arg);
+
+	// Try to find a local variable, otherwise try to get a global.
+	auto index = routine->find_local(var->name, current_scope);
+	if (index)
+	{
+		EMIT(Opcode::SetLocal, *index);
+	}
+	else
+	{
+		auto arg = routine->add_string_constant(var->name);
+		EMIT(Opcode::SetGlobal, arg);
+	}
+}
+
+std::pair<int, int> Compiler::get_scope() const
+{
+	return { current_scope, scope_depth };
+}
+
+void Compiler::visit_assert_statement(AssertStatement *node)
+{
+	Instruction narg = (node->msg == nullptr) ? 1 : 2;
+	node->expr->visit(*this);
+	if (narg == 2) node->msg->visit(*this);
+	EMIT(Opcode::Assert, narg);
+}
+
+void Compiler::visit_concat_expression(ConcatExpression *node)
+{
+	for (auto &e : node->list) {
+		e->visit(*this);
+	}
+	EMIT(Opcode::Concat, Instruction(node->list.size()));
 }
 
 

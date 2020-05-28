@@ -17,9 +17,9 @@
 #include <calao/internal/parser.hpp>
 
 #if 0
-#define debug_ast() std::cerr << token.line_no << ": " << __FUNCTION__ << std::endl;
+#define trace_ast() std::cerr << token.line_no << ": " << __FUNCTION__ << std::endl;
 #else
-#define debug_ast()
+#define trace_ast()
 #endif
 
 namespace calao {
@@ -91,7 +91,7 @@ AutoAst Parser::do_string(const String &text)
 
 int Parser::get_line()
 {
-	return (int) scanner.line_no();
+	return (int) token.line_no;
 }
 
 void Parser::initialize()
@@ -103,45 +103,71 @@ AutoAst Parser::parse()
 {
 	initialize();
 	accept();
+	auto line = get_line();
 	AstList block;
 	while (token.is_separator()) accept();
 
-	while (!accept(Lexeme::Eot))
+	while (!check(Lexeme::Eot))
 	{
 		block.push_back(parse_statement());
 		while (token.is_separator()) accept();
 	}
-
-	return make<StatementList>(std::move(block));
+	expect(Lexeme::Eot, "at end of file");
+	return std::make_unique<StatementList>(line, std::move(block));
 }
 
 AutoAst Parser::parse_statement()
 {
-	debug_ast();
+	trace_ast();
 
 	if (accept(Lexeme::Print))
 	{
 		return parse_print_statement();
 	}
+	if (accept(Lexeme::Local))
+	{
+		accept(Lexeme::Var);
+		return parse_declaration(true);
+	}
 	else if (accept(Lexeme::Var))
 	{
-		return parse_declaration();
+		return parse_declaration(false);
 	}
-//	else if (accept(Lexeme::Do))
-//	{
-//		open_scope();
-//		parse_block();
-//		close_scope();
-//	}
+	else if (accept(Lexeme::Do))
+	{
+		return parse_statements();
+	}
+	else if (accept(Lexeme::Assert))
+	{
+		return parse_assertion();
+	}
 	else
 	{
 		return parse_expression_statement();
 	}
 }
 
+AutoAst Parser::parse_statements()
+{
+	trace_ast();
+	AstList block;
+	auto line = get_line();
+	while (token.is_separator()) { accept(); }
+
+	while (!check(Lexeme::End))
+	{
+		block.push_back(parse_statement());
+		while (token.is_separator()) accept();
+	}
+	expect(Lexeme::End, "at end of statement block");
+
+	return std::make_unique<StatementList>(line, std::move(block), true);
+}
+
+
 AutoAst Parser::parse_print_statement()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_expression();
 	bool add_newline = !accept(Lexeme::Comma);
 
@@ -150,27 +176,26 @@ AutoAst Parser::parse_print_statement()
 
 AutoAst Parser::parse_expression_statement()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_expression();
 	if (check(Lexeme::OpAssign))
 	{
 		accept();
 		return make<Assignment>(std::move(e), parse_expression());
 	}
-	expect_separator();
 
 	return e;
 }
 
 AutoAst Parser::parse_expression()
 {
-	debug_ast();
+	trace_ast();
 	return parse_or_expression();
 }
 
-AutoAst Parser::parse_declaration()
+AutoAst Parser::parse_declaration(bool local)
 {
-	debug_ast();
+	trace_ast();
 	// rhs may be empty if the variable(s) are declared but not assigned.
 	AstList lhs, rhs;
 	lhs.push_back(parse_identifier("in variable declaration"));
@@ -195,14 +220,12 @@ AutoAst Parser::parse_declaration()
 		report_error("Invalid declaration: the number of elements on the left hand side and right and side doesn't match");
 	}
 
-	expect_separator();
-
-	return make<Declaration>(std::move(lhs), std::move(rhs));
+	return make<Declaration>(std::move(lhs), std::move(rhs), local);
 }
 
 AutoAst Parser::parse_identifier(const char *msg)
 {
-	debug_ast();
+	trace_ast();
 	// This may not be an identifier, but we will throw if that's not the case...
 	auto ident = token.spelling;
 	expect(Lexeme::Identifier, msg);
@@ -213,7 +236,7 @@ AutoAst Parser::parse_identifier(const char *msg)
 
 AutoAst Parser::parse_or_expression()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_and_expression();
 
 	if (check(Lexeme::Or))
@@ -227,7 +250,7 @@ AutoAst Parser::parse_or_expression()
 
 AutoAst Parser::parse_and_expression()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_not_expression();
 
 	if (check(Lexeme::And))
@@ -241,11 +264,12 @@ AutoAst Parser::parse_and_expression()
 
 AutoAst Parser::parse_not_expression()
 {
-	debug_ast();
-	if (check(Lexeme::Not))
+	trace_ast();
+	if (check(Lexeme::Not) || check(Lexeme::OpMinus))
 	{
+		auto op = token.id;
 		accept();
-		return make<UnaryExpression>(Lexeme::Not, parse_comp_expression());
+		return make<UnaryExpression>(op, parse_comp_expression());
 	}
 
 	return parse_comp_expression();
@@ -253,7 +277,7 @@ AutoAst Parser::parse_not_expression()
 
 AutoAst Parser::parse_comp_expression()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_additive_expression();
 
 	while (check(Lexeme::OpEqual) || check(Lexeme::OpNotEqual) || check(Lexeme::OpGreaterEqual) || check(Lexeme::OpGreaterThan) || check(Lexeme::OpLessEqual)
@@ -269,10 +293,13 @@ AutoAst Parser::parse_comp_expression()
 
 AutoAst Parser::parse_additive_expression()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_multiplicative_expression();
 
-	while (check(Lexeme::OpPlus) || check(Lexeme::OpMinus) || check(Lexeme::OpConcat))
+	if (accept(Lexeme::OpConcat)) {
+		return parse_concat_expression(std::move(e));
+	}
+	while (check(Lexeme::OpPlus) || check(Lexeme::OpMinus))
 	{
 		auto op = token.id;
 		accept();
@@ -284,7 +311,7 @@ AutoAst Parser::parse_additive_expression()
 
 AutoAst Parser::parse_multiplicative_expression()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_signed_expression();
 
 	while (check(Lexeme::OpStar) || check(Lexeme::OpSlash) || check(Lexeme::OpMod))
@@ -299,7 +326,7 @@ AutoAst Parser::parse_multiplicative_expression()
 
 AutoAst Parser::parse_signed_expression()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_exponential_expression();
 
 	if (accept(Lexeme::OpMinus))
@@ -310,7 +337,7 @@ AutoAst Parser::parse_signed_expression()
 
 AutoAst Parser::parse_exponential_expression()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_call_expression();
 
 	while (accept(Lexeme::OpPower))
@@ -322,7 +349,7 @@ AutoAst Parser::parse_exponential_expression()
 
 AutoAst Parser::parse_call_expression()
 {
-	debug_ast();
+	trace_ast();
 	auto e = parse_new_expression();
 
 	LOOP:
@@ -342,7 +369,7 @@ AutoAst Parser::parse_call_expression()
 
 AutoAst Parser::parse_new_expression()
 {
-	debug_ast();
+	trace_ast();
 	// TODO: new and function
 
 	return parse_primary_expression();
@@ -350,7 +377,7 @@ AutoAst Parser::parse_new_expression()
 
 AutoAst Parser::parse_primary_expression()
 {
-	debug_ast();
+	trace_ast();
 	if (check(Lexeme::Identifier))
 	{
 		auto name = std::move(token.spelling);
@@ -360,7 +387,7 @@ AutoAst Parser::parse_primary_expression()
 	}
 	else if (check(Lexeme::StringLiteral))
 	{
-		auto s = std::move(token.spelling);
+		auto s = runtime->intern_string(token.spelling);
 		accept();
 		return make<StringLiteral>(std::move(s));
 	}
@@ -393,7 +420,7 @@ AutoAst Parser::parse_primary_expression()
 
 AstList Parser::parse_arguments()
 {
-	debug_ast();
+	trace_ast();
 	AstList args;
 
 	if (accept(Lexeme::RParen))
@@ -411,6 +438,32 @@ AstList Parser::parse_arguments()
 	return args;
 }
 
+AutoAst Parser::parse_assertion()
+{
+	auto e = parse_expression();
+	AutoAst msg;
+
+	if (accept(Lexeme::Comma))
+	{
+		msg = parse_expression();
+	}
+
+	return make<AssertStatement>(std::move(e), std::move(msg));
+}
+
+AutoAst Parser::parse_concat_expression(AutoAst e)
+{
+	AstList lst;
+	lst.push_back(std::move(e));
+	lst.push_back(parse_multiplicative_expression());
+
+	while (accept(Lexeme::OpConcat)) {
+		lst.push_back(parse_multiplicative_expression());
+	}
+
+	return make<ConcatExpression>(std::move(lst));
+}
+
 } // namespace calao
 
-#undef debug_ast
+#undef trace_ast

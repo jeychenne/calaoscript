@@ -29,11 +29,14 @@ using Instruction = uint16_t;
 
 enum class Opcode : Instruction
 {
+	Assert,
 	Add,
 	Compare,
 	Concat,
 	DefineGlobal,
+	DefineLocal,
 	GetGlobal,
+	GetLocal,
 	Divide,
 	Equal,
 	Greater,
@@ -43,6 +46,7 @@ enum class Opcode : Instruction
 	Modulus,
 	Multiply,
 	Negate,
+	NewFrame,
 	Not,
 	NotEqual,
 	Pop,
@@ -60,6 +64,7 @@ enum class Opcode : Instruction
 	PushTrue,
 	Return,
 	SetGlobal,
+	SetLocal,
 	Subtract,
 };
 
@@ -72,12 +77,6 @@ class Code final
 	using LineNo = uint16_t;
 
 public:
-
-	struct Local
-	{
-		String name;
-		int depth;
-	};
 
 	Code() = default;
 
@@ -103,40 +102,13 @@ public:
 
 	size_t size() const { return code.size(); }
 
-	Instruction add_integer_constant(intptr_t i);
-
-	Instruction add_float_constant(double n);
-
-	Instruction add_string_constant(String s);
-
-	Instruction add_local(String name, int depth);
-
-	double get_float(intptr_t i) const { return float_pool[i]; }
-
-	intptr_t get_integer(intptr_t i) const { return integer_pool[i]; }
-
-	String get_string(intptr_t i) const { return string_pool[i]; }
-
 	int get_line(int offset) const;
 
+	void backpatch(int offset, Instruction i);
+
+	int get_backpatch_offset() const { return int(code.size() - 1); }
+
 private:
-
-	template<class T>
-	Instruction add_constant(std::vector<T> &vec, T value)
-	{
-		auto it = std::find(vec.begin(), vec.end(), value);
-
-		if (it == vec.end())
-		{
-			if (unlikely(vec.size() == (std::numeric_limits<Instruction>::max)())) {
-				throw error("Maximum number of constants exceeded");
-			}
-			vec.push_back(std::move(value));
-			return Instruction(vec.size() - 1);
-		}
-
-		return Instruction(std::distance(vec.begin(), it));
-	}
 
 	void add_line(intptr_t line_no);
 
@@ -146,14 +118,6 @@ private:
 	// Line numbers on which byte codes are found, for error reporting.
 	// first = line number; second = number of instructions on that line
 	std::vector<std::pair<LineNo,LineNo>> lines;
-
-	// Constant pools.
-	std::vector<double> float_pool;
-	std::vector<intptr_t> integer_pool;
-	std::vector<String> string_pool;
-
-	// Local variables.
-	std::vector<Local> locals;
 };
 
 } // namespace calao

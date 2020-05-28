@@ -18,21 +18,6 @@
 
 namespace calao {
 
-Instruction Code::add_integer_constant(intptr_t i)
-{
-	return add_constant(integer_pool, i);
-}
-
-Instruction Code::add_float_constant(double n)
-{
-	return add_constant(float_pool, n);
-}
-
-Instruction Code::add_string_constant(String s)
-{
-	return add_constant(string_pool, std::move(s));
-}
-
 void Code::add_line(intptr_t line_no)
 {
 	constexpr auto max_lines = (std::numeric_limits<uint16_t>::max)();
@@ -67,26 +52,15 @@ int Code::get_line(int offset) const
 	throw error("[Internal error] Cannot determine line number: invalid offset %", offset);
 }
 
-Instruction Code::add_local(String name, int depth)
-{
-	for (auto it = locals.rbegin(); it != locals.rend(); it++)
-	{
-		if (it->depth > depth) {
-			break;
-		}
-		if (it->name == name) {
-			throw error("[Name error] Variable \"%\" is already defined in the current scope", name);
-		}
-	}
-	locals.push_back({std::move(name), depth});
-
-	return Instruction(locals.size() - 1);
-}
-
 void Code::emit_return()
 {
 	intptr_t index = lines.empty() ? intptr_t(0) : intptr_t(lines.back().first);
 	emit(index, Opcode::Return);
+}
+
+void Code::backpatch(int offset, Instruction i)
+{
+	code[offset] = i;
 }
 
 } // namespace calao

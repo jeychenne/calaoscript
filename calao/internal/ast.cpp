@@ -77,5 +77,15 @@ void Assignment::visit(AstVisitor &v)
 {
 	VISIT(assignment);
 }
+
+void AssertStatement::visit(AstVisitor &v)
+{
+	VISIT(assert_statement);
+}
+
+void ConcatExpression::visit(AstVisitor &v)
+{
+	VISIT(concat_expression);
+}
 } // namespace calao
 #undef VISIT

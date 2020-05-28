@@ -1,0 +1,10 @@
+local var x = "outer"
+var y = "global"
+
+do 
+    var z = "inner"
+    assert z == "inner"
+end
+
+assert x == "outer"
+assert y == "global"

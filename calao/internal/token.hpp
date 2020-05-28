@@ -24,7 +24,7 @@ struct Token final
 	// end of text character in ASCII
 	static const char32_t ETX = 3;
 
-	// Tokens of the language. Don't forget to update the token names and the compiler's constructor if you modify this enum.
+	// Tokens of the language. Don't forget to update the token names.
 	enum class Lexeme
 	{
 		Unknown = 0,
@@ -50,6 +50,7 @@ struct Token final
 		Import,
 		In,
 		Inherits,
+		Local,
 		Method,
 		Nan,
 		New,

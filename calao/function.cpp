@@ -17,14 +17,14 @@
 
 namespace calao {
 
-Routine::Routine(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg, int max_arg) :
+Callable::Callable(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg, int max_arg) :
 	signature(std::move(sig)), ref_flags(ref_flags), min_argc(min_arg), max_argc(max_arg)
 {
 
 }
 
 NativeRoutine::NativeRoutine(NativeCallback cb, std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg,
-							 int max_arg) : Routine(std::move(sig), ref_flags, min_arg, max_arg), callback(std::move(cb))
+							 int max_arg) : Callable(std::move(sig), ref_flags, min_arg, max_arg), callback(std::move(cb))
 {
 
 }
@@ -38,19 +38,67 @@ void NativeRoutine::call(Runtime &, CallInfo &)
 
 
 
-ScriptRoutine::ScriptRoutine() : Routine()
+Routine::Routine() : Callable()
 {
 
 }
 
-ScriptRoutine::ScriptRoutine(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg, int max_arg) :
-	Routine(std::move(sig), ref_flags, min_arg, max_arg)
+Routine::Routine(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg, int max_arg) :
+		Callable(std::move(sig), ref_flags, min_arg, max_arg)
 {
 
 }
 
-void ScriptRoutine::call(Runtime &rt, CallInfo &)
+void Routine::call(Runtime &rt, CallInfo &)
 {
-	rt.interpret(code);
+	rt.interpret(*this);
+}
+
+Instruction Routine::add_integer_constant(intptr_t i)
+{
+	return add_constant(integer_pool, i);
+}
+
+Instruction Routine::add_float_constant(double n)
+{
+	return add_constant(float_pool, n);
+}
+
+Instruction Routine::add_string_constant(String s)
+{
+	return add_constant(string_pool, std::move(s));
+}
+
+Instruction Routine::add_local(const String &name, int scope, int depth)
+{
+	for (auto it = locals.rbegin(); it != locals.rend(); it++)
+	{
+		if (it->scope != scope) {
+			break;
+		}
+		if (it->name == name) {
+			throw error("[Name error] Variable \"%\" is already defined in the current scope", name);
+		}
+	}
+	locals.push_back({name, scope, depth});
+
+	return Instruction(locals.size() - 1);
+}
+
+std::optional<Instruction> Routine::find_local(const String &name, int scope) const
+{
+	for (size_t i = locals.size(); i-- > 0; )
+	{
+		auto &local = locals[i];
+		if (local.scope == scope && local.name == name) {
+			return Instruction(i);
+		}
+	}
+	return std::optional<Instruction>();
+}
+
+int Routine::local_count() const
+{
+	return int(locals.size());
 }
 } // namespace calao

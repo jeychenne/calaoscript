@@ -67,13 +67,15 @@ private:
 
 	AutoAst parse_statement();
 
+	AutoAst parse_statements();
+
 	AutoAst parse_print_statement();
 
 	AutoAst parse_expression_statement();
 
 	AutoAst parse_expression();
 
-	AutoAst parse_declaration();
+	AutoAst parse_declaration(bool local);
 
 	AutoAst parse_or_expression();
 
@@ -100,6 +102,10 @@ private:
 	AstList parse_arguments();
 
 	AutoAst parse_identifier(const char *msg);
+
+	AutoAst parse_assertion();
+
+	AutoAst parse_concat_expression(AutoAst e);
 
 	// Instance of the scanner (reads one token at a time).
 	Scanner scanner;

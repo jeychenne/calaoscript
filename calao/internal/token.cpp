@@ -45,6 +45,7 @@ static Array<String> token_names = {
         "import",
         "in",
         "inherits",
+        "local",
         "method",
         "nan",
         "new",

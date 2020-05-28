@@ -130,6 +130,15 @@ struct BinaryExpression final : public Ast
 	AutoAst lhs, rhs;
 };
 
+struct ConcatExpression final : public Ast
+{
+	ConcatExpression(int line, AstList lst) : Ast(line), list(std::move(lst)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AstList list;
+};
+
 struct CallExpression final : public Ast
 {
 	CallExpression(int line, AutoAst e, AstList args) : Ast(line), expr(std::move(e)), args(std::move(args)) { }
@@ -154,30 +163,41 @@ struct Variable final : public Ast
 
 struct StatementList final : public Ast
 {
-	StatementList(int line, AstList stmts) : Ast(line), statements(std::move(stmts)) { }
+	StatementList(int line, AstList stmts, bool open_scope = false) : Ast(line), statements(std::move(stmts)), open_scope(open_scope) { }
 
 	void visit(AstVisitor &v) override;
 
 	AstList statements;
+	bool open_scope;
 };
 
 struct Declaration final : public Ast
 {
-	Declaration(int line, AstList lhs, AstList rhs) : Ast(line), lhs(std::move(lhs)), rhs(std::move(rhs)) { }
+	Declaration(int line, AstList lhs, AstList rhs, bool local) : Ast(line), lhs(std::move(lhs)), rhs(std::move(rhs)), local(local) { }
 
 	void visit(AstVisitor &v) override;
 
 	AstList lhs, rhs;
+	bool local;
 };
 
 struct PrintStatement final : public Ast
 {
-	PrintStatement(int line, AutoAst expr, bool new_line) : Ast(line), expr(std::move(expr)), new_line(new_line) { }
+	PrintStatement(int line, AutoAst e, bool new_line) : Ast(line), expr(std::move(e)), new_line(new_line) { }
 
 	void visit(AstVisitor &v) override;
 
 	AutoAst expr;
 	bool new_line;
+};
+
+struct AssertStatement final : public Ast
+{
+	AssertStatement(int line, AutoAst e, AutoAst msg) : Ast(line), expr(std::move(e)), msg(std::move(msg)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst expr, msg;
 };
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -200,7 +220,8 @@ public:
 	virtual void visit_call(CallExpression *node) = 0;
 	virtual void visit_variable(Variable *node) = 0;
 	virtual void visit_assignment(Assignment *node) = 0;
-
+	virtual void visit_assert_statement(AssertStatement *node) = 0;
+	virtual void visit_concat_expression(ConcatExpression *node) = 0;
 };
 
 } // namespace calao

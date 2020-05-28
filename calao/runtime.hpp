@@ -184,15 +184,24 @@ public:
 
 	Variant & peek(int n = -1);
 
-	void interpret(const Code &code);
+	void interpret(const Routine &routine);
 
-	void disassemble(const Code &code, const String &name);
+	void disassemble(const Routine &routine, const String &name);
 
 	void do_file(const String &path);
 
 	String intern_string(const String &s);
 
 private:
+
+	struct StackFrame
+	{
+		// Beginning of the frame.
+		Variant *base;
+
+		// Arguments and local variables on the stack.
+		Variant *locals;
+	};
 
 	friend class Collectable;
 
@@ -204,11 +213,15 @@ private:
 
 	void check_capacity();
 
+	void ensure_capacity(int n);
+
+	void resize_stack();
+
 	void check_underflow();
 
 	Variant *var();
 
-	size_t disassemble_instruction(const Code &code, size_t offset);
+	size_t disassemble_instruction(const Routine &routine, size_t offset);
 
 	size_t print_simple_instruction(const char *name);
 
@@ -219,6 +232,10 @@ private:
 	static void check_float_error();
 
 	int get_current_line() const;
+
+	void push_stack_frame(int nlocal);
+
+	void pop_stack_frame();
 
 	// Garbage collector.
 	Recycler gc;
@@ -252,6 +269,11 @@ private:
 
 	// Global variables.
 	Dictionary<Variant> globals;
+
+	// Stack of stack frames.
+	std::vector<std::unique_ptr<StackFrame>> frames;
+
+	StackFrame *current_frame = nullptr;
 
 	// Global initialization.
 	static bool initialized;

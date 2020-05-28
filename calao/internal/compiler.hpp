@@ -28,7 +28,7 @@ public:
 
 	Compiler() = default;
 
-	std::shared_ptr<ScriptRoutine> compile(AutoAst ast);
+	std::shared_ptr<Routine> compile(AutoAst ast);
 
 	void visit_constant(ConstantLiteral *node) override;
 	void visit_integer(IntegerLiteral *node) override;
@@ -42,25 +42,35 @@ public:
 	void visit_call(CallExpression *node) override;
 	void visit_variable(Variable *node) override;
 	void visit_assignment(Assignment *node) override;
+	void visit_assert_statement(AssertStatement *node) override;
+	void visit_concat_expression(ConcatExpression *node) override;
 
 private:
 
 	// Routine being compiled.
-	std::shared_ptr<ScriptRoutine> routine;
+	std::shared_ptr<Routine> routine;
 
 	void initialize();
 
 	void finalize();
 
-	void open_scope();
+	int open_scope();
 
-	void close_scope();
+	void close_scope(int previous);
+
+	std::pair<int,int> get_scope() const;
 
 	// Code of the routine being compiled.
 	Code *code = nullptr;
 
 	// Keep track of scopes.
 	int current_scope = 0;
+
+	// Generate unique ID's for scopes (0 = global scope, 1 = module scope).
+	int scope_id = 0;
+
+	// In addition to scope ID's, we record each scope's depth to resolve non-local variables.
+	int scope_depth = 0;
 };
 
 } // namespace calao

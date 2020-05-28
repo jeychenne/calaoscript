@@ -265,7 +265,8 @@ Token Scanner::read_token()
     case U'\n':
 	{
 		accept();
-		return Token(Token::Lexeme::Eol, String(), m_line_no);
+		// We return the previous line because after accept() we are already pointing to the beginning of the following line.
+		return Token(Token::Lexeme::Eol, String(), m_line_no - 1);
 	}
     case U'"':
     {
@@ -370,8 +371,8 @@ Token Scanner::read_token()
     case U'#':
     {
         // Skip comment and read next token
-        do skip(); while (m_char != '\n');
-        skip();
+        do skip(); while (m_char != '\n' && m_char != Token::ETX);
+        if (m_char != Token::ETX) skip(); // handle case when the file ends with a comment without a new line.
         goto RETRY;
     }
     case U'!':

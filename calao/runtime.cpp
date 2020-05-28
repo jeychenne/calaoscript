@@ -143,16 +143,27 @@ Variant *Runtime::var()
 
 void Runtime::check_capacity()
 {
-	if (this->top == this->limit)
-	{
-		// FIXME: if we hold pointers to the stack, they should be updated.
-		auto size = stack.size();
-		auto new_size = size + STACK_SIZE;
-		this->stack.resize(new_size);
-		top = stack.begin() + size;
-		limit = stack.end();
+	if (this->top == this->limit) {
+		resize_stack();
 	}
 }
+
+void Runtime::resize_stack()
+{
+	auto size = stack.size();
+	auto new_size = size + STACK_SIZE;
+	this->stack.resize(new_size);
+	top = stack.begin() + size;
+	limit = stack.end();
+}
+
+void Runtime::ensure_capacity(int n)
+{
+	if (top + n >= limit) {
+		resize_stack();
+	}
+}
+
 
 void Runtime::check_underflow()
 {
@@ -349,10 +360,10 @@ void Runtime::check_float_error()
 	}
 }
 
-void Runtime::interpret(const Code &code)
+void Runtime::interpret(const Routine &routine)
 {
-	this->code = &code;
-	ip = code.data();
+	this->code = &routine.code;
+	ip = routine.code.data();
 
 	while (true)
 	{
@@ -363,6 +374,17 @@ void Runtime::interpret(const Code &code)
 			case Opcode::Add:
 			{
 				math_op('+');
+				break;
+			}
+			case Opcode::Assert:
+			{
+				int narg = *ip++;
+				bool value = peek(-narg).to_boolean();
+				if (!value)
+				{
+					auto msg = (narg == 2) ? utils::format("Assertion failed: %", peek(-1).to_string()) : std::string("Assertion failed");
+					throw RuntimeError(get_current_line(), msg);
+				}
 				break;
 			}
 			case Opcode::Compare:
@@ -376,19 +398,29 @@ void Runtime::interpret(const Code &code)
 			}
 			case Opcode::Concat:
 			{
-				auto s = peek(-2).to_string();
-				s.append(peek(-1).to_string());
-				pop(2);
+				int narg = *ip++;
+				String s;
+				for (int i = narg; i > 0; i--) {
+					s.append(peek(-i).to_string());
+				}
+				pop(narg);
 				push(std::move(s));
 				break;
 			}
 			case Opcode::DefineGlobal:
 			{
-				auto name = code.get_string(*ip++);
+				auto name = routine.get_string(*ip++);
 				if (globals.find(name) != globals.end()) {
 					throw RuntimeError(get_current_line(), "Global variable \"%\" is already defined", name);
 				}
 				globals.insert({name, std::move(peek())});
+				pop();
+				break;
+			}
+			case Opcode::DefineLocal:
+			{
+				Variant &local = current_frame->locals[*ip++];
+				local = std::move(peek());
 				pop();
 				break;
 			}
@@ -408,12 +440,18 @@ void Runtime::interpret(const Code &code)
 			}
 			case Opcode::GetGlobal:
 			{
-				auto name = code.get_string(*ip++);
+				auto name = routine.get_string(*ip++);
 				auto it = globals.find(name);
 				if (it == globals.end()) {
 					throw RuntimeError(get_current_line(), "Undefined variable \"%\"", name);
 				}
 				push(it->second);
+				break;
+			}
+			case Opcode::GetLocal:
+			{
+				const Variant &v = current_frame->locals[*ip++];
+				push(v);
 				break;
 			}
 			case Opcode::Greater:
@@ -467,6 +505,11 @@ void Runtime::interpret(const Code &code)
 				negate();
 				break;
 			}
+			case Opcode::NewFrame:
+			{
+				push_stack_frame(*ip++);
+				break;
+			}
 			case Opcode::Not:
 			{
 				bool value = peek().to_boolean();
@@ -497,6 +540,7 @@ void Runtime::interpret(const Code &code)
 			{
 				auto s = peek().to_string();
 				utils::printf(s);
+				pop();
 				break;
 			}
 			case Opcode::PrintLine:
@@ -504,6 +548,7 @@ void Runtime::interpret(const Code &code)
 				auto s = peek().to_string();
 				utils::printf(s);
 				printf("\n");
+				pop();
 				break;
 			}
 			case Opcode::PushBoolean:
@@ -519,13 +564,13 @@ void Runtime::interpret(const Code &code)
 			}
 			case Opcode::PushFloat:
 			{
-				double value = code.get_float(*ip++);
+				double value = routine.get_float(*ip++);
 				push(value);
 				break;
 			}
 			case Opcode::PushInteger:
 			{
-				intptr_t value = code.get_integer(*ip++);
+				intptr_t value = routine.get_integer(*ip++);
 				push_int(value);
 				break;
 			}
@@ -546,7 +591,7 @@ void Runtime::interpret(const Code &code)
 			}
 			case Opcode::PushString:
 			{
-				String value = code.get_string(*ip++);
+				String value = routine.get_string(*ip++);
 				push(std::move(value));
 				break;
 			}
@@ -562,12 +607,19 @@ void Runtime::interpret(const Code &code)
 			}
 			case Opcode::SetGlobal:
 			{
-				auto name = code.get_string(*ip++);
+				auto name = routine.get_string(*ip++);
 				auto it = globals.find(name);
 				if (it == globals.end()) {
 					throw RuntimeError(get_current_line(), "Undefined variable \"%\"", name);
 				}
 				it->second = std::move(peek());
+				pop();
+				break;
+			}
+			case Opcode::SetLocal:
+			{
+				Variant &v = current_frame->locals[*ip++];
+				v = std::move(peek());
 				pop();
 				break;
 			}
@@ -582,15 +634,15 @@ void Runtime::interpret(const Code &code)
 	}
 }
 
-void Runtime::disassemble(const Code &code, const String &name)
+void Runtime::disassemble(const Routine &routine, const String &name)
 {
 	printf("==================== %s ====================\n", name.data());
 	printf("offset    line   instruction    operands   comments\n");
-	size_t size = code.size();
+	size_t size = routine.code.size();
 
 	for (size_t offset = 0; offset < size; )
 	{
-		offset += disassemble_instruction(code, offset);
+		offset += disassemble_instruction(routine, offset);
 	}
 }
 
@@ -600,10 +652,10 @@ size_t Runtime::print_simple_instruction(const char *name)
 	return 1;
 }
 
-size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
+size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 {
-	auto op = static_cast<Opcode>(code[offset]);
-	printf("%6zu   %5d   ", offset, code.get_line(offset));
+	auto op = static_cast<Opcode>(routine.code[offset]);
+	printf("%6zu   %5d   ", offset, routine.code.get_line(offset));
 
 	switch (op)
 	{
@@ -611,19 +663,34 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		{
 			return print_simple_instruction("ADD");
 		}
+		case Opcode::Assert:
+		{
+			int narg = routine.code[offset + 1];
+			printf("ASSERT         %-5d\n", narg);
+			return 2;
+		}
 		case Opcode::Compare:
 		{
 			return print_simple_instruction("COMPARE");
 		}
 		case Opcode::Concat:
 		{
-			return print_simple_instruction("CONCAT");
+			int narg = routine.code[offset+1];
+			printf("CONCAT         %-5d\n", narg);
+			return 2;
 		}
 		case Opcode::DefineGlobal:
 		{
-			int index = code[offset+1];
-			String value = code.get_string(index);
+			int index = routine.code[offset + 1];
+			String value = routine.get_string(index);
 			printf("DEFINE_GLOBAL  %-5d      ; %s\n", index, value.data());
+			return 2;
+		}
+		case Opcode::DefineLocal:
+		{
+			int index = routine.code[offset + 1];
+			String value = routine.get_local_name(index);
+			printf("DEFINE_LOCAL   %-5d      ; %s\n", index, value.data());
 			return 2;
 		}
 		case Opcode::Divide:
@@ -636,9 +703,16 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		}
 		case Opcode::GetGlobal:
 		{
-			int index = code[offset+1];
-			String value = code.get_string(index);
+			int index = routine.code[offset + 1];
+			String value = routine.get_string(index);
 			printf("GET_GLOBAL     %-5d      ; %s\n", index, value.data());
+			return 2;
+		}
+		case Opcode::GetLocal:
+		{
+			int index = routine.code[offset + 1];
+			String value = routine.get_local_name(index);
+			printf("GET_LOCAL      %-5d      ; %s\n", index, value.data());
 			return 2;
 		}
 		case Opcode::Greater:
@@ -669,6 +743,12 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		{
 			return print_simple_instruction("NEGATE");
 		}
+		case Opcode::NewFrame:
+		{
+			int nlocal = routine.code[offset+1];
+			printf("NEW_FRAME      %-5d\n", nlocal);
+			return 2;
+		}
 		case Opcode::Not:
 		{
 			return print_simple_instruction("NOT");
@@ -695,7 +775,7 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		}
 		case Opcode::PushBoolean:
 		{
-			int value = code[offset+1];
+			int value = routine.code[offset + 1];
 			auto str = value ? "true" : "false";
 			printf("PUSH_BOOLEAN   %-5d      ; %s\n", value, str);
 			return 2;
@@ -706,15 +786,15 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		}
 		case Opcode::PushFloat:
 		{
-			int index = code[offset+1];
-			double value = code.get_float(index);
+			int index = routine.code[offset + 1];
+			double value = routine.get_float(index);
 			printf("PUSH_FLOAT     %-5d      ; %f\n", index, value);
 			return 2;
 		}
 		case Opcode::PushInteger:
 		{
-			int index = code[offset+1];
-			intptr_t value = code.get_integer(index);
+			int index = routine.code[offset + 1];
+			intptr_t value = routine.get_integer(index);
 			printf("PUSH_INTEGER   %-5d      ; %" PRIdPTR "\n", index, value);
 			return 2;
 		}
@@ -728,14 +808,14 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		}
 		case Opcode::PushSmallInt:
 		{
-			int value = (int16_t) code[offset+1];
+			int value = (int16_t) routine.code[offset + 1];
 			printf("PUSH_SMALL_INT %-5d\n", value);
 			return 2;
 		}
 		case Opcode::PushString:
 		{
-			int index = code[offset+1];
-			String value = code.get_string(index);
+			int index = routine.code[offset + 1];
+			String value = routine.get_string(index);
 			printf("PUSH_STRING    %-5d      ; \"%s\"\n", index, value.data());
 			return 2;
 		}
@@ -749,9 +829,16 @@ size_t Runtime::disassemble_instruction(const Code &code, size_t offset)
 		}
 		case Opcode::SetGlobal:
 		{
-			int index = code[offset+1];
-			String value = code.get_string(index);
+			int index = routine.code[offset + 1];
+			String value = routine.get_string(index);
 			printf("SET_GLOBAL     %-5d      ; %s\n", index, value.data());
+			return 2;
+		}
+		case Opcode::SetLocal:
+		{
+			int index = routine.code[offset + 1];
+			String value = routine.get_local_name(index);
+			printf("SET_LOCAL      %-5d      ; %s\n", index, value.data());
 			return 2;
 		}
 		case Opcode::Subtract:
@@ -769,7 +856,7 @@ void Runtime::do_file(const String &path)
 {
 	auto ast = parser.parse_file(path);
 	auto routine = compiler.compile(std::move(ast));
-	disassemble(routine->code, "test");
+	disassemble(*routine, "test");
 	CallInfo call;
 	routine->call(*this, call);
 }
@@ -784,6 +871,29 @@ String Runtime::intern_string(const String &s)
 {
 	auto result = strings.insert(s);
 	return *result.first;
+}
+
+void Runtime::push_stack_frame(int nlocal)
+{
+	frames.push_back(std::make_unique<StackFrame>());
+	current_frame = frames.back().get();
+	// Add 1 for the return value, which will sit at the beginning of the frame
+	ensure_capacity(nlocal + 1);
+	current_frame->base = top;
+	current_frame->locals = top + 1;
+	// Push null for the return value (we've already checked the capacity).
+	new (top++) Variant;
+	top += nlocal;
+}
+
+void Runtime::pop_stack_frame()
+{
+	// Discard everything except the return value.
+	auto n = int(top - current_frame->locals);
+	assert(n >= 0);
+	pop(n);
+	frames.pop_back();
+	current_frame = frames.empty() ? nullptr : frames.back().get();
 }
 
 
