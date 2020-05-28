@@ -44,6 +44,9 @@ public:
 	void visit_assignment(Assignment *node) override;
 	void visit_assert_statement(AssertStatement *node) override;
 	void visit_concat_expression(ConcatExpression *node) override;
+	void visit_if_condition(IfCondition *node) override;
+	void visit_if_statement(IfStatement *node) override;
+	void visit_while_statement(WhileStatement *node) override;
 
 private:
 

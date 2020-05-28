@@ -133,6 +133,14 @@ AutoAst Parser::parse_statement()
 	{
 		return parse_declaration(false);
 	}
+	else if (accept(Lexeme::If))
+	{
+		return parse_if_statement();
+	}
+	else if (accept(Lexeme::While))
+	{
+		return parse_while_statement();
+	}
 	else if (accept(Lexeme::Do))
 	{
 		return parse_statements();
@@ -159,11 +167,27 @@ AutoAst Parser::parse_statements()
 		block.push_back(parse_statement());
 		while (token.is_separator()) accept();
 	}
-	expect(Lexeme::End, "at end of statement block");
+	accept(Lexeme::End);
 
 	return std::make_unique<StatementList>(line, std::move(block), true);
 }
 
+AutoAst Parser::parse_if_block()
+{
+	trace_ast();
+	AstList block;
+	auto line = get_line();
+	while (token.is_separator()) { accept(); }
+
+	while (!check(Lexeme::End) && !check(Lexeme::Elsif) && !check(Lexeme::Else))
+	{
+		block.push_back(parse_statement());
+		while (token.is_separator()) accept();
+	}
+	accept(Lexeme::End);
+
+	return std::make_unique<StatementList>(line, std::move(block), true);
+}
 
 AutoAst Parser::parse_print_statement()
 {
@@ -265,11 +289,10 @@ AutoAst Parser::parse_and_expression()
 AutoAst Parser::parse_not_expression()
 {
 	trace_ast();
-	if (check(Lexeme::Not) || check(Lexeme::OpMinus))
+	if (accept(Lexeme::Not))
 	{
-		auto op = token.id;
 		accept();
-		return make<UnaryExpression>(op, parse_comp_expression());
+		return make<UnaryExpression>(Lexeme::Not, parse_comp_expression());
 	}
 
 	return parse_comp_expression();
@@ -280,7 +303,7 @@ AutoAst Parser::parse_comp_expression()
 	trace_ast();
 	auto e = parse_additive_expression();
 
-	while (check(Lexeme::OpEqual) || check(Lexeme::OpNotEqual) || check(Lexeme::OpGreaterEqual) || check(Lexeme::OpGreaterThan) || check(Lexeme::OpLessEqual)
+	if (check(Lexeme::OpEqual) || check(Lexeme::OpNotEqual) || check(Lexeme::OpGreaterEqual) || check(Lexeme::OpGreaterThan) || check(Lexeme::OpLessEqual)
 		|| check(Lexeme::OpLessThan) || check(Lexeme::OpCompare))
 	{
 		auto op = token.id;
@@ -327,12 +350,10 @@ AutoAst Parser::parse_multiplicative_expression()
 AutoAst Parser::parse_signed_expression()
 {
 	trace_ast();
-	auto e = parse_exponential_expression();
-
 	if (accept(Lexeme::OpMinus))
-		return make<UnaryExpression>(Lexeme::OpMinus, std::move(e));
+		return make<UnaryExpression>(Lexeme::OpMinus, parse_exponential_expression());
 
-	return e;
+	return parse_exponential_expression();
 }
 
 AutoAst Parser::parse_exponential_expression()
@@ -407,14 +428,14 @@ AutoAst Parser::parse_primary_expression()
 		accept();
 		return make<FloatLiteral>(value);
 	}
-	else if (check(Lexeme::True) || check(Lexeme::False))
+	else if (check(Lexeme::True) || check(Lexeme::False) || check(Lexeme::Null) || check(Lexeme::Nan))
 	{
 		auto value = token.id;
 		accept();
 		return make<ConstantLiteral>(value);
 	}
-	report_error("Invalid primary expression");
 
+	report_error("Invalid primary expression");
 	return nullptr;
 }
 
@@ -462,6 +483,40 @@ AutoAst Parser::parse_concat_expression(AutoAst e)
 	}
 
 	return make<ConcatExpression>(std::move(lst));
+}
+
+AutoAst Parser::parse_if_statement()
+{
+	AstList ifs;
+	AutoAst else_block;
+	auto line = get_line();
+	auto e = parse_expression();
+	expect(Lexeme::Then, "in 'if' statement");
+	auto block = parse_if_block();
+	ifs.push_back(make<IfCondition>(std::move(e), std::move(block)));
+
+	while (accept(Lexeme::Elsif))
+	{
+		e = parse_expression();
+		expect(Lexeme::Then, "in 'elsif' condition");
+		block = parse_if_block();
+		ifs.push_back(make<IfCondition>(std::move(e), std::move(block)));
+	}
+	if (accept(Lexeme::Else)) {
+		else_block = parse_if_block();
+	}
+
+	return std::make_unique<IfStatement>(line, std::move(ifs), std::move(else_block));
+}
+
+AutoAst Parser::parse_while_statement()
+{
+	auto line = get_line();
+	auto e = parse_expression();
+	expect(Lexeme::Do, "in while statement");
+	auto block = parse_statements();
+
+	return std::make_unique<WhileStatement>(line, std::move(e), std::move(block));
 }
 
 } // namespace calao

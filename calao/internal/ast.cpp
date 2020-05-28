@@ -87,5 +87,20 @@ void ConcatExpression::visit(AstVisitor &v)
 {
 	VISIT(concat_expression);
 }
+
+void IfStatement::visit(AstVisitor &v)
+{
+	VISIT(if_statement);
+}
+
+void IfCondition::visit(AstVisitor &v)
+{
+	VISIT(if_condition);
+}
+
+void WhileStatement::visit(AstVisitor &v)
+{
+	VISIT(while_statement);
+}
 } // namespace calao
 #undef VISIT

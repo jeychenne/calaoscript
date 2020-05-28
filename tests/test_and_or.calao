@@ -1,0 +1,10 @@
+var x = 3.14
+
+if x > 0 and x < 5 then
+    print "ok"
+end
+
+if x < 0 or x == 3.14 then
+    print "this is pi!"
+end
+

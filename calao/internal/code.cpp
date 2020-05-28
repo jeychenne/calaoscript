@@ -58,9 +58,44 @@ void Code::emit_return()
 	emit(index, Opcode::Return);
 }
 
-void Code::backpatch(int offset, Instruction i)
+void Code::backpatch(int at)
 {
-	code[offset] = i;
+	// If this fails, adjust the following code, as well as read_integer() and emit_jump().
+	static_assert(IntSerializer::IntSize == 2);
+	IntSerializer s = { .value = get_current_offset() };
+	code[at] = s.ins[0];
+ 	code[at + 1] = s.ins[1];
 }
+
+int Code::read_integer(const Instruction *&ip)
+{
+	IntSerializer s;
+	s.ins[0] = *ip++;
+	s.ins[1] = *ip++;
+
+	return s.value;
+}
+
+int Code::emit_jump(intptr_t line_no, Opcode jmp)
+{
+	return emit_jump(line_no, jmp, 0);
+}
+
+void Code::backpatch_instruction(int at, Instruction value)
+{
+	code[at] = value;
+}
+
+int Code::emit_jump(intptr_t line_no, Opcode jmp, int addr)
+{
+	emit(line_no, jmp);
+	IntSerializer s = { .value = addr };
+	auto offset = get_current_offset();
+	emit(line_no, s.ins[0]);
+	emit(line_no, s.ins[1]);
+
+	return offset;
+}
+
 
 } // namespace calao

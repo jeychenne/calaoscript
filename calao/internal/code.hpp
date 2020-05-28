@@ -41,6 +41,9 @@ enum class Opcode : Instruction
 	Equal,
 	Greater,
 	GreaterEqual,
+	Jump,
+	JumpFalse,
+	JumpTrue,
 	Less,
 	LessEqual,
 	Modulus,
@@ -78,6 +81,14 @@ class Code final
 
 public:
 
+	// Simple trick to convert back and forth between an int and bytecodes.
+	union IntSerializer
+	{
+		static constexpr size_t IntSize = sizeof(int) / sizeof(Instruction);
+		int value;
+		Instruction ins[IntSize];
+	};
+
 	Code() = default;
 
 	Code(const Code &) = delete;
@@ -92,6 +103,8 @@ public:
 
 	void emit(intptr_t line_no, Opcode op, Instruction i) { emit(line_no, op); emit(line_no, i); }
 
+	static int read_integer(const Instruction *&ip);
+
 	void emit_return();
 
 	const Instruction *data() const { return code.data(); }
@@ -104,9 +117,15 @@ public:
 
 	int get_line(int offset) const;
 
-	void backpatch(int offset, Instruction i);
+	void backpatch_instruction(int at, Instruction value);
 
-	int get_backpatch_offset() const { return int(code.size() - 1); }
+	void backpatch(int at);
+
+	int emit_jump(intptr_t line_no, Opcode jmp);
+
+	int emit_jump(intptr_t line_no, Opcode jmp, int addr);
+
+	int get_current_offset() const { return int(code.size()); }
 
 private:
 

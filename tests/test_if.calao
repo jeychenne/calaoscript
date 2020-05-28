@@ -1,0 +1,13 @@
+var x = -1
+var y
+assert y == null
+
+if x < 0 then
+    y = "negative"
+elsif x == 0 then
+    y = "null"    
+else
+    y = "positive"
+end
+
+assert y == "negative"

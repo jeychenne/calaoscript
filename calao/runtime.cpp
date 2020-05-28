@@ -472,6 +472,28 @@ void Runtime::interpret(const Routine &routine)
 				push(value);
 				break;
 			}
+			case Opcode::Jump:
+			{
+				int addr = Code::read_integer(ip);
+				ip = code->data() + addr;
+				break;
+			}
+			case Opcode::JumpFalse:
+			{
+				int addr = Code::read_integer(ip);
+				bool value = peek().to_boolean();
+				pop();
+				if (!value) ip = code->data() + addr;
+				break;
+			}
+			case Opcode::JumpTrue:
+			{
+				int addr = Code::read_integer(ip);
+				bool value = peek().to_boolean();
+				pop();
+				if (value) ip = code->data() + addr;
+				break;
+			}
 			case Opcode::Less:
 			{
 				auto &v2 = peek(-1);
@@ -602,6 +624,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::Return:
 			{
+				pop_stack_frame();
 				this->code = nullptr;
 				return;
 			}
@@ -722,6 +745,27 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		case Opcode::GreaterEqual:
 		{
 			return print_simple_instruction("GREATER_EQUAL");
+		}
+		case Opcode::Jump:
+		{
+			auto ptr = routine.code.data() + offset + 1;
+			int addr = Code::read_integer(ptr);
+			printf("JUMP           %-5d\n", addr);
+			return 1 + Code::IntSerializer::IntSize;
+		}
+		case Opcode::JumpFalse:
+		{
+			auto ptr = routine.code.data() + offset + 1;
+			int addr = Code::read_integer(ptr);
+			printf("JUMP_FALSE     %-5d\n", addr);
+			return 1 + Code::IntSerializer::IntSize;
+		}
+		case Opcode::JumpTrue:
+		{
+			auto ptr = routine.code.data() + offset + 1;
+			int addr = Code::read_integer(ptr);
+			printf("JUMP_TRUE      %-5d\n", addr);
+			return 1 + Code::IntSerializer::IntSize;
 		}
 		case Opcode::Less:
 		{

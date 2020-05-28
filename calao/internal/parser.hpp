@@ -107,6 +107,12 @@ private:
 
 	AutoAst parse_concat_expression(AutoAst e);
 
+	AutoAst parse_if_statement();
+
+	AutoAst parse_if_block();
+
+	AutoAst parse_while_statement();
+
 	// Instance of the scanner (reads one token at a time).
 	Scanner scanner;
 

@@ -40,7 +40,7 @@ struct Ast
 	virtual void mark_assigned() { is_assigned = true; }
 
 	template<class T>
-	bool is() const { return dynamic_cast<T*>(this) != nullptr; }
+	bool is() const { return dynamic_cast<const T*>(this) != nullptr; }
 
 	// Line number, for error reporting.
 	int line_no;
@@ -200,6 +200,38 @@ struct AssertStatement final : public Ast
 	AutoAst expr, msg;
 };
 
+struct IfCondition final : public Ast
+{
+	IfCondition(int line, AutoAst cond, AutoAst block) : Ast(line), cond(std::move(cond)), block(std::move(block)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst cond, block;
+	int conditional_jump = -1;
+	int unconditional_jump = -1;
+};
+
+struct IfStatement final : public Ast
+{
+	IfStatement(int line, AstList ifs, AutoAst else_block) : Ast(line), if_conds(std::move(ifs)), else_block(std::move(else_block)) { }
+
+	void visit(AstVisitor &v) override;
+
+	// The first entry in this list represents the obligatory "if" statement.
+	// Additional entries represent optional "elsif" statements.
+	AstList if_conds;
+	AutoAst else_block;
+};
+
+struct WhileStatement final : public Ast
+{
+	WhileStatement(int line, AutoAst e, AutoAst block) : Ast(line), cond(std::move(e)), block(std::move(block)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst cond, block;
+};
+
 //---------------------------------------------------------------------------------------------------------------------
 
 class AstVisitor
@@ -222,6 +254,9 @@ public:
 	virtual void visit_assignment(Assignment *node) = 0;
 	virtual void visit_assert_statement(AssertStatement *node) = 0;
 	virtual void visit_concat_expression(ConcatExpression *node) = 0;
+	virtual void visit_if_condition(IfCondition *node) = 0;
+	virtual void visit_if_statement(IfStatement *node) = 0;
+	virtual void visit_while_statement(WhileStatement *node) = 0;
 };
 
 } // namespace calao
