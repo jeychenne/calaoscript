@@ -1,0 +1,4 @@
+var x = 5
+var res = "it works!" if x > 0 else "It doesn't work"
+
+assert res == "it works!"
