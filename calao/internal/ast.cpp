@@ -112,5 +112,20 @@ void LoopExitStatement::visit(AstVisitor &v)
 {
 	VISIT(loop_exit);
 }
+
+void RoutineParameter::visit(AstVisitor &v)
+{
+	VISIT(parameter);
+}
+
+void RoutineDefinition::visit(AstVisitor &v)
+{
+	VISIT(routine);
+}
+
+void ReturnStatement::visit(AstVisitor &v)
+{
+	VISIT(return_statement);
+}
 } // namespace calao
 #undef VISIT

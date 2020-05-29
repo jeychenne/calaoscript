@@ -17,19 +17,14 @@
 
 namespace calao {
 
-Callable::Callable(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg, int max_arg) :
-	signature(std::move(sig)), ref_flags(ref_flags), min_argc(min_arg), max_argc(max_arg)
+Callable::Callable(std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
+	signature(std::move(sig)), ref_flags(ref_flags)
 {
 
 }
 
-NativeRoutine::NativeRoutine(NativeCallback cb, std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg,
-							 int max_arg) : Callable(std::move(sig), ref_flags, min_arg, max_arg), callback(std::move(cb))
-{
-
-}
-
-void NativeRoutine::call(Runtime &, CallInfo &)
+NativeRoutine::NativeRoutine(NativeCallback cb, std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
+	Callable(std::move(sig), ref_flags), callback(std::move(cb))
 {
 
 }
@@ -43,15 +38,10 @@ Routine::Routine() : Callable()
 
 }
 
-Routine::Routine(std::vector<Handle<Class>> sig, ParamBitset ref_flags, int min_arg, int max_arg) :
-		Callable(std::move(sig), ref_flags, min_arg, max_arg)
+Routine::Routine(std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
+		Callable(std::move(sig), ref_flags)
 {
 
-}
-
-void Routine::call(Runtime &rt, CallInfo &)
-{
-	rt.interpret(*this);
 }
 
 Instruction Routine::add_integer_constant(intptr_t i)
@@ -67,6 +57,11 @@ Instruction Routine::add_float_constant(double n)
 Instruction Routine::add_string_constant(String s)
 {
 	return add_constant(string_pool, std::move(s));
+}
+
+Instruction Routine::add_function(Handle<Function> f)
+{
+	return add_constant(function_pool, std::move(f));
 }
 
 Instruction Routine::add_local(const String &name, int scope, int depth)
@@ -101,4 +96,25 @@ int Routine::local_count() const
 {
 	return int(locals.size());
 }
+
+Instruction Routine::add_routine(std::shared_ptr<Routine> r)
+{
+	return add_constant(routine_pool, std::move(r));
+}
+
+
+//----------------------------------------------------------------------------------------------------------------------
+
+Function::Function(String name, std::shared_ptr<Callable> r) :
+	Function(std::move(name))
+{
+	add_routine(std::move(r));
+}
+
+void Function::add_routine(std::shared_ptr<Callable> r)
+{
+	routines.push_back(std::move(r));
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 } // namespace calao

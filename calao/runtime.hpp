@@ -26,11 +26,11 @@
 #include <calao/variant.hpp>
 #include <calao/list.hpp>
 #include <calao/table.hpp>
+#include <calao/function.hpp>
 #include <calao/dictionary.hpp>
 #include <calao/internal/parser.hpp>
 #include <calao/internal/code.hpp>
 #include <calao/internal/compiler.hpp>
-#include <calao/internal/call.hpp>
 #include <calao/third_party/memory_pool.hpp>
 
 namespace calao {
@@ -254,7 +254,7 @@ private:
 	Variant *limit;
 
 	// Instruction pointer.
-	const Instruction *ip;
+	const Instruction *ip = nullptr;
 
 	// Currently executing code chunk.
 	const Code *code = nullptr;

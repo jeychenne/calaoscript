@@ -68,6 +68,8 @@ void Runtime::create_builtins()
 	// yet. We can't create it first because it inherits from Object.
 	auto object_class = create_type<Object>("Object", nullptr);
 
+	//globals.insert({ Class::get_name<Object>(), Handle<Class>(object_class, Handle<Class>::Retain())});
+
 	auto class_class = create_type<Class>("Class", object_class);
 	assert(class_class->inherits(object_class));
 
@@ -87,6 +89,7 @@ void Runtime::create_builtins()
 	create_type<List>("List", object_class);
 	create_type<Table>("Table", object_class);
 	create_type<File>("File", object_class);
+	create_type<Function>("Function", object_class);
 //	create_type<Module>("Module", object_class);
 
 	// Sanity checks
@@ -606,6 +609,12 @@ void Runtime::interpret(const Routine &routine)
 				push(value);
 				break;
 			}
+			case Opcode::PushFunction:
+			{
+				auto value = routine.get_function(*ip++);
+				push(std::move(value));
+				break;
+			}
 			case Opcode::PushInteger:
 			{
 				intptr_t value = routine.get_integer(*ip++);
@@ -660,6 +669,22 @@ void Runtime::interpret(const Routine &routine)
 				Variant &v = current_frame->locals[*ip++];
 				v = std::move(peek());
 				pop();
+				break;
+			}
+			case Opcode::SetSignature:
+			{
+				const int index = *ip++;
+				const int narg = *ip++;
+				auto r = routine.get_routine(index);
+
+				for (int i = narg; i > 0; i--)
+				{
+					auto &v = peek(-i);
+					if (!check_type<Class>(v)) {
+						throw RuntimeError(get_current_line(), "Expected a Class object as type of parameter %", (narg + 1 - i));
+					}
+					r->add_parameter_type(v.handle<Class>());
+				}
 				break;
 			}
 			case Opcode::Subtract:
@@ -863,6 +888,13 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("PUSH_FLOAT     %-5d      ; %f\n", index, value);
 			return 2;
 		}
+		case Opcode::PushFunction:
+		{
+			int index = routine.code[offset + 1];
+			auto value = routine.get_function(index);
+			printf("PUSH_FUNCTION  %-5d      ; %s\n", index, value->name().data());
+			return 2;
+		}
 		case Opcode::PushInteger:
 		{
 			int index = routine.code[offset + 1];
@@ -913,6 +945,14 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("SET_LOCAL      %-5d      ; %s\n", index, value.data());
 			return 2;
 		}
+		case Opcode::SetSignature:
+		{
+			int index = routine.code[offset + 1];
+			int narg = routine.code[offset + 2];
+			auto r = routine.get_routine(index);
+			printf("SET_SIGNATURE  %-3d %-5d  ; <%p>\n", index, narg, r.get());
+			return 3;
+		}
 		case Opcode::Subtract:
 		{
 			return print_simple_instruction("SUBTRACT");
@@ -929,8 +969,7 @@ void Runtime::do_file(const String &path)
 	auto ast = parser.parse_file(path);
 	auto routine = compiler.compile(std::move(ast));
 	disassemble(*routine, "test");
-	CallInfo call;
-	routine->call(*this, call);
+	interpret(*routine);
 }
 
 int Runtime::get_current_line() const

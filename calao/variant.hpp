@@ -139,6 +139,9 @@ public:
 
 	double get_number() const;
 
+	template<class T>
+	Handle<T> handle() { return reinterpret_cast<Handle<T> &>(as.storage); }
+
 private:
 
 	template<class T>

@@ -61,6 +61,7 @@ enum class Opcode : Instruction
 	PushBoolean,
 	PushFalse,
 	PushFloat,
+	PushFunction,
 	PushInteger,
 	PushNan,
 	PushNull,
@@ -70,6 +71,7 @@ enum class Opcode : Instruction
 	Return,
 	SetGlobal,
 	SetLocal,
+	SetSignature,
 	Subtract,
 };
 
@@ -104,6 +106,8 @@ public:
 	void emit(intptr_t line_no, Opcode op) { emit(line_no, static_cast<Instruction>(op)); }
 
 	void emit(intptr_t line_no, Opcode op, Instruction i) { emit(line_no, op); emit(line_no, i); }
+
+	void emit(intptr_t line_no, Opcode op, Instruction i1, Instruction i2) { emit(line_no, op); emit(line_no, i1); emit(line_no, i2); }
 
 	static int read_integer(const Instruction *&ip);
 

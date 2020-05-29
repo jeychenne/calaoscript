@@ -139,17 +139,6 @@ struct ConcatExpression final : public Ast
 	AstList list;
 };
 
-struct CallExpression final : public Ast
-{
-	CallExpression(int line, AutoAst e, AstList args) : Ast(line), expr(std::move(e)), args(std::move(args)) { }
-
-	void visit(AstVisitor &v) override;
-
-	AutoAst expr;
-	AstList args;
-};
-
-
 struct Variable final : public Ast
 {
 	Variable(int line, String name) : Ast(line), name(std::move(name)) { }
@@ -254,6 +243,49 @@ struct LoopExitStatement final : public Ast
 
 //---------------------------------------------------------------------------------------------------------------------
 
+struct RoutineParameter final : public Ast
+{
+	RoutineParameter(int line, AutoAst var, AutoAst type) : Ast(line), variable(std::move(var)), type(std::move(type)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst variable, type;
+	bool add_names = false; // flag for the compiler
+};
+
+struct RoutineDefinition final : public Ast
+{
+	RoutineDefinition(int line, AutoAst name, AstList params, AutoAst body, bool local, bool method) :
+		Ast(line), name(std::move(name)),  body(std::move(body)), params(std::move(params)), local(local), method(method) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst name, body;
+	AstList params;
+	bool local, method;
+};
+
+struct CallExpression final : public Ast
+{
+	CallExpression(int line, AutoAst e, AstList args) : Ast(line), expr(std::move(e)), args(std::move(args)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst expr;
+	AstList args;
+};
+
+struct ReturnStatement final : public Ast
+{
+	ReturnStatement(int line, AutoAst e) : Ast(line), expr(std::move(e)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst expr;
+};
+
+//---------------------------------------------------------------------------------------------------------------------
+
 class AstVisitor
 {
 public:
@@ -270,6 +302,8 @@ public:
 	virtual void visit_declaration(Declaration *node) = 0;
 	virtual void visit_print_statement(PrintStatement *node) = 0;
 	virtual void visit_call(CallExpression *node) = 0;
+	virtual void visit_parameter(RoutineParameter *node) = 0;
+	virtual void visit_routine(RoutineDefinition *node) = 0;
 	virtual void visit_variable(Variable *node) = 0;
 	virtual void visit_assignment(Assignment *node) = 0;
 	virtual void visit_assert_statement(AssertStatement *node) = 0;
@@ -279,6 +313,7 @@ public:
 	virtual void visit_while_statement(WhileStatement *node) = 0;
 	virtual void visit_for_statement(ForStatement *node) = 0;
 	virtual void visit_loop_exit(LoopExitStatement *node) = 0;
+	virtual void visit_return_statement(ReturnStatement *node) = 0;
 };
 
 } // namespace calao

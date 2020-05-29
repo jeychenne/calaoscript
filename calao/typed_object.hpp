@@ -101,12 +101,12 @@ public:
 	}
 
 	Handle(const Handle &other) {
-		ptr = other.get();
+		ptr = other.ptr;
 		retain();
 	}
 
 	Handle(Handle &&other) noexcept {
-		ptr = other.get();
+		ptr = other.ptr;
 		other.zero();
 	}
 
@@ -153,11 +153,11 @@ public:
 	}
 
 	bool operator==(const Handle &other) const {
-		return ptr == other.get();
+		return ptr == other.ptr;
 	}
 
 	bool operator!=(const Handle &other) const {
-		return ptr != other.get();
+		return ptr != other.ptr;
 	}
 
 	void swap(Handle &other) noexcept {

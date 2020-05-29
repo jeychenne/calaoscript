@@ -43,8 +43,7 @@ void Compiler::initialize()
 {
 	scope_id = 0;
 	current_scope = 0;
-	routine = std::make_shared<Routine>();
-	code = &routine->code;
+	set_routine(std::make_shared<Routine>());
 }
 
 void Compiler::finalize()
@@ -266,7 +265,7 @@ void Compiler::visit_declaration(Declaration *node)
 	{
 		try
 		{
-			auto index = routine->add_local(ident->name, current_scope, scope_depth);
+			auto index = add_local(ident->name);
 			EMIT(Opcode::DefineLocal, index);
 		}
 		catch (std::runtime_error &e)
@@ -432,12 +431,12 @@ void Compiler::visit_for_statement(ForStatement *node)
 	// Initialize loop variable
 	auto ident = dynamic_cast<Variable*>(node->var.get());
 	node->start->visit(*this);
-	auto var_index = routine->add_local(ident->name, current_scope, scope_depth);
+	auto var_index = add_local(ident->name);
 	EMIT(Opcode::DefineLocal, var_index);
 
 	// Evaluate end condition once and store it in a hidden variable.
 	node->end->visit(*this);
-	auto end_index = routine->add_local("$end", current_scope, scope_depth);
+	auto end_index = add_local("$end");
 	EMIT(Opcode::DefineLocal, end_index);
 
 	// Evaluate step condition if it was provided and store it in a hidden variable;
@@ -447,7 +446,7 @@ void Compiler::visit_for_statement(ForStatement *node)
 	if (node->step)
 	{
 		node->step->visit(*this);
-		step_index = routine->add_local("$step", current_scope, scope_depth);
+		step_index = add_local("$step");
 		EMIT(Opcode::DefineLocal, step_index);
 	}
 
@@ -525,6 +524,123 @@ void Compiler::backpatch_continues(int previous)
 		code->backpatch(addr);
 	}
 	continue_count = previous;
+}
+
+void Compiler::visit_parameter(RoutineParameter *node)
+{
+	if (node->add_names)
+	{
+		auto ident = static_cast<Variable*>(node->variable.get());
+		// From the function's point of view, the parameters are just the first locals.
+		add_local(ident->name);
+	}
+	else
+	{
+		if (node->type)
+		{
+			// The expression must evaluate to a Class at runtime.
+			node->type->visit(*this);
+		}
+		else
+		{
+			// Parameters with no type are implicitly tagged as Object.
+			auto id = routine->add_string_constant(Class::get_name<Object>());
+			EMIT(Opcode::GetGlobal, id);
+		}
+	}
+}
+
+void Compiler::visit_routine(RoutineDefinition *node)
+{
+	if (node->params.size() > PARAM_BITSET_SIZE) {
+		throw RuntimeError(node->line_no, "[Syntax error] Maximum number of parameters exceeded (limit is %)", PARAM_BITSET_SIZE);
+	}
+	auto ident = static_cast<Variable*>(node->name.get());
+	auto &name = ident->name;
+	auto func = create_function_symbol(node, name);
+
+	// Compile inner routine.
+	auto previous_scope = open_scope();
+	auto outer_routine = routine;
+	set_routine(std::make_shared<Routine>());
+
+	for (auto &param : node->params)
+	{
+		// Compile names in the new function.
+		static_cast<RoutineParameter*>(param.get())->add_names = true;
+		param->visit(*this);
+	}
+	node->body->visit(*this);
+	close_scope(previous_scope);
+
+	auto index = outer_routine->add_routine(routine);
+	func->add_routine(std::move(routine));
+	set_routine(std::move(outer_routine));
+
+	// Compile type information in the outer routine.
+	for (auto &param : node->params)
+	{
+		static_cast<RoutineParameter*>(param.get())->add_names = false;
+		param->visit(*this);
+	}
+	EMIT(Opcode::SetSignature, index, Instruction(node->params.size()));
+}
+
+Handle<Function> Compiler::create_function_symbol(RoutineDefinition *node, const String &name)
+{
+	Handle<Function> func;
+
+	if (node->local)
+	{
+		auto symbol = routine->find_local(name, current_scope);
+
+		if (symbol)
+		{
+			func = routine->get_function(*symbol);
+		}
+		else
+		{
+			func = make_handle<Function>(name);
+			auto symbol = routine->add_function(func);
+			auto index = add_local(name);
+			EMIT(Opcode::PushFunction, symbol);
+			EMIT(Opcode::DefineLocal, index);
+		}
+	}
+	else
+	{
+		func = make_handle<Function>(name);
+		auto symbol = routine->add_function(func);
+		auto index = routine->add_string_constant(name);
+		EMIT(Opcode::PushFunction, symbol);
+		EMIT(Opcode::DefineGlobal, index);
+	}
+
+	return func;
+}
+
+Instruction Compiler::add_local(const String &name)
+{
+	return routine->add_local(name, current_scope, scope_depth);
+}
+
+void Compiler::set_routine(std::shared_ptr<Routine> r)
+{
+	this->code = r ? &r->code : nullptr;
+	this->routine = std::move(r);
+}
+
+void Compiler::visit_return_statement(ReturnStatement *node)
+{
+	if (node->expr)
+	{
+		node->expr->visit(*this);
+	}
+	else
+	{
+		EMIT(Opcode::PushNull);
+	}
+	EMIT(Opcode::Return);
 }
 
 

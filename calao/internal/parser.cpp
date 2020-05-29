@@ -126,8 +126,12 @@ AutoAst Parser::parse_statement()
 	}
 	if (accept(Lexeme::Local))
 	{
-		accept(Lexeme::Var);
-		return parse_declaration(true);
+		if (accept(Lexeme::Var)) {
+			return parse_declaration(true);
+		}
+		expect(Lexeme::Function, "after 'local'");
+		return parse_function_declaration(true);
+
 	}
 	else if (accept(Lexeme::Var))
 	{
@@ -145,9 +149,13 @@ AutoAst Parser::parse_statement()
 	{
 		return parse_for_statement();
 	}
-	else if (accept(Lexeme::Do))
+	else if (accept(Lexeme::Function))
 	{
-		return parse_statements(true);
+		return parse_function_declaration(false);
+	}
+	else if (accept(Lexeme::Return))
+	{
+		return parse_return_statement();
 	}
 	else if (accept(Lexeme::Break))
 	{
@@ -160,6 +168,10 @@ AutoAst Parser::parse_statement()
 	else if (accept(Lexeme::Assert))
 	{
 		return parse_assertion();
+	}
+	else if (accept(Lexeme::Do))
+	{
+		return parse_statements(true);
 	}
 	else
 	{
@@ -477,6 +489,37 @@ AstList Parser::parse_arguments()
 	return args;
 }
 
+AstList Parser::parse_parameters()
+{
+	trace_ast();
+	AstList params;
+
+	if (accept(Lexeme::RParen))
+	{
+		return params;
+	}
+	params.push_back(parse_parameter());
+
+	while (accept(Lexeme::Comma))
+	{
+		params.push_back(parse_parameter());
+	}
+	expect(Lexeme::RParen, "in parameter list");
+
+	return params;
+}
+
+AutoAst Parser::parse_parameter()
+{
+	auto var = parse_identifier("in parameter list");
+	AutoAst type;
+	if (accept(Lexeme::As)) {
+		type = parse_expression();
+	}
+
+	return make<RoutineParameter>(std::move(var), std::move(type));
+}
+
 AutoAst Parser::parse_assertion()
 {
 	auto e = parse_expression();
@@ -589,6 +632,33 @@ AutoAst Parser::parse_conditional_expression()
 
 	return e;
 }
+
+AutoAst Parser::parse_function_declaration(bool local)
+{
+	trace_ast();
+	int line = get_line();
+	constexpr const char *hint = "in function declaration";
+	auto name = parse_identifier(hint);
+	expect(Lexeme::LParen, hint);
+	auto params = parse_parameters();
+	// Don't open a scope for the block: the function will do it so that we include the parameters in the scope.
+	auto body = parse_statements(false);
+
+	return std::make_unique<RoutineDefinition>(line, std::move(name), std::move(params), std::move(body), local, false);
+}
+
+AutoAst Parser::parse_return_statement()
+{
+	AutoAst e;
+
+	if (!token.is_separator())
+	{
+		e = parse_expression();
+	}
+
+	return make<ReturnStatement>(std::move(e));
+}
+
 
 } // namespace calao
 

@@ -26,6 +26,8 @@ class String;
 class File;
 class Regex;
 class Variant;
+class Function;
+class Closure;
 
 // Dummy base class for Float and Integer
 class Number {};
@@ -39,26 +41,17 @@ template<typename T> struct maybe_cyclic : std::true_type
 
 };
 
+#define NON_CYCLIC(T) template<> struct maybe_cyclic<T> : std::false_type { };
 
-template<> struct maybe_cyclic<String> : std::false_type
-{
+NON_CYCLIC(String);
+NON_CYCLIC(File);
+NON_CYCLIC(Regex);
+NON_CYCLIC(Class);
+NON_CYCLIC(Function);
+NON_CYCLIC(Closure);
 
-};
+#undef NON_CYCLIC
 
-template<> struct maybe_cyclic<File> : std::false_type
-{
-
-};
-
-template<> struct maybe_cyclic<Regex> : std::false_type
-{
-
-};
-
-template<> struct maybe_cyclic<Class> : std::false_type
-{
-
-};
 
 //----------------------------------------------------------------------------------------------------------------------
 

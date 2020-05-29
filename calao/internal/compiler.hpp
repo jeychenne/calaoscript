@@ -41,6 +41,8 @@ public:
 	void visit_declaration(Declaration *node) override;
 	void visit_print_statement(PrintStatement *node) override;
 	void visit_call(CallExpression *node) override;
+	void visit_parameter(RoutineParameter *node) override;
+	void visit_routine(RoutineDefinition *node) override;
 	void visit_variable(Variable *node) override;
 	void visit_assignment(Assignment *node) override;
 	void visit_assert_statement(AssertStatement *node) override;
@@ -50,6 +52,7 @@ public:
 	void visit_while_statement(WhileStatement *node) override;
 	void visit_for_statement(ForStatement *node) override;
 	void visit_loop_exit(LoopExitStatement *node) override;
+	void visit_return_statement(ReturnStatement *node) override;
 
 private:
 
@@ -69,6 +72,12 @@ private:
 	void backpatch_breaks(int previous);
 
 	void backpatch_continues(int previous);
+
+	Handle<Function> create_function_symbol(RoutineDefinition *node, const String &name);
+
+	Instruction add_local(const String &name);
+
+	void set_routine(std::shared_ptr<Routine> r);
 
 	// Code of the routine being compiled.
 	Code *code = nullptr;
