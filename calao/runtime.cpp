@@ -46,10 +46,7 @@ Runtime::Runtime() :
 
 calao::Runtime::~Runtime()
 {
-	for (auto i = classes.size(); i-- > 0; )
-	{
-		delete classes[i];
-	}
+
 }
 
 void calao::Runtime::add_candidate(Collectable *obj)
@@ -66,24 +63,25 @@ void Runtime::create_builtins()
 {
 	// We need to boostrap the class system, since we are creating class instances but the class type doesn't exist
 	// yet. We can't create it first because it inherits from Object.
-	auto object_class = create_type<Object>("Object", nullptr);
+	auto object_handle = create_type<Object>("Object", nullptr);
+	auto object_class = object_handle.get();
 
 	//globals.insert({ Class::get_name<Object>(), Handle<Class>(object_class, Handle<Class>::Retain())});
 
-	auto class_class = create_type<Class>("Class", object_class);
-	assert(class_class->inherits(object_class));
+	auto class_handle = create_type<Class>("Class", object_class);
+	assert(class_handle->inherits(object_class));
 
-	assert(object_class->get_class() == nullptr);
-	assert(class_class->get_class() == nullptr);
+	assert(object_handle.object()->get_class() == nullptr);
+	assert(class_handle.object()->get_class() == nullptr);
 
-	object_class->set_class(class_class);
-	class_class->set_class(class_class);
+	object_handle.object()->set_class(class_handle.get());
+	class_handle.object()->set_class(class_handle.get());
 
 	// Create other builtin types.
 	create_type<bool>("Boolean", object_class);
 	auto num_class = create_type<Number>("Number", object_class);
-	create_type<intptr_t>("Integer", num_class);
-	create_type<double>("Float", num_class);
+	create_type<intptr_t>("Integer", num_class.get());
+	create_type<double>("Float", num_class.get());
 	create_type<String>("String", object_class);
 	create_type<Regex>("Regex", object_class);
 	create_type<List>("List", object_class);
@@ -93,8 +91,8 @@ void Runtime::create_builtins()
 //	create_type<Module>("Module", object_class);
 
 	// Sanity checks
-	assert(object_class->get_class() != nullptr);
-	assert(class_class->get_class() != nullptr);
+	assert(object_handle.object()->get_class() != nullptr);
+	assert(class_handle.object()->get_class() != nullptr);
 	assert((Class::get<Class>()) != nullptr);
 }
 

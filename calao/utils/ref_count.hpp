@@ -81,7 +81,7 @@ class IntrusivePtr
 public:
 
 	// Dummy struct to construct a handle from a raw pointer without retaining it.
-	struct Retain { };
+	struct Raw { };
 
 	IntrusivePtr()
 	{ ptr = nullptr; }
@@ -99,15 +99,13 @@ public:
 		ptr = h.abandon();
 	}
 
-	// When constructing from a raw pointer, the object is initialized with a count of 1 so we don't retain by default...
 	explicit IntrusivePtr(T *value) {
 		ptr = value;
+		retain();
 	}
 
-	// ... but we can explicitly retain if needed.
-	IntrusivePtr(T *value, Retain) {
+	IntrusivePtr(T *value, Raw) {
 		ptr = value;
-		retain();
 	}
 
 	IntrusivePtr(const IntrusivePtr &other) {

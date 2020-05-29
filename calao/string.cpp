@@ -43,7 +43,7 @@ namespace calao {
 IntrusivePtr<String::Data> String::empty_string()
 {
 	static Data e;
-	return IntrusivePtr<Data>(&e, IntrusivePtr<Data>::Retain());
+	return IntrusivePtr<Data>(&e);
 }
 
 String::String(const std::wstring &other) :
@@ -344,7 +344,7 @@ IntrusivePtr<String::Data> String::Data::create(const char *str, intptr_t len, i
 	auto self = utils::alloc(base_size + capacity);
 	auto data = new (self) Data(str, len, capacity);
 
-	return IntrusivePtr<Data>(data);
+	return IntrusivePtr<Data>(data, IntrusivePtr<Data>::Raw());
 }
 
 void String::Data::reset()

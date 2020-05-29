@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <functional>
 
 #define CALAO_UNUSED(x) (void)(x)
 
@@ -49,6 +50,13 @@ static constexpr bool is_arch64 = (pointer_size == 8);
 // Largest and smallest integers that can be safely stored in a double.
 static constexpr double largest_integer = 9007199254740992;
 static constexpr double smallest_integer = -9007199254740992;
+
+
+class Object;
+class Collectable;
+
+// Callback for the garbage collector.
+using GCCallback = std::function<void(Collectable*)>;
 
 } // namespace calao
 

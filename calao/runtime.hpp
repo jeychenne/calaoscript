@@ -24,6 +24,7 @@
 #include <calao/typed_object.hpp>
 #include <calao/internal/recycler.hpp>
 #include <calao/variant.hpp>
+#include <calao/class.hpp>
 #include <calao/list.hpp>
 #include <calao/table.hpp>
 #include <calao/function.hpp>
@@ -105,19 +106,19 @@ public:
 	~Runtime();
 
 	template<typename T>
-	Class *create_type(const char *name, Class *base)
+	Handle<Class> create_type(const char *name, Class *base)
 	{
 		// Sanity checks.
 		static_assert(!(std::is_same<T, String>::value && traits::is_collectable<T>::value), "String is not collectable");
 		static_assert(!(std::is_same<T, Class>::value && traits::is_collectable<T>::value), "Class is not collectable");
 
 		using Type = typename traits::bare_type<T>::type;
-		Class *klass = new Class(name, base, &typeid(Type));
+		auto klass = make_handle<Class>(name, base, &typeid(Type));
 		classes.push_back(klass);
-
+		klass->set_object(classes.back().object());
 
 		// Register statically known type so that we can call Class::get<T>() to retrieve a type's class.
-		Class::Descriptor<T>::set(klass);
+		Class::Descriptor<T>::set(klass.get());
 
 		// Object is an abstract type
 		if constexpr (traits::is_boxed<T>::value && !std::is_same<T, Object>::value)
@@ -241,8 +242,8 @@ private:
 	// Garbage collector.
 	Recycler gc;
 
-	// Builtin classes.
-	std::vector<Class*> classes;
+	// Builtin classes (known at compile time).
+	std::vector<Handle<Class>> classes;
 
 	// Runtime stack.
 	Array<Variant> stack;

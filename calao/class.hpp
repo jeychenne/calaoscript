@@ -18,13 +18,12 @@
 
 #include <typeinfo>
 #include <vector>
-#include <calao/object.hpp>
 #include <calao/string.hpp>
 
 namespace calao {
 
 // Classes are objects too.
-class Class final : public Atomic
+class Class final
 {
 	// A template to keep track of classes known at compile time. This should not be accessed directly: use
 	// Class::get<T>() instead.
@@ -49,13 +48,13 @@ class Class final : public Atomic
 		static Class *isa;
 	};
 
-
 public:
 
 
 	Class(String name, Class *parent, const std::type_info *info);
 
 	Class(const Class &) = delete;
+
 	Class(Class &&) = delete;
 
 	~Class() = default;
@@ -97,8 +96,13 @@ private:
 	int (*compare)(const Object*, const Object*) = nullptr;
 	bool (*equal)(const Object*, const Object*) = nullptr;
 
+	void set_object(Object *o) { _object = o; }
+
 	// Name given to the class when it was created
 	String _name;
+
+	// Pointer to the object the class is wrapped in.
+	Object *_object = nullptr;
 
 	// Inheritance depth (0 for Object, 1 for direct subclasses of Object, etc.).
 	size_t _depth;

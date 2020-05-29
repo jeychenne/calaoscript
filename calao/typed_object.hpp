@@ -78,26 +78,19 @@ class Handle
 public:
 
 	// Dummy struct to construct a handle from a raw pointer without retaining it.
-	struct Retain { };
+	struct Raw { };
 
 	Handle()
 	{ ptr = nullptr; }
 
-	template<typename... Args>
-	Handle(Args... args)
-	{
-		ptr = new TObject<T>(std::forward<Args>(args)...);
-	}
-
-	// When constructing from a raw pointer, the object is initialized with a count of 1 so we don't retain by default...
 	explicit Handle(TObject<T> *value) {
 		ptr = value;
+		retain();
 	}
 
 	// ... but we can explicitly retain if needed.
-	Handle(TObject<T> *value, Retain) {
+	Handle(TObject<T> *value, Raw) {
 		ptr = value;
-		retain();
 	}
 
 	Handle(const Handle &other) {
@@ -144,10 +137,6 @@ public:
 		return &ptr->value();
 	}
 
-	operator T*() const {
-		return ptr;
-	}
-
 	operator bool() const {
 		return ptr != nullptr;
 	}
@@ -175,11 +164,11 @@ public:
 		ptr = nullptr;
 	}
 
-	T *object() {
+	TObject<T> *object() {
 		return ptr;
 	}
 
-	const T *object() const {
+	const TObject<T> *object() const {
 		return ptr;
 	}
 
@@ -213,7 +202,7 @@ private:
 template<class T, class... Args>
 Handle<T> make_handle(Args... args)
 {
-	return Handle<T>(new TObject<T>(std::forward<Args>(args)...));
+	return Handle<T>(new TObject<T>(std::forward<Args>(args)...), typename Handle<T>::Raw());
 }
 
 } // namespace calao

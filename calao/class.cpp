@@ -18,7 +18,7 @@ namespace calao {
 
 
 Class::Class(String name, Class *parent, const std::type_info *info) :
-	Atomic(get<Class>()), _name(std::move(name)), _info(info), _bases(parent ? parent->_bases : std::vector<Class*>())
+	_name(std::move(name)), _info(info), _bases(parent ? parent->_bases : std::vector<Class*>())
 {
 	_depth = _bases.size();
 	_bases.push_back(this);

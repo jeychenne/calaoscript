@@ -15,17 +15,12 @@
 #ifndef CALAO_OBJECT_HPP
 #define CALAO_OBJECT_HPP
 
-#include <functional>
 #include <calao/string.hpp>
 
 namespace calao {
 
 class Class;
 class Runtime;
-class Collectable;
-
-// Callback for the garbage collector.
-using GCCallback = std::function<void(Collectable*)>;
 
 // Color for the garbage collector. Objects that are acyclic (i.e. contain no cyclic reference)
 // are green. Base types such as String and Regex are acyclic because there is no way they
