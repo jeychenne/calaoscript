@@ -205,6 +205,14 @@ Handle<T> make_handle(Args... args)
 	return Handle<T>(new TObject<T>(std::forward<Args>(args)...), typename Handle<T>::Raw());
 }
 
+//---------------------------------------------------------------------------------------------------------------------
+
+template<class T>
+Handle<Class> get_class()
+{
+	return Handle<Class>(reinterpret_cast<TObject<Class>*>(Class::get<T>()->object()));
+}
+
 } // namespace calao
 
 #endif // CALAO_TYPED_OBJECT_HPP

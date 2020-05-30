@@ -17,29 +17,36 @@
 
 namespace calao {
 
-Callable::Callable(std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
-	signature(std::move(sig)), ref_flags(ref_flags)
+Callable::Callable(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
+	signature(std::move(sig)), ref_flags(ref_flags), _name(name)
 {
 
 }
 
-NativeRoutine::NativeRoutine(NativeCallback cb, std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
-	Callable(std::move(sig), ref_flags), callback(std::move(cb))
-{
-
-}
 
 //----------------------------------------------------------------------------------------------------------------------
 
-
-
-Routine::Routine() : Callable()
+NativeRoutine::NativeRoutine(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags) :
+	Callable(name, std::move(sig), ref_flags), callback(std::move(cb))
 {
 
 }
 
-Routine::Routine(std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
-		Callable(std::move(sig), ref_flags)
+Variant NativeRoutine::call(Runtime &rt, std::span<Variant> args)
+{
+	return callback(rt, args);
+}
+
+
+//----------------------------------------------------------------------------------------------------------------------
+
+Routine::Routine(const String &name) : Callable(name)
+{
+
+}
+
+Routine::Routine(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
+		Callable(name, std::move(sig), ref_flags)
 {
 
 }
@@ -102,6 +109,10 @@ Instruction Routine::add_routine(std::shared_ptr<Routine> r)
 	return add_constant(routine_pool, std::move(r));
 }
 
+Variant Routine::call(Runtime &rt, std::span<Variant> args)
+{
+	return rt.interpret(*this, args);
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -113,7 +124,63 @@ Function::Function(String name, std::shared_ptr<Callable> r) :
 
 void Function::add_routine(std::shared_ptr<Callable> r)
 {
-	routines.push_back(std::move(r));
+	if (std::find(routines.begin(), routines.end(), r) == routines.end()) {
+		routines.push_back(std::move(r));
+	}
+}
+
+std::shared_ptr<Callable> Function::resolve(std::span<Variant> args)
+{
+	// We use the simplest implementation possible. It finds the routine with the cheapest cost, where cost is defined
+	// as the sum of the distances between each argument's type and the expected parameter type.
+	int best_cost = (std::numeric_limits<int>::max)();
+	std::shared_ptr<Callable> candidate;
+	bool conflict = false;
+	assert(!routines.empty());
+
+	for (auto &r : routines)
+	{
+		int cost = 0;
+
+
+		if (!r->check_arg_count(args.size())) continue;
+
+		for (int i = 0; i < args.size(); i++)
+		{
+			auto &v = args[i];
+			// Null variables are compatible with any type
+			if (v.is_null()) continue;
+
+			// Add
+			auto derived = v.get_class();
+			auto base = r->signature[i].get();
+			int dist = derived->get_distance(base);
+			// If the argument doesn't match, this can't be a candidate.
+			if (dist < 0) goto SKIP;
+			cost += dist;
+		}
+		if (cost <= best_cost)
+		{
+			conflict = (cost == best_cost);
+			best_cost = cost;
+			candidate = r;
+		}
+
+		SKIP: (void)(nullptr);
+	}
+
+	if (conflict) {
+		throw error("[Runtime error] Can't resolve call to function '%': "
+			  "there are at least two methods that can accept this list of arguments", name());
+	}
+
+	return candidate;
+}
+
+Function::Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig,
+				   ParamBitset ref_flags)
+{
+	add_routine(std::make_shared<NativeRoutine>(name, std::move(cb), std::move(sig), ref_flags));
 }
 
 //----------------------------------------------------------------------------------------------------------------------

@@ -86,7 +86,7 @@ public:
 		{
 			if (!map->empty())
 			{
-				while (!map->node(pos)->used() && pos <= map->capacity()) {
+				while (pos < map->capacity() && !map->node(pos)->used()) {
 					++pos;
 				}
 			}
@@ -108,14 +108,14 @@ public:
 
 		iterator &operator++()
 		{
-			do { ++pos; } while (!map->node(pos)->used() && pos <= map->capacity());
+			do { ++pos; } while (pos < map->capacity() && !map->node(pos)->used());
 			return (*this);
 		}
 
 		iterator &operator++(int)
 		{
 			auto tmp(*this);
-			do { ++pos; } while (!map->node(pos)->used() && pos <= map->capacity());
+			do { ++pos; } while (pos < map->capacity() && !map->node(pos)->used());
 			return tmp;
 		}
 

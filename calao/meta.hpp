@@ -24,7 +24,7 @@ namespace meta {
 
 // Convert type to string.
 template<typename T>
-String to_string(const T &, bool, bool)
+String to_string(const T &, bool /* quote */, bool /* seen */)
 {
 	throw error("[Type error] Type % cannot be converted to string", Class::get_name<T>());
 }

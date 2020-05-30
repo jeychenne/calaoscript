@@ -58,8 +58,11 @@ public:
 
 	Variant(double val);
 
-	Variant(const char *str) : Variant(String(str))
-	{}
+	Variant(const char *str) : Variant(String(str)) {}
+
+	Variant(Substring str) : Variant(String(str)) { }
+
+	Variant(Object *obj);
 
 	explicit Variant(String s);
 
@@ -68,7 +71,7 @@ public:
 			m_data_type(Datatype::Object)
 	{
 		using Type = typename std::remove_reference<typename std::remove_cv<T>::type>::type;
-		as.obj = new TObject<Type>(std::forward<Type>(val));
+		as.object = new TObject<Type>(std::forward<Type>(val));
 	}
 
 	// Note: beware of C++'s "most vexing parse" when using this constructor. The following code:
@@ -91,9 +94,7 @@ public:
 
 	void swap(Variant &other) noexcept;
 
-	Variant &operator=(const Variant &other) noexcept;
-
-	Variant &operator=(Variant &&other) noexcept;
+	Variant &operator=(Variant other) noexcept;
 
 	Datatype data_type() const { return m_data_type; }
 
@@ -112,6 +113,8 @@ public:
 	bool is_number() const { return static_cast<unsigned >(m_data_type) & number_mask; }
 
 	bool is_alias() const { return m_data_type == Datatype::Alias; }
+
+	bool is_null() const { return m_data_type == Datatype::Null; }
 
 	const std::type_info *type_info() const;
 
@@ -144,6 +147,8 @@ public:
 
 private:
 
+	friend class Runtime;
+
 	template<class T>
 	friend T &cast(Variant &var);
 
@@ -159,6 +164,8 @@ private:
 
 	void zero();
 
+	void finalize(); // for the runtime only
+
 	void copy_fields(const Variant &other);
 
 	using largest_type_t = typename std::conditional<sizeof(void *) >= sizeof(double), void *, double>::type;
@@ -168,7 +175,7 @@ private:
 	union Storage
 	{
 		storage_t storage;
-		Object *obj;
+		Object *object;
 		Alias *alias;
 	} as;
 
@@ -257,7 +264,7 @@ T &cast(Variant &v)
 	auto &var = v.resolve();
 	using Type = typename traits::bare_type<T>::type;
 	assert(var.data_type() == Variant::Datatype::Object);
-	auto ptr = reinterpret_cast<TObject<Type> *>(var.as.obj);
+	auto ptr = reinterpret_cast<TObject<Type> *>(var.as.object);
 
 	if (ptr->type_info() != &typeid(Type))
 	{

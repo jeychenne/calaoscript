@@ -134,9 +134,6 @@ struct is_boxed<Number> : std::false_type { };
 template<>
 struct is_boxed<String> : std::false_type { };
 
-template<>
-struct is_boxed<Class> : std::false_type { };
-
 // Abstract type, but we need to create a class for it since it is the base of all classes.
 template<>
 struct is_boxed<Object> : std::false_type { };

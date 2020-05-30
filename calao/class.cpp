@@ -26,6 +26,12 @@ Class::Class(String name, Class *parent, const std::type_info *info) :
 
 bool Class::inherits(const Class *base) const
 {
-	return base->depth() <= this->depth() && _bases[base->depth()] == base;
+	return _bases[base->depth()] == base && base->depth() <= this->depth();
 }
+
+int Class::get_distance(const Class *base) const
+{
+	return _bases[base->depth()] == base ? this->depth() - base->depth() : -1;
+}
+
 } // namespace calao

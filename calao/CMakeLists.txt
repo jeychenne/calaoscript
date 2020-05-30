@@ -55,7 +55,7 @@ endif()
 #####################
 
 # Uncomment this line to use std::unordered_map instead of Calao's default hashmap.
-# add_definitions(-DCALAO_STD_UNORDERED_MAP)
+#add_definitions(-DCALAO_STD_UNORDERED_MAP)
 
 include_directories("..")
 
@@ -76,7 +76,6 @@ file(GLOB SOURCE_FILES
         utils/*.cpp utils/*.hpp
         third_party/utf8proc/utf8proc.c
         third_party/utf8proc/utf8proc.h
-        third_party/memory_pool.hpp
 )
 
 add_library(calao-runtime STATIC ${SOURCE_FILES})

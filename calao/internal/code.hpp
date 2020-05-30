@@ -31,6 +31,7 @@ enum class Opcode : Instruction
 {
 	Assert,
 	Add,
+	Call,
 	Compare,
 	Concat,
 	DecrementLocal,
@@ -132,6 +133,8 @@ public:
 	int emit_jump(intptr_t line_no, Opcode jmp, int addr);
 
 	int get_current_offset() const { return int(code.size()); }
+
+	static const char *get_opcode_name(Instruction op);
 
 private:
 

@@ -32,7 +32,6 @@
 #include <calao/internal/parser.hpp>
 #include <calao/internal/code.hpp>
 #include <calao/internal/compiler.hpp>
-#include <calao/third_party/memory_pool.hpp>
 
 namespace calao {
 
@@ -186,7 +185,10 @@ public:
 
 	Variant & peek(int n = -1);
 
-	void interpret(const Routine &routine);
+	Variant interpret(const Routine &routine);
+
+	// Call a user-defined function in Opcode::Call.
+	Variant interpret(const Routine &routine, std::span<Variant> args);
 
 	void disassemble(const Routine &routine, const String &name);
 
@@ -194,15 +196,25 @@ public:
 
 	String intern_string(const String &s);
 
+	void add_global(String name, Variant value);
+
+	void add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref = 0);
+
 private:
 
 	struct CallFrame
 	{
-		// Beginning of the frame.
-		Variant *base;
+		// Return address in the caller.
+		const Instruction *ip = nullptr;
+
+		// Routine being called
+		const Routine *previous_routine = nullptr;
 
 		// Arguments and local variables on the stack.
-		Variant *locals;
+		Variant *locals = nullptr;
+
+		// Number of local variables.
+		int nlocal = -1;
 	};
 
 	friend class Collectable;
@@ -212,6 +224,8 @@ private:
 	void remove_candidate(Collectable *obj);
 
 	void create_builtins();
+
+	void set_global_namespace();
 
 	void check_capacity();
 
@@ -225,7 +239,7 @@ private:
 
 	size_t disassemble_instruction(const Routine &routine, size_t offset);
 
-	size_t print_simple_instruction(const char *name);
+	static size_t print_simple_instruction(const char *name);
 
 	void negate();
 
@@ -235,9 +249,9 @@ private:
 
 	int get_current_line() const;
 
-	void push_stack_frame(int nlocal);
+	void push_call_frame(int nlocal);
 
-	void pop_stack_frame();
+	Variant pop_call_frame();
 
 	// Garbage collector.
 	Recycler gc;
@@ -253,6 +267,9 @@ private:
 
 	// End of the stack array.
 	Variant *limit;
+
+	// Routine which is being executed.
+	const Routine *current_routine = nullptr;
 
 	// Instruction pointer.
 	const Instruction *ip = nullptr;
@@ -272,11 +289,8 @@ private:
 	// Global variables.
 	Dictionary<Variant> globals;
 
-	// Memory pool for stack frames.
-	acay::MemoryPool<CallFrame, 64 * sizeof(CallFrame)> frame_pool;
-
 	// Stack of call frames.
-	std::vector<CallFrame*> frames;
+	std::vector<std::unique_ptr<CallFrame>> frames;
 
 	CallFrame *current_frame = nullptr;
 

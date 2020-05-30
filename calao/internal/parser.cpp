@@ -126,10 +126,11 @@ AutoAst Parser::parse_statement()
 	}
 	if (accept(Lexeme::Local))
 	{
+		while (accept(Lexeme::Eol)) { }
 		if (accept(Lexeme::Var)) {
 			return parse_declaration(true);
 		}
-		expect(Lexeme::Function, "after 'local'");
+		expect(Lexeme::Function, "or \"var\" after \"local\"");
 		return parse_function_declaration(true);
 
 	}
@@ -172,6 +173,11 @@ AutoAst Parser::parse_statement()
 	else if (accept(Lexeme::Do))
 	{
 		return parse_statements(true);
+	}
+	else if (accept(Lexeme::Pass))
+	{
+		// Stuff this in constant literal to avoid creating a new AST node. This is a no-op anyway.
+		return make<ConstantLiteral>(Lexeme::Pass);
 	}
 	else
 	{
@@ -552,14 +558,14 @@ AutoAst Parser::parse_if_statement()
 	AutoAst else_block;
 	auto line = get_line();
 	auto e = parse_expression();
-	expect(Lexeme::Then, "in 'if' statement");
+	expect(Lexeme::Then, "in \"if\" statement");
 	auto block = parse_if_block();
 	ifs.push_back(make<IfCondition>(std::move(e), std::move(block)));
 
 	while (accept(Lexeme::Elsif))
 	{
 		e = parse_expression();
-		expect(Lexeme::Then, "in 'elsif' condition");
+		expect(Lexeme::Then, "in \"elsif\" condition");
 		block = parse_if_block();
 		ifs.push_back(make<IfCondition>(std::move(e), std::move(block)));
 	}
@@ -603,7 +609,7 @@ AutoAst Parser::parse_for_statement()
 	}
 	else
 	{
-		report_error("Expected 'to' or 'downto' in for loop");
+		report_error("Expected \"to\" or \"downto\" in for loop");
 	}
 
 	if (accept(Lexeme::Step)) {

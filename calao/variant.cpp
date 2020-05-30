@@ -15,6 +15,7 @@
 #include <calao/variant.hpp>
 #include <calao/meta.hpp>
 #include <calao/class.hpp>
+#include <calao/function.hpp>
 
 namespace calao {
 
@@ -35,6 +36,14 @@ Variant::Variant(intptr_t val) :
 {
 	new (&as.storage) intptr_t(val);
 }
+
+Variant::Variant(Object *obj) :
+		m_data_type(Datatype::Object)
+{
+	obj->retain();
+	as.object = obj;
+}
+
 
 Variant::Variant(double val) :
 		m_data_type(Datatype::Float)
@@ -73,7 +82,7 @@ void Variant::retain()
 	}
 	else if (this->is_object())
 	{
-		as.obj->retain();
+		as.object->retain();
 	}
 	else if (this->is_alias())
 	{
@@ -89,7 +98,7 @@ void Variant::release()
 	}
 	else if (this->is_object())
 	{
-		as.obj->release();
+		as.object->release();
 	}
 	else if (this->is_alias())
 	{
@@ -137,7 +146,7 @@ const std::type_info *Variant::type_info() const
 		case Datatype::String:
 			return &typeid(String);
 		case Datatype::Object:
-			return as.obj->type_info();
+			return as.object->type_info();
 		case Datatype::Integer:
 			return &typeid(intptr_t);
 		case Datatype::Float:
@@ -164,7 +173,7 @@ String Variant::class_name() const
 		case Datatype::String:
 			return Class::get_name<String>();
 		case Datatype::Object:
-			return as.obj->class_name();
+			return as.object->class_name();
 		case Datatype::Integer:
 			return Class::get_name<intptr_t>();
 		case Datatype::Float:
@@ -184,9 +193,9 @@ String Variant::class_name() const
 
 void Variant::traverse(const GCCallback &callback)
 {
-	if (this->is_object() and as.obj->collectable())
+	if (this->is_object() and as.object->collectable())
 	{
-		callback(reinterpret_cast<Collectable*>(as.obj));
+		callback(reinterpret_cast<Collectable*>(as.object));
 	}
 }
 
@@ -208,8 +217,8 @@ bool Variant::operator==(const Variant &other) const
 			}
 			case Datatype::Object:
 			{
-				auto o1 = v1.as.obj;
-				auto o2 = v2.as.obj;
+				auto o1 = v1.as.object;
+				auto o2 = v2.as.object;
 
 				if (o1->get_class() != o2->get_class()) {
 					break;
@@ -274,8 +283,8 @@ int Variant::compare(const Variant &other) const
 			}
 			case Datatype::Object:
 			{
-				auto o1 = v1.as.obj;
-				auto o2 = v2.as.obj;
+				auto o1 = v1.as.object;
+				auto o2 = v2.as.object;
 
 				// TODO: handle subclasses in comparison
 				if (o1->get_class() != o2->get_class()) {
@@ -377,10 +386,10 @@ String Variant::to_string(bool quote) const
 		}
 		case Datatype::Object:
 		{
-			bool seen = as.obj->is_seen();
-			as.obj->mark_seen(true);
-			auto s = as.obj->to_string(quote, seen);
-			as.obj->mark_seen(seen);
+			bool seen = as.object->is_seen();
+			as.object->mark_seen(true);
+			auto s = as.object->to_string(quote, seen);
+			as.object->mark_seen(seen);
 
 			return s;
 		}
@@ -413,33 +422,25 @@ String Variant::to_string(bool quote) const
 	throw error("[Internal error] Invalid type ID in to_string function");
 }
 
-Variant &Variant::operator=(Variant &&other) noexcept
+Variant &Variant::operator=(Variant other) noexcept
 {
-	if (this->is_alias())
+	auto &self = resolve();
+
+	if (check_type<Function>(self) && check_type<Function>(other))
 	{
-		this->as.alias->variant.swap(other);
+		auto &f1 = unsafe_cast<Function>(self);
+		auto &f2 = unsafe_cast<Function>(other);
+
+		if (&f1 != &f2)
+		{
+			for (auto &r : f2.routines) {
+				f1.add_routine(r);
+			}
+		}
 	}
 	else
 	{
-		swap(other);
-	}
-
-	return *this;
-}
-
-Variant &Variant::operator=(const Variant &other) noexcept
-{
-	if (this != &other)
-	{
-		Variant tmp(other);
-		if (this->is_alias())
-		{
-			this->as.alias->variant.swap(tmp);
-		}
-		else
-		{
-			swap(tmp);
-		}
+		self.swap(other);
 	}
 
 	return *this;
@@ -466,7 +467,7 @@ Class *Variant::get_class() const
 		case Datatype::Null:
 			return Class::get<void>();
 		case Datatype::Object:
-			return as.obj->get_class();
+			return as.object->get_class();
 		case Datatype::Alias:
 			return resolve().get_class();
 	}
@@ -485,7 +486,7 @@ size_t Variant::hash() const
 		case Datatype::Float:
 			return meta::hash(static_cast<uint64_t>((unsafe_cast<double>(*this))));
 		case Datatype::Object:
-			return as.obj->hash();
+			return as.object->hash();
 		case Datatype::Boolean:
 			return unsafe_cast<bool>(*this) ? 3 : 7;
 		case Datatype::Alias:
@@ -519,6 +520,12 @@ Variant &Variant::resolve()
 const Variant &Variant::resolve() const
 {
 	return const_cast<Variant*>(this)->resolve();
+}
+
+void Variant::finalize()
+{
+	release();
+	zero();
 }
 
 

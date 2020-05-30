@@ -34,7 +34,7 @@ static constexpr size_t PARAM_BITSET_SIZE = 64;
 using ParamBitset = std::bitset<PARAM_BITSET_SIZE>;
 
 // A native C++ callback.
-using NativeCallback = std::function<Variant(std::span<Variant>)>;
+using NativeCallback = std::function<Variant(Runtime &, std::span<Variant>)>;
 
 // A Callable is an internal abstract bate type type used to represent one particular signature for a function. Each function has at least
 // one callable, and each callable is owned by at least one function. Callable has two subclasses: NativeRoutine, which is implemented in C++,
@@ -43,11 +43,13 @@ class Callable
 {
 public:
 
-	Callable() = default; // routine without parameters
+	explicit Callable(const String &name) : _name(name) { } // routine without parameters
 
-	Callable(std::vector<Handle<Class>> sig, ParamBitset ref_flags);
+	Callable(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
 
 	virtual ~Callable() = default;
+
+	virtual bool is_native() const = 0;
 
 	int arg_count() const { return int(signature.size()); }
 
@@ -57,13 +59,25 @@ public:
 
 	void add_parameter_type(Handle<Class> cls) { signature.push_back(std::move(cls)); }
 
+	String name() const { return _name; }
+
+	Variant operator()(Runtime &rt, std::span<Variant> args) { return call(rt, args); }
+
 protected:
+
+	friend class Function;
+
+	virtual Variant call(Runtime &rt, std::span<Variant> args) = 0;
+
 	// Type of positional arguments.
 	std::vector<Handle<Class>> signature;
 
 	// Indicates whether a parameter is a reference (1) or a value (0). Bit 0 refers to the return value, whereas bits 1
 	// to 63 refer to parameter.
 	ParamBitset ref_flags;
+
+	// For debugging and stack traces.
+	String _name;
 };
 
 
@@ -72,9 +86,13 @@ protected:
 // A routine implemented in C++.
 struct NativeRoutine final : public Callable
 {
-	NativeRoutine(NativeCallback cb, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
+	NativeRoutine(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags = 0);
+
+	bool is_native() const override { return true; }
 
 	NativeCallback callback;
+
+	Variant call(Runtime &rt, std::span<Variant> args) override;
 };
 
 
@@ -91,9 +109,11 @@ public:
 		int scope, depth;
 	};
 
-	Routine();
+	explicit Routine(const String &name);
 
-	Routine(std::vector<Handle<Class>> sig, ParamBitset ref_flags);
+	Routine(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
+
+	bool is_native() const override { return false; }
 
 	Instruction add_integer_constant(intptr_t i);
 
@@ -131,6 +151,7 @@ private:
 	// Bytecode.
 	Code code;
 
+	Variant call(Runtime &rt, std::span<Variant> args) override;
 
 	template<class T>
 	Instruction add_constant(std::vector<T> &vec, T value)
@@ -191,6 +212,7 @@ private:
 
 //----------------------------------------------------------------------------------------------------------------------
 
+// A Function object (also known as 'generic function' in languages with multiple dispatch).
 // Functions are first-class objects. They can have several signatures, each of which is represented by a routine.
 // Whenever a function is called, the appropriate routine is selected based on the number and type of the arguments.
 // Note that all functions are wrapped in a Closure, which may optionally capture the function's lexical environment.
@@ -201,13 +223,19 @@ public:
 
 	explicit Function(String name) : _name(std::move(name)) { }
 
-	explicit Function(String name, std::shared_ptr<Callable> r);
+	Function(String name, std::shared_ptr<Callable> r);
+
+	Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags = 0);
 
 	String name() const { return _name; }
 
 	void add_routine(std::shared_ptr<Callable> r);
 
+	std::shared_ptr<Callable> resolve(std::span<Variant> args);
+
 private:
+
+	friend class Variant;
 
 	// Name provided when the function was declared. Anonymous functions don't have a name.
 	String _name;
@@ -215,6 +243,44 @@ private:
 	// Each function signature is represented by a different routine, which may be native or user-defined.
 	std::vector<std::shared_ptr<Callable>> routines;
 };
+
+//----------------------------------------------------------------------------------------------------------------------
+
+// Instantiation of a Function that capture over its environment.
+class Closure final
+{
+public:
+
+private:
+
+};
+
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+
+namespace meta {
+
+static inline
+String to_string(const Function &f, bool quote, bool)
+{
+	auto s = String::format("<function %s at %p>", f.name().data(), std::addressof(f));
+	if (quote) { s.prepend('"'); s.append('"'); }
+
+	return s;
+}
+
+static inline
+String to_string(const Callable &c, bool quote, bool)
+{
+	auto s = String::format("<function %s at %p>", c.name().data(), std::addressof(c));
+	if (quote) { s.prepend('"'); s.append('"'); }
+
+	return s;
+}
+
+
+} // namespace calao::meta
+
 
 } // namespace calao
 

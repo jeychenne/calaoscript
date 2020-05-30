@@ -65,6 +65,8 @@ public:
 
 	bool inherits(const Class *base) const;
 
+	int get_distance(const Class *base) const;
+
 	const std::type_info *type_info() const { return _info; }
 
 	template<class T>
@@ -81,6 +83,8 @@ public:
 	}
 
 	bool operator==(const Class &other) const { return this == &other; }
+
+	Object *object() { return _object; }
 
 private:
 
@@ -121,6 +125,19 @@ private:
 
 template<class T>
 Class *Class::Descriptor<T>::isa = nullptr;
+
+namespace meta {
+
+static inline
+String to_string(const Class &klass, bool quote, bool)
+{
+	auto s = String::format("<class %s>", klass.name().data());
+	if (quote) { s.prepend('"'); s.append('"'); }
+
+	return s;
+}
+
+} // namespace calao::meta
 
 } // namespace calao
 

@@ -15,15 +15,22 @@
 #include <cfenv>
 #include <cstdio>
 #include <ctime>
+#include <iomanip>
 #include <calao/runtime.hpp>
 #include <calao/regex.hpp>
 #include <calao/file.hpp>
 #include <calao/utils/helpers.hpp>
 
+#define RUNTIME_ERROR(...) throw RuntimeError(get_current_line(), __VA_ARGS__)
+#if 0
+#	define trace_op() std::cerr << std::setw(6) << std::left << (ip-1-code->data()) << "\t" << std::setw(15) << Code::get_opcode_name(*(ip-1)) << "stack size = " << intptr_t(top - stack.data()) << std::endl;
+#else
+#	define trace_op()
+#endif
+
 namespace calao {
 
 static const int STACK_SIZE = 1024;
-
 bool Runtime::initialized = false;
 
 
@@ -40,13 +47,26 @@ Runtime::Runtime() :
 	}
 
 	create_builtins();
+	set_global_namespace();
 	this->top = this->stack.begin();
 	this->limit = this->stack.end();
 }
 
 calao::Runtime::~Runtime()
 {
+	stack.clear();
 
+	for (auto &pair : globals) {
+		pair.second.finalize();
+	}
+	// Finalize classes manually: this is necessary because we must finalize Class last.
+	for (size_t i = classes.size(); i-- > 2; )
+	{
+		auto ptr = classes[i].drop();
+		ptr->release();
+	}
+	classes[0].drop()->release();
+	classes[1].drop()->release();
 }
 
 void calao::Runtime::add_candidate(Collectable *obj)
@@ -63,37 +83,51 @@ void Runtime::create_builtins()
 {
 	// We need to boostrap the class system, since we are creating class instances but the class type doesn't exist
 	// yet. We can't create it first because it inherits from Object.
-	auto object_handle = create_type<Object>("Object", nullptr);
-	auto object_class = object_handle.get();
+	auto object_class = create_type<Object>("Object", nullptr);
+	auto raw_object_class = object_class.get();
 
-	//globals.insert({ Class::get_name<Object>(), Handle<Class>(object_class, Handle<Class>::Retain())});
+	auto class_class = create_type<Class>("Class", raw_object_class);
+	assert(class_class->inherits(raw_object_class));
 
-	auto class_handle = create_type<Class>("Class", object_class);
-	assert(class_handle->inherits(object_class));
+	assert(object_class.object()->get_class() == nullptr);
+	assert(class_class.object()->get_class() == nullptr);
 
-	assert(object_handle.object()->get_class() == nullptr);
-	assert(class_handle.object()->get_class() == nullptr);
-
-	object_handle.object()->set_class(class_handle.get());
-	class_handle.object()->set_class(class_handle.get());
+	object_class.object()->set_class(class_class.get());
+	class_class.object()->set_class(class_class.get());
 
 	// Create other builtin types.
-	create_type<bool>("Boolean", object_class);
-	auto num_class = create_type<Number>("Number", object_class);
-	create_type<intptr_t>("Integer", num_class.get());
-	create_type<double>("Float", num_class.get());
-	create_type<String>("String", object_class);
-	create_type<Regex>("Regex", object_class);
-	create_type<List>("List", object_class);
-	create_type<Table>("Table", object_class);
-	create_type<File>("File", object_class);
-	create_type<Function>("Function", object_class);
+	auto bool_class = create_type<bool>("Boolean", raw_object_class);
+	auto num_class = create_type<Number>("Number", raw_object_class);
+	auto int_class = create_type<intptr_t>("Integer", num_class.get());
+	auto float_class = create_type<double>("Float", num_class.get());
+	auto string_class = create_type<String>("String", raw_object_class);
+	auto regex_class = create_type<Regex>("Regex", raw_object_class);
+	auto list_class = create_type<List>("List", raw_object_class);
+	auto table_class = create_type<Table>("Table", raw_object_class);
+	auto file_class = create_type<File>("File", raw_object_class);
+	// Function and Closure have the same name because the difference is an implementation detail.
+	create_type<Function>("Function", raw_object_class);
+	auto func_class = create_type<Closure>("Function", raw_object_class);
 //	create_type<Module>("Module", object_class);
 
 	// Sanity checks
-	assert(object_handle.object()->get_class() != nullptr);
-	assert(class_handle.object()->get_class() != nullptr);
+	assert(object_class.object()->get_class() != nullptr);
+	assert(class_class.object()->get_class() != nullptr);
 	assert((Class::get<Class>()) != nullptr);
+
+#define GLOB(T, h) add_global(Class::get_name<T>(), std::move(h));
+	GLOB(Object, object_class);
+	GLOB(bool, bool_class);
+	GLOB(Number, num_class);
+	GLOB(intptr_t, int_class);
+	GLOB(double, float_class);
+	GLOB(String, string_class);
+	GLOB(Regex, regex_class);
+	GLOB(List, list_class);
+	GLOB(Table, table_class);
+	GLOB(File, file_class);
+	GLOB(Closure, func_class);
+#undef GLOB
 }
 
 void Runtime::push_null()
@@ -170,7 +204,7 @@ void Runtime::check_underflow()
 {
 	if (this->top == this->stack.begin())
 	{
-		throw RuntimeError(get_current_line(), "[Internal error] Stack underflow");
+		RUNTIME_ERROR("[Internal error] Stack underflow");
 	}
 }
 
@@ -185,7 +219,7 @@ void Runtime::pop(int n)
 		{
 			(--top)->~Variant();
 		}
-		throw RuntimeError(get_current_line(), "[Internal error] Stack underflow");
+		RUNTIME_ERROR("[Internal error] Stack underflow");
 	}
 
 	while (top > limit)
@@ -239,7 +273,7 @@ void Runtime::math_op(char op)
 					auto y = cast<intptr_t>(v2);
 					pop(2);
 					if ((x < 0.0) == (y < 0.0) && std::abs(y) > (std::numeric_limits<intptr_t>::max)() - std::abs(x)) {
-						throw RuntimeError(get_current_line(), "[Math error] Integer overflow");
+						RUNTIME_ERROR("[Math error] Integer overflow");
 					}
 					push_int(x+y);
 				}
@@ -339,7 +373,7 @@ void Runtime::math_op(char op)
 
 	pop(2);
 	char opstring[2] = { op, '\0' };
-	throw RuntimeError(get_current_line(), "[Type error] Cannot apply math operator '%' to % and %", opstring, v1.class_name(), v2.class_name());
+	RUNTIME_ERROR("[Type error] Cannot apply math operator '%' to % and %", opstring, v1.class_name(), v2.class_name());
 }
 
 void Runtime::check_float_error()
@@ -361,9 +395,14 @@ void Runtime::check_float_error()
 	}
 }
 
-void Runtime::interpret(const Routine &routine)
+Variant Runtime::interpret(const Routine &routine)
 {
-	this->code = &routine.code;
+	if (current_frame) {
+		current_frame->previous_routine = current_routine;
+
+	}
+	current_routine = &routine;
+	code = &routine.code;
 	ip = routine.code.data();
 
 	while (true)
@@ -374,22 +413,65 @@ void Runtime::interpret(const Routine &routine)
 		{
 			case Opcode::Add:
 			{
+				trace_op();
 				math_op('+');
 				break;
 			}
 			case Opcode::Assert:
 			{
+				trace_op();
 				int narg = *ip++;
 				bool value = peek(-narg).to_boolean();
 				if (!value)
 				{
 					auto msg = (narg == 2) ? utils::format("Assertion failed: %", peek(-1).to_string()) : std::string("Assertion failed");
-					throw RuntimeError(get_current_line(), msg);
+					RUNTIME_ERROR(msg);
+				}
+				break;
+			}
+			case Opcode::Call:
+			{
+				trace_op();
+				int narg = *ip++;
+				auto &v = peek();
+				if (!check_type<Function>(v)) {
+					RUNTIME_ERROR("Expected a Function object, got a %", v.class_name());
+				}
+				auto func = v.handle<Function>();
+				pop();
+				std::span<Variant> args(top - narg, narg);
+				try 
+				{
+					auto r = func->resolve(args);
+					if (!r)
+					{
+						Array<String> types;
+						for (auto &arg : args) {
+							types.append(arg.class_name());
+						}
+						RUNTIME_ERROR("Cannot resolve call to function '%' with the following signature: <%>",
+								func->name(), String::join(types, ", "));
+					}
+					if (r->is_native())
+					{
+						auto result = (*r)(*this, args);
+						pop(narg);
+						push(std::move(result));
+					}
+					else
+					{
+						current_frame->ip = ip;
+						push((*r)(*this, args));
+					}
+				}
+				catch (std::runtime_error &e) {
+					RUNTIME_ERROR(e.what());
 				}
 				break;
 			}
 			case Opcode::Compare:
 			{
+				trace_op();
 				auto &v1 = peek(-2);
 				auto &v2 = peek(-1);
 				int result = v1.compare(v2);
@@ -399,6 +481,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::Concat:
 			{
+				trace_op();
 				int narg = *ip++;
 				String s;
 				for (int i = narg; i > 0; i--) {
@@ -410,6 +493,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::DecrementLocal:
 			{
+				trace_op();
 				int index = *ip++;
 				auto &v = current_frame->locals[index];
 				assert(v.is_integer());
@@ -418,9 +502,11 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::DefineGlobal:
 			{
+				trace_op();
 				auto name = routine.get_string(*ip++);
-				if (globals.find(name) != globals.end()) {
-					throw RuntimeError(get_current_line(), "Global variable \"%\" is already defined", name);
+				if (globals.find(name) != globals.end())
+				{
+					RUNTIME_ERROR("Global variable \"%\" is already defined", name);
 				}
 				globals.insert({name, std::move(peek())});
 				pop();
@@ -428,6 +514,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::DefineLocal:
 			{
+				trace_op();
 				Variant &local = current_frame->locals[*ip++];
 				local = std::move(peek());
 				pop();
@@ -435,11 +522,13 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::Divide:
 			{
+				trace_op();
 				math_op('/');
 				break;
 			}
 			case Opcode::Equal:
 			{
+				trace_op();
 				auto &v2 = peek(-1);
 				auto &v1 = peek(-2);
 				bool value = (v1 == v2);
@@ -449,22 +538,25 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::GetGlobal:
 			{
+				trace_op();
 				auto name = routine.get_string(*ip++);
 				auto it = globals.find(name);
 				if (it == globals.end()) {
-					throw RuntimeError(get_current_line(), "Undefined variable \"%\"", name);
+					RUNTIME_ERROR("Undefined variable \"%\"", name);
 				}
 				push(it->second);
 				break;
 			}
 			case Opcode::GetLocal:
 			{
+				trace_op();
 				const Variant &v = current_frame->locals[*ip++];
 				push(v);
 				break;
 			}
 			case Opcode::Greater:
 			{
+				trace_op();
 				auto &v2 = peek(-1);
 				auto &v1 = peek(-2);
 				bool value = (v1.compare(v2) > 0);
@@ -474,6 +566,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::GreaterEqual:
 			{
+				trace_op();
 				auto &v2 = peek(-1);
 				auto &v1 = peek(-2);
 				bool value = (v1.compare(v2) >= 0);
@@ -483,6 +576,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::IncrementLocal:
 			{
+				trace_op();
 				int index = *ip++;
 				auto &v = current_frame->locals[index];
 				assert(v.is_integer());
@@ -491,12 +585,14 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::Jump:
 			{
+				trace_op();
 				int addr = Code::read_integer(ip);
 				ip = code->data() + addr;
 				break;
 			}
 			case Opcode::JumpFalse:
 			{
+				trace_op();
 				int addr = Code::read_integer(ip);
 				bool value = peek().to_boolean();
 				pop();
@@ -505,6 +601,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::JumpTrue:
 			{
+				trace_op();
 				int addr = Code::read_integer(ip);
 				bool value = peek().to_boolean();
 				pop();
@@ -513,6 +610,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::Less:
 			{
+				trace_op();
 				auto &v2 = peek(-1);
 				auto &v1 = peek(-2);
 				bool value = (v1.compare(v2) < 0);
@@ -522,6 +620,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::LessEqual:
 			{
+				trace_op();
 				auto &v2 = peek(-1);
 				auto &v1 = peek(-2);
 				bool value = (v1.compare(v2) <= 0);
@@ -531,26 +630,31 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::Modulus:
 			{
+				trace_op();
 				math_op('%');
 				break;
 			}
 			case Opcode::Multiply:
 			{
+				trace_op();
 				math_op('*');
 				break;
 			}
 			case Opcode::Negate:
 			{
+				trace_op();
 				negate();
 				break;
 			}
 			case Opcode::NewFrame:
 			{
-				push_stack_frame(*ip++);
+				trace_op();
+				push_call_frame(*ip++);
 				break;
 			}
 			case Opcode::Not:
 			{
+				trace_op();
 				bool value = peek().to_boolean();
 				pop();
 				push(!value);
@@ -558,6 +662,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::NotEqual:
 			{
+				trace_op();
 				auto &v2 = peek(-1);
 				auto &v1 = peek(-2);
 				bool value = (v1 != v2);
@@ -567,16 +672,19 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::Pop:
 			{
+				trace_op();
 				pop();
 				break;
 			}
 			case Opcode::Power:
 			{
+				trace_op();
 				math_op('^');
 				break;
 			}
 			case Opcode::Print:
 			{
+				trace_op();
 				auto s = peek().to_string();
 				utils::printf(s);
 				pop();
@@ -584,6 +692,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::PrintLine:
 			{
+				trace_op();
 				auto s = peek().to_string();
 				utils::printf(s);
 				printf("\n");
@@ -592,78 +701,99 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::PushBoolean:
 			{
+				trace_op();
 				bool value = bool(*ip++);
 				push(value);
 				break;
 			}
 			case Opcode::PushFalse:
 			{
+				trace_op();
 				push(false);
 				break;
 			}
 			case Opcode::PushFloat:
 			{
+				trace_op();
 				double value = routine.get_float(*ip++);
 				push(value);
 				break;
 			}
 			case Opcode::PushFunction:
 			{
+				trace_op();
 				auto value = routine.get_function(*ip++);
 				push(std::move(value));
 				break;
 			}
 			case Opcode::PushInteger:
 			{
+				trace_op();
 				intptr_t value = routine.get_integer(*ip++);
 				push_int(value);
 				break;
 			}
 			case Opcode::PushNan:
 			{
+				trace_op();
 				push(std::nan(""));
 				break;
 			}
 			case Opcode::PushNull:
 			{
+				trace_op();
 				push_null();
 				break;
 			}
 			case Opcode::PushSmallInt:
 			{
+				trace_op();
 				push_int((int16_t) *ip++);
 				break;
 			}
 			case Opcode::PushString:
 			{
+				trace_op();
 				String value = routine.get_string(*ip++);
 				push(std::move(value));
 				break;
 			}
 			case Opcode::PushTrue:
 			{
+				trace_op();
 				push(true);
 				break;
 			}
 			case Opcode::Return:
 			{
-				pop_stack_frame();
-				this->code = nullptr;
-				return;
+				trace_op();
+				return pop_call_frame();
 			}
 			case Opcode::SetGlobal:
 			{
+				trace_op();
 				auto name = routine.get_string(*ip++);
 				auto it = globals.find(name);
-				if (it == globals.end()) {
-					throw RuntimeError(get_current_line(), "Undefined variable \"%\"", name);
+				auto &v = peek();
+				if (it == globals.end())
+				{
+					if (check_type<Function>(v)) {
+						globals.insert({name, std::move(v)});
+					}
+					else {
+						RUNTIME_ERROR("Undefined variable \"%\"", name);
+					}
 				}
-				it->second = std::move(peek());
+				else
+				{
+					it->second = std::move(v);
+				}
 				pop();
 				break;
 			}
 			case Opcode::SetLocal:
 			{
+				trace_op();
 				Variant &v = current_frame->locals[*ip++];
 				v = std::move(peek());
 				pop();
@@ -671,6 +801,7 @@ void Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::SetSignature:
 			{
+				trace_op();
 				const int index = *ip++;
 				const int narg = *ip++;
 				auto r = routine.get_routine(index);
@@ -679,14 +810,16 @@ void Runtime::interpret(const Routine &routine)
 				{
 					auto &v = peek(-i);
 					if (!check_type<Class>(v)) {
-						throw RuntimeError(get_current_line(), "Expected a Class object as type of parameter %", (narg + 1 - i));
+						RUNTIME_ERROR("Expected a Class object as type of parameter %", (narg + 1 - i));
 					}
 					r->add_parameter_type(v.handle<Class>());
 				}
+				pop(narg);
 				break;
 			}
 			case Opcode::Subtract:
 			{
+				trace_op();
 				math_op('-');
 				break;
 			}
@@ -694,17 +827,27 @@ void Runtime::interpret(const Routine &routine)
 				throw error("[Internal error] Invalid opcode: %", (int)op);
 		}
 	}
+
+	return Variant();
 }
 
 void Runtime::disassemble(const Routine &routine, const String &name)
 {
-	printf("==================== %s ====================\n", name.data());
+	printf("========================= %s =========================\n", name.data());
+	printf("strings: %d, large integers: %d, floats: %d, routines: %d\n", (int)routine.string_pool.size(), (int) routine.integer_pool.size(),
+		   (int) routine.float_pool.size(), (int) routine.routine_pool.size());
 	printf("offset    line   instruction    operands   comments\n");
 	size_t size = routine.code.size();
 
 	for (size_t offset = 0; offset < size; )
 	{
 		offset += disassemble_instruction(routine, offset);
+	}
+
+	for (auto &r : routine.routine_pool)
+	{
+		printf("\n");
+		disassemble(*r, r->name());
 	}
 }
 
@@ -729,6 +872,12 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		{
 			int narg = routine.code[offset + 1];
 			printf("ASSERT         %-5d\n", narg);
+			return 2;
+		}
+		case Opcode::Call:
+		{
+			int narg = routine.code[offset + 1];
+			printf("CALL           %-5d\n", narg);
 			return 2;
 		}
 		case Opcode::Compare:
@@ -966,7 +1115,8 @@ void Runtime::do_file(const String &path)
 {
 	auto ast = parser.parse_file(path);
 	auto routine = compiler.compile(std::move(ast));
-	disassemble(*routine, "test");
+	disassemble(*routine, "main");
+	printf("--------------------------------------------------------\n");
 	interpret(*routine);
 }
 
@@ -982,29 +1132,74 @@ String Runtime::intern_string(const String &s)
 	return *result.first;
 }
 
-void Runtime::push_stack_frame(int nlocal)
+void Runtime::push_call_frame(int nlocal)
 {
-	current_frame = frame_pool.newElement();
-	frames.push_back(current_frame);
-	// Add 1 for the return value, which will sit at the beginning of the frame
-	ensure_capacity(nlocal + 1);
-	current_frame->base = top;
-	current_frame->locals = top + 1;
-	// Push null for the return value (we've already checked the capacity).
-	new (top++) Variant;
+	// FIXME: valgrind complains about a fishy size passed to malloc here when CALAO_STD_UNORDERED_MAP is defined.
+	frames.push_back(std::make_unique<CallFrame>());
+	current_frame = frames.back().get();
+	ensure_capacity(nlocal);
+	current_frame->locals = top;
+	current_frame->nlocal = nlocal;
 	top += nlocal;
 }
 
-void Runtime::pop_stack_frame()
+Variant Runtime::pop_call_frame()
 {
-	// Discard everything except the return value.
+	Variant result;
+
+	// If there's a value left on top of the stack, it is taken as the return value.
+	auto locals_end = current_frame->locals + current_frame->nlocal;
+	if (top > locals_end) {
+		result = std::move(*--top);
+	}
+
+	// Clean current frame.
 	auto n = int(top - current_frame->locals);
 	assert(n >= 0);
 	pop(n);
-	frame_pool.deleteElement(current_frame);
+
+	// Restore previous frame.
 	frames.pop_back();
-	current_frame = frames.empty() ? nullptr : frames.back();
+	current_frame = frames.empty() ? nullptr : frames.back().get();
+
+	if (frames.empty())
+	{
+		current_frame = nullptr;
+		code = nullptr;
+		current_routine = nullptr;
+		ip = nullptr;
+	}
+	else
+	{
+		current_frame = frames.back().get();
+		code = &current_frame->previous_routine->code;
+		current_routine = current_frame->previous_routine;
+		ip = current_frame->ip;
+	}
+
+	return result;
 }
 
+void Runtime::add_global(String name, Variant value)
+{
+	globals.insert({ std::move(name), std::move(value) });
+}
+
+Variant Runtime::interpret(const Routine &routine, std::span<Variant> args)
+{
+	// The arguments are on top of the stack. We adjust the top of the stack accordingly.
+	top -= args.size();
+
+	// Now we can just interpret the routine. The first opcode wil be NewFrame.
+	return interpret(routine);
+}
+
+void Runtime::add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref)
+{
+	globals[name] = make_handle<Function>(name, std::move(cb), sig, ref);
+}
 
 } // namespace calao
+
+#undef RUNTIME_ERROR
+#undef trace_op

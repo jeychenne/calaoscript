@@ -18,6 +18,54 @@
 
 namespace calao {
 
+const char *opcode_names[] = {
+	"Assert",
+	"Add",
+	"Call",
+	"Compare",
+	"Concat",
+	"DecrementLocal",
+	"DefineGlobal",
+	"DefineLocal",
+	"GetGlobal",
+	"GetLocal",
+	"Divide",
+	"Equal",
+	"Greater",
+	"GreaterEqual",
+	"IncrementLocal",
+	"Jump",
+	"JumpFalse",
+	"JumpTrue",
+	"Less",
+	"LessEqual",
+	"Modulus",
+	"Multiply",
+	"Negate",
+	"NewFrame",
+	"Not",
+	"NotEqual",
+	"Pop",
+	"Power",
+	"Print",
+	"PrintLine",
+	"PushBoolean",
+	"PushFalse",
+	"PushFloat",
+	"PushFunction",
+	"PushInteger",
+	"PushNan",
+	"PushNull",
+	"PushSmallInt",
+	"PushString",
+	"PushTrue",
+	"Return",
+	"SetGlobal",
+	"SetLocal",
+	"SetSignature",
+	"Subtract",
+};
+
 void Code::add_line(intptr_t line_no)
 {
 	constexpr auto max_lines = (std::numeric_limits<uint16_t>::max)();
@@ -95,6 +143,11 @@ int Code::emit_jump(intptr_t line_no, Opcode jmp, int addr)
 	emit(line_no, s.ins[1]);
 
 	return offset;
+}
+
+const char *Code::get_opcode_name(Instruction op)
+{
+	return opcode_names[op];
 }
 
 

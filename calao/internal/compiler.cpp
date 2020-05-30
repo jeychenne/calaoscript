@@ -43,7 +43,7 @@ void Compiler::initialize()
 {
 	scope_id = 0;
 	current_scope = 0;
-	set_routine(std::make_shared<Routine>());
+	set_routine(std::make_shared<Routine>(String()));
 }
 
 void Compiler::finalize()
@@ -83,6 +83,9 @@ void Compiler::visit_constant(ConstantLiteral *node)
 		case Lexeme::Nan:
 			EMIT(Opcode::PushNan);
 			break;
+		// Not a constant, but we put it here to avoid creating a new node.
+		case Lexeme::Pass:
+			break; // no-op
 		default:
 			THROW("[Internal error] Invalid constant in visit_constant()");
 	}
@@ -289,7 +292,14 @@ void Compiler::visit_print_statement(PrintStatement *node)
 
 void Compiler::visit_call(CallExpression *node)
 {
-	VISIT()
+	// First push the arguments.
+	for (auto &arg : node->args) {
+		arg->visit(*this);
+	}
+
+	// Next push the function and emit the call.
+	node->expr->visit(*this);
+	EMIT(Opcode::Call, Instruction(node->args.size()));
 }
 
 void Compiler::visit_variable(Variable *node)
@@ -562,7 +572,9 @@ void Compiler::visit_routine(RoutineDefinition *node)
 	// Compile inner routine.
 	auto previous_scope = open_scope();
 	auto outer_routine = routine;
-	set_routine(std::make_shared<Routine>());
+	set_routine(std::make_shared<Routine>(name));
+	EMIT(Opcode::NewFrame, 0);
+	int frame_offset = code->get_current_offset() - 1;
 
 	for (auto &param : node->params)
 	{
@@ -571,6 +583,9 @@ void Compiler::visit_routine(RoutineDefinition *node)
 		param->visit(*this);
 	}
 	node->body->visit(*this);
+	EMIT(Opcode::Return);
+	// Fix number of locals.
+	code->backpatch_instruction(frame_offset, (Instruction)routine->local_count());
 	close_scope(previous_scope);
 
 	auto index = outer_routine->add_routine(routine);
@@ -590,7 +605,7 @@ Handle<Function> Compiler::create_function_symbol(RoutineDefinition *node, const
 {
 	Handle<Function> func;
 
-	if (node->local)
+	if (node->local || scope_depth > 1)
 	{
 		auto symbol = routine->find_local(name, current_scope);
 
@@ -613,7 +628,8 @@ Handle<Function> Compiler::create_function_symbol(RoutineDefinition *node, const
 		auto symbol = routine->add_function(func);
 		auto index = routine->add_string_constant(name);
 		EMIT(Opcode::PushFunction, symbol);
-		EMIT(Opcode::DefineGlobal, index);
+		// Don't use DefineGlobal here.
+		EMIT(Opcode::SetGlobal, index);
 	}
 
 	return func;
