@@ -321,7 +321,6 @@ AutoAst Parser::parse_not_expression()
 	trace_ast();
 	if (accept(Lexeme::Not))
 	{
-		accept();
 		return make<UnaryExpression>(Lexeme::Not, parse_comp_expression());
 	}
 
@@ -422,6 +421,9 @@ AutoAst Parser::parse_new_expression()
 {
 	trace_ast();
 	// TODO: new and function
+	if (accept(Lexeme::Ref)) {
+		return make<ReferenceExpression>(parse_member_expression());
+	}
 
 	return parse_primary_expression();
 }
@@ -663,6 +665,24 @@ AutoAst Parser::parse_return_statement()
 	}
 
 	return make<ReturnStatement>(std::move(e));
+}
+
+AutoAst Parser::parse_member_expression()
+{
+	auto e = parse_new_expression();
+
+	LOOP:
+	while (accept(Lexeme::Dot))
+	{
+		e = make<BinaryExpression>(Lexeme::Dot, std::move(e), parse_identifier("in member expression"));
+
+	}
+	if (accept(Lexeme::LSquare)) {
+		e = make<BinaryExpression>(Lexeme::LSquare, std::move(e), parse_expression());
+		goto LOOP;
+	}
+
+	return e;
 }
 
 

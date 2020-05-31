@@ -1,0 +1,16 @@
+print "testing String... ",
+
+var s1 = "hello world"
+var s2 = "llo"
+var s3 = "noël"
+
+assert find(s1, s2) != 0
+assert contains(s1, s2)
+assert mid(s1, 5) == "o world"
+assert mid(s1, 5, 3) == "o w"
+assert left(s1, 2) == "he"
+assert right(s1, 5) == "world"
+assert reverse(s3) == "lëon"
+assert right(s3, 2) == "ël"
+
+print "all tests passed"

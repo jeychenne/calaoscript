@@ -127,5 +127,10 @@ void ReturnStatement::visit(AstVisitor &v)
 {
 	VISIT(return_statement);
 }
+
+void ReferenceExpression::visit(AstVisitor &v)
+{
+	VISIT(reference_expression);
+}
 } // namespace calao
 #undef VISIT

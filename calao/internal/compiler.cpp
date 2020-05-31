@@ -239,7 +239,7 @@ void Compiler::visit_binary(BinaryExpression *node)
 
 void Compiler::visit_statements(StatementList *node)
 {
-	int scope;
+	int scope = 0;
 	if (node->open_scope) scope = open_scope();
 
 	for (auto &stmt : node->statements) {
@@ -308,12 +308,22 @@ void Compiler::visit_variable(Variable *node)
 	auto index = routine->find_local(node->name, current_scope);
 	if (index)
 	{
-		EMIT(Opcode::GetLocal, *index);
+		if (node->is_reference) {
+			EMIT(Opcode::GetLocalRef, *index);
+		}
+		else {
+			EMIT(Opcode::GetLocal, *index);
+		}
 	}
 	else
 	{
 		auto var = routine->add_string_constant(node->name);
-		EMIT(Opcode::GetGlobal, var);
+		if (node->is_reference) {
+			EMIT(Opcode::GetGlobalRef, var);
+		}
+		else {
+			EMIT(Opcode::GetGlobal, var);
+		}
 	}
 }
 
@@ -657,6 +667,12 @@ void Compiler::visit_return_statement(ReturnStatement *node)
 		EMIT(Opcode::PushNull);
 	}
 	EMIT(Opcode::Return);
+}
+
+void Compiler::visit_reference_expression(ReferenceExpression *node)
+{
+	node->mark_reference();
+	node->expr->visit(*this);
 }
 
 

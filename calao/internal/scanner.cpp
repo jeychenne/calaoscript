@@ -79,7 +79,7 @@ void Scanner::read_char()
 
 void Scanner::get_char()
 {
-    m_char = *m_pos++;
+    m_char = m_line.next_codepoint(m_pos);
 }
 
 void Scanner::set_line(intptr_t index)

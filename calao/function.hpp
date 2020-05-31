@@ -63,6 +63,10 @@ public:
 
 	Variant operator()(Runtime &rt, std::span<Variant> args) { return call(rt, args); }
 
+	int get_cost(std::span<Variant> args) const;
+
+	String get_definition() const;
+
 protected:
 
 	friend class Function;
@@ -236,6 +240,7 @@ public:
 private:
 
 	friend class Variant;
+	friend class Runtime;
 
 	// Name provided when the function was declared. Anonymous functions don't have a name.
 	String _name;
@@ -243,6 +248,7 @@ private:
 	// Each function signature is represented by a different routine, which may be native or user-defined.
 	std::vector<std::shared_ptr<Callable>> routines;
 };
+
 
 //----------------------------------------------------------------------------------------------------------------------
 

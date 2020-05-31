@@ -239,13 +239,13 @@ void Runtime::negate()
 
 	if (var.is_integer())
 	{
-		intptr_t value = - unsafe_cast<intptr_t>(var);
+		intptr_t value = -raw_cast<intptr_t>(var);
 		pop();
 		push_int(value);
 	}
 	else if (var.is_float())
 	{
-		double value = - unsafe_cast<double>(var);
+		double value = -raw_cast<double>(var);
 		pop();
 		push(value);
 	}
@@ -449,14 +449,24 @@ Variant Runtime::interpret(const Routine &routine)
 						for (auto &arg : args) {
 							types.append(arg.class_name());
 						}
-						RUNTIME_ERROR("Cannot resolve call to function '%' with the following signature: <%>",
-								func->name(), String::join(types, ", "));
+						String candidates;
+						for (auto &r : func->routines) {
+							candidates.append(r->get_definition());
+							candidates.append('\n');
+						}
+						RUNTIME_ERROR("Cannot resolve call to function '%' with the following signature: (%).\nCandidates are:\n%",
+								func->name(), String::join(types, ", "), candidates);
 					}
 					if (r->is_native())
 					{
-						auto result = (*r)(*this, args);
-						pop(narg);
-						push(std::move(result));
+						try {
+							auto result = (*r)(*this, args);
+							pop(narg);
+							push(std::move(result));
+						}
+						catch (std::runtime_error &e) {
+							RUNTIME_ERROR(e.what());
+						}
 					}
 					else
 					{
@@ -497,7 +507,7 @@ Variant Runtime::interpret(const Routine &routine)
 				int index = *ip++;
 				auto &v = current_frame->locals[index];
 				assert(v.is_integer());
-				unsafe_cast<intptr_t>(v)--;
+				raw_cast<intptr_t>(v)--;
 				break;
 			}
 			case Opcode::DefineGlobal:
@@ -544,6 +554,18 @@ Variant Runtime::interpret(const Routine &routine)
 				if (it == globals.end()) {
 					RUNTIME_ERROR("Undefined variable \"%\"", name);
 				}
+				push(it->second.resolve());
+				break;
+			}
+			case Opcode::GetGlobalRef:
+			{
+				trace_op();
+				auto name = routine.get_string(*ip++);
+				auto it = globals.find(name);
+				if (it == globals.end()) {
+					RUNTIME_ERROR("Undefined variable \"%\"", name);
+				}
+				it->second.make_alias();
 				push(it->second);
 				break;
 			}
@@ -551,6 +573,14 @@ Variant Runtime::interpret(const Routine &routine)
 			{
 				trace_op();
 				const Variant &v = current_frame->locals[*ip++];
+				push(v.resolve());
+				break;
+			}
+			case Opcode::GetLocalRef:
+			{
+				trace_op();
+				Variant &v = current_frame->locals[*ip++];
+				v.make_alias();
 				push(v);
 				break;
 			}
@@ -580,7 +610,7 @@ Variant Runtime::interpret(const Routine &routine)
 				int index = *ip++;
 				auto &v = current_frame->locals[index];
 				assert(v.is_integer());
-				unsafe_cast<intptr_t>(v)++;
+				raw_cast<intptr_t>(v)++;
 				break;
 			}
 			case Opcode::Jump:
@@ -925,11 +955,25 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("GET_GLOBAL     %-5d      ; %s\n", index, value.data());
 			return 2;
 		}
+		case Opcode::GetGlobalRef:
+		{
+			int index = routine.code[offset + 1];
+			String value = routine.get_string(index);
+			printf("GET_GLOBAL_REF %-5d      ; %s\n", index, value.data());
+			return 2;
+		}
 		case Opcode::GetLocal:
 		{
 			int index = routine.code[offset + 1];
 			String value = routine.get_local_name(index);
 			printf("GET_LOCAL      %-5d      ; %s\n", index, value.data());
+			return 2;
+		}
+		case Opcode::GetLocalRef:
+		{
+			int index = routine.code[offset + 1];
+			String value = routine.get_local_name(index);
+			printf("GET_LOCAL_REF  %-5d      ; %s\n", index, value.data());
 			return 2;
 		}
 		case Opcode::Greater:

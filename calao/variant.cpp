@@ -78,7 +78,7 @@ void Variant::retain()
 {
 	if (check_type<String>(*this))
 	{
-		unsafe_cast<String>(*this).impl->retain();
+		raw_cast<String>(*this).impl->retain();
 	}
 	else if (this->is_object())
 	{
@@ -94,7 +94,7 @@ void Variant::release()
 {
 	if (check_type<String>(*this))
 	{
-		unsafe_cast<String>(*this).~String();
+		raw_cast<String>(*this).~String();
 	}
 	else if (this->is_object())
 	{
@@ -210,8 +210,8 @@ bool Variant::operator==(const Variant &other) const
 		{
 			case Datatype::String:
 			{
-				auto &s1 = unsafe_cast<String>(v1);
-				auto &s2 = unsafe_cast<String>(v2);
+				auto &s1 = raw_cast<String>(v1);
+				auto &s2 = raw_cast<String>(v2);
 
 				return s1 == s2;
 			}
@@ -228,22 +228,22 @@ bool Variant::operator==(const Variant &other) const
 			}
 			case Datatype::Integer:
 			{
-				auto x = unsafe_cast<intptr_t>(v1);
-				auto y = unsafe_cast<intptr_t>(v2);
+				auto x = raw_cast<intptr_t>(v1);
+				auto y = raw_cast<intptr_t>(v2);
 
 				return x == y;
 			}
 			case Datatype::Float:
 			{
-				auto x = unsafe_cast<double>(v1);
-				auto y = unsafe_cast<double>(v2);
+				auto x = raw_cast<double>(v1);
+				auto y = raw_cast<double>(v2);
 
 				return meta::equal(x, y);
 			}
 			case Datatype::Boolean:
 			{
-				auto x = unsafe_cast<bool>(v1);
-				auto y = unsafe_cast<bool>(v2);
+				auto x = raw_cast<bool>(v1);
+				auto y = raw_cast<bool>(v2);
 
 				return x == y;
 			}
@@ -276,8 +276,8 @@ int Variant::compare(const Variant &other) const
 		{
 			case Datatype::String:
 			{
-				auto &s1 = unsafe_cast<String>(v1);
-				auto &s2 = unsafe_cast<String>(v2);
+				auto &s1 = raw_cast<String>(v1);
+				auto &s2 = raw_cast<String>(v2);
 
 				return s1.compare(s2);
 			}
@@ -295,22 +295,22 @@ int Variant::compare(const Variant &other) const
 			}
 			case Datatype::Integer:
 			{
-				auto x = unsafe_cast<intptr_t>(v1);
-				auto y = unsafe_cast<intptr_t>(v2);
+				auto x = raw_cast<intptr_t>(v1);
+				auto y = raw_cast<intptr_t>(v2);
 
 				return meta::compare(x, y);
 			}
 			case Datatype::Float:
 			{
-				auto x = unsafe_cast<double>(v1);
-				auto y = unsafe_cast<double>(v2);
+				auto x = raw_cast<double>(v1);
+				auto y = raw_cast<double>(v2);
 
 				return meta::compare(x, y);
 			}
 			case Datatype::Boolean:
 			{
-				auto x = unsafe_cast<bool>(v1);
-				auto y = unsafe_cast<bool>(v2);
+				auto x = raw_cast<bool>(v1);
+				auto y = raw_cast<bool>(v2);
 
 				return meta::compare(x, y);
 			}
@@ -334,9 +334,9 @@ int Variant::compare(const Variant &other) const
 double Variant::get_number() const
 {
 	if (data_type() == Datatype::Float)
-		return unsafe_cast<double>(*this);
+		return raw_cast<double>(*this);
 	assert(data_type() == Datatype::Integer);
-	auto i = unsafe_cast<intptr_t>(*this);
+	auto i = raw_cast<intptr_t>(*this);
 
 	if constexpr (meta::is_arch32)
 	{
@@ -361,11 +361,11 @@ bool Variant::to_boolean() const
 	switch (m_data_type)
 	{
 		case Datatype::Boolean:
-			return unsafe_cast<bool>(*this);
+			return raw_cast<bool>(*this);
 		case Datatype::Null:
 			return false;
 		case Datatype::Float:
-			return !std::isnan(unsafe_cast<double>(*this));
+			return !std::isnan(raw_cast<double>(*this));
 		case Datatype::Alias:
 			return resolve().to_boolean();
 		default:
@@ -379,7 +379,7 @@ String Variant::to_string(bool quote) const
 	{
 		case Datatype::String:
 		{
-			auto s = unsafe_cast<String>(*this);
+			auto s = raw_cast<String>(*this);
 			if (quote) { s.prepend('"'); s.append('"'); }
 
 			return s;
@@ -395,17 +395,17 @@ String Variant::to_string(bool quote) const
 		}
 		case Datatype::Integer:
 		{
-			intptr_t num = unsafe_cast<intptr_t>(*this);
+			intptr_t num = raw_cast<intptr_t>(*this);
 			return meta::to_string(num, quote);
 		}
 		case Datatype::Float:
 		{
-			double num = unsafe_cast<double>(*this);
+			double num = raw_cast<double>(*this);
 			return meta::to_string(num, quote);
 		}
 		case Datatype::Boolean:
 		{
-			bool b = unsafe_cast<bool>(*this);
+			bool b = raw_cast<bool>(*this);
 			return meta::to_string(b, quote);
 		}
 		case Datatype::Alias:
@@ -428,8 +428,8 @@ Variant &Variant::operator=(Variant other) noexcept
 
 	if (check_type<Function>(self) && check_type<Function>(other))
 	{
-		auto &f1 = unsafe_cast<Function>(self);
-		auto &f2 = unsafe_cast<Function>(other);
+		auto &f1 = raw_cast<Function>(self);
+		auto &f2 = raw_cast<Function>(other);
 
 		if (&f1 != &f2)
 		{
@@ -480,15 +480,15 @@ size_t Variant::hash() const
 	switch (data_type())
 	{
 		case Datatype::String:
-			return unsafe_cast<String>(*this).hash();
+			return raw_cast<String>(*this).hash();
 		case Datatype::Integer:
-			return meta::hash(static_cast<uint64_t>((unsafe_cast<intptr_t>(*this))));
+			return meta::hash(static_cast<uint64_t>((raw_cast<intptr_t>(*this))));
 		case Datatype::Float:
-			return meta::hash(static_cast<uint64_t>((unsafe_cast<double>(*this))));
+			return meta::hash(static_cast<uint64_t>((raw_cast<double>(*this))));
 		case Datatype::Object:
 			return as.object->hash();
 		case Datatype::Boolean:
-			return unsafe_cast<bool>(*this) ? 3 : 7;
+			return raw_cast<bool>(*this) ? 3 : 7;
 		case Datatype::Alias:
 			return resolve().hash();
 		case Datatype::Null:
@@ -509,7 +509,7 @@ Variant &Variant::resolve()
 {
 	Variant *v = this;
 
-	while (this->is_alias())
+	while (v->is_alias())
 	{
 		v = &as.alias->variant;
 	}

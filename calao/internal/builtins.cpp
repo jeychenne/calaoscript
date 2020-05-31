@@ -12,108 +12,58 @@
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#include <calao/runtime.hpp>
+#include <calao/internal/func_generic.hpp>
+#include <calao/internal/func_file.hpp>
+#include <calao/internal/func_string.hpp>
+#include <calao/internal/func_list.hpp>
 
 #define CLS(T) get_class<T>()
 
 namespace calao {
 
-static Variant get_type(Runtime &, std::span<Variant> args)
-{
-	return args[0].get_class()->object();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-// String type
-
-static Variant string_contains(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = unsafe_cast<String>(args[0]);
-	auto &s2 = unsafe_cast<String>(args[1]);
-
-	return s1.contains(s2);
-}
-
-static Variant string_startswith(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = unsafe_cast<String>(args[0]);
-	auto &s2 = unsafe_cast<String>(args[1]);
-
-	return s1.starts_with(s2);
-}
-
-static Variant string_endswith(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = unsafe_cast<String>(args[0]);
-	auto &s2 = unsafe_cast<String>(args[1]);
-
-	return s1.ends_with(s2);
-}
-
-static Variant string_find(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = unsafe_cast<String>(args[0]);
-	auto &s2 = unsafe_cast<String>(args[1]);
-
-	return s1.find(s2);
-}
-
-static Variant string_rfind(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = unsafe_cast<String>(args[0]);
-	auto &s2 = unsafe_cast<String>(args[1]);
-
-	return s1.rfind(s2);
-}
-
-static Variant string_left(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = unsafe_cast<String>(args[0]);
-	auto count = unsafe_cast<intptr_t>(args[1]);
-
-	return s1.left(count);
-}
-
-static Variant string_right(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = unsafe_cast<String>(args[0]);
-	auto count = unsafe_cast<intptr_t>(args[1]);
-
-	return s1.right(count);
-}
-
-static Variant string_mid1(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = unsafe_cast<String>(args[0]);
-	auto from = unsafe_cast<intptr_t>(args[1]);
-
-	return s1.mid(from);
-}
-
-static Variant string_mid2(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = unsafe_cast<String>(args[0]);
-	auto from = unsafe_cast<intptr_t>(args[1]);
-	auto count = unsafe_cast<intptr_t>(args[2]);
-
-	return s1.mid(from, count);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
 void Runtime::set_global_namespace()
 {
+	// Generic functions
 	add_global("type", get_type, { CLS(Object) });
+	add_global("len", get_length, { CLS(Object) });
+
+	// String type
 	add_global("contains", string_contains, { CLS(String), CLS(String) });
 	add_global("starts_with", string_startswith, { CLS(String), CLS(String) });
 	add_global("ends_with", string_endswith, { CLS(String), CLS(String) });
-	add_global("find", string_find, { CLS(String), CLS(String) });
-	add_global("rfind", string_rfind, { CLS(String), CLS(String) });
+	add_global("find", string_find1, { CLS(String), CLS(String) });
+	add_global("find", string_find2, { CLS(String), CLS(String), CLS(intptr_t) });
+	add_global("rfind", string_rfind1, { CLS(String), CLS(String) });
+	add_global("rfind", string_rfind2, { CLS(String), CLS(String), CLS(intptr_t) });
 	add_global("left", string_left, { CLS(String), CLS(intptr_t) });
 	add_global("right", string_right, { CLS(String), CLS(intptr_t) });
 	add_global("mid", string_mid1, { CLS(String), CLS(intptr_t) });
 	add_global("mid", string_mid2, { CLS(String), CLS(intptr_t), CLS(intptr_t) });
+	add_global("first", string_first, {CLS(String)});
+	add_global("last", string_last, {CLS(String)});
+	add_global("count", string_count,  { CLS(String), CLS(String) });
+	add_global("to_upper", string_toupper, {CLS(String)});
+	add_global("to_lower", string_tolower, {CLS(String)});
+	add_global("reverse", string_reverse, { CLS(String) });
+	add_global("is_empty", string_isempty, { CLS(String) });
+	add_global("char", string_char, { CLS(String), CLS(intptr_t) });
+	add_global("split", string_split, { CLS(String), CLS(String) });
+
+	// List type
+	add_global("contains", list_contains, { CLS(List), CLS(Object) });
+	add_global("first", list_first, { CLS(List) });
+	add_global("last", list_last, { CLS(List) });
+	add_global("find", list_find1, { CLS(List), CLS(Object) });
+	add_global("find", list_find2, { CLS(List), CLS(Object), CLS(intptr_t) });
+	add_global("rfind", list_rfind1, { CLS(List), CLS(Object) });
+	add_global("rfind", list_rfind2, { CLS(List), CLS(Object), CLS(intptr_t) });
+	add_global("left", list_left, { CLS(List), CLS(intptr_t) });
+	add_global("right", list_right, { CLS(List), CLS(intptr_t) });
+
+	// File type
+	add_global("open", file_open1, { CLS(String) });
+	add_global("open", file_open2, { CLS(String), CLS(String) });
+	add_global("read_line", file_readline, { CLS(File) });
 }
 
 } // namespace calao

@@ -1,0 +1,10 @@
+function test(x as Integer, y as Number)
+    print y
+end
+
+function test(x as Number, y as Integer)
+    print x
+end
+
+test(3, 5)
+

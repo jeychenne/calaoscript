@@ -64,7 +64,7 @@ public:
 
 	Variant(Object *obj);
 
-	explicit Variant(String s);
+	Variant(String s);
 
 	template<class T>
 	Variant(T &&val) :
@@ -153,7 +153,7 @@ private:
 	friend T &cast(Variant &var);
 
 	template<class T>
-	friend T &unsafe_cast(Variant &var);
+	friend T &raw_cast(Variant &var);
 
 	template<class T>
 	friend bool check_type(const Variant &var);
@@ -220,38 +220,38 @@ inline bool check_type<String>(const Variant &var)
 //------------------------------------------------------------------------------------------------------------------
 
 template<class T>
-T &unsafe_cast(Variant &var)
+T &raw_cast(Variant &var)
 {
 	return reinterpret_cast<Handle<T> &>(var.as.storage).value();
 }
 
 
 template<class T>
-const T &unsafe_cast(const Variant &var)
+const T &raw_cast(const Variant &var)
 {
-	return unsafe_cast<T>(const_cast<Variant &>(var));
+	return raw_cast<T>(const_cast<Variant &>(var));
 }
 
 template<>
-inline bool &unsafe_cast<bool>(Variant &var)
+inline bool &raw_cast<bool>(Variant &var)
 {
 	return reinterpret_cast<bool &>(var.as.storage);
 }
 
 template<>
-inline intptr_t &unsafe_cast<intptr_t>(Variant &var)
+inline intptr_t &raw_cast<intptr_t>(Variant &var)
 {
 	return reinterpret_cast<intptr_t &>(var.as.storage);
 }
 
 template<>
-inline double &unsafe_cast<double>(Variant &var)
+inline double &raw_cast<double>(Variant &var)
 {
 	return reinterpret_cast<double &>(var.as.storage);
 }
 
 template<>
-inline String &unsafe_cast<String>(Variant &var)
+inline String &raw_cast<String>(Variant &var)
 {
 	return reinterpret_cast<String &>(var.as.storage);
 }
@@ -291,7 +291,7 @@ inline bool &cast<bool>(Variant &v)
 		throw error("[Cast error] Expected a %, got a %", Class::get_name<bool>(), var.class_name());
 	}
 
-	return unsafe_cast<bool>(var);
+	return raw_cast<bool>(var);
 }
 
 template<>
@@ -304,7 +304,7 @@ inline intptr_t &cast<intptr_t>(Variant &v)
 		throw error("[Cast error] Expected a %, got a %", Class::get_name<intptr_t>(), var.class_name());
 	}
 
-	return unsafe_cast<intptr_t>(var);
+	return raw_cast<intptr_t>(var);
 }
 
 template<>
@@ -317,7 +317,7 @@ inline double &cast<double>(Variant &v)
 		throw error("[Cast error] Expected a %, got a %", Class::get_name<double>(), var.class_name());
 	}
 
-	return unsafe_cast<double>(var);
+	return raw_cast<double>(var);
 }
 
 template<>
@@ -330,7 +330,7 @@ inline String &cast<String>(Variant &v)
 		throw error("[Cast error] Expected a %, got a %", Class::get_name<String>(), var.class_name());
 	}
 
-	return unsafe_cast<String>(var);
+	return raw_cast<String>(var);
 }
 
 //------------------------------------------------------------------------------------------------------------------

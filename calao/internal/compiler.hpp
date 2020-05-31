@@ -53,6 +53,7 @@ public:
 	void visit_for_statement(ForStatement *node) override;
 	void visit_loop_exit(LoopExitStatement *node) override;
 	void visit_return_statement(ReturnStatement *node) override;
+	void visit_reference_expression(ReferenceExpression *node) override;
 
 private:
 

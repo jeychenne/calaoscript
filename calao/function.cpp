@@ -23,6 +23,41 @@ Callable::Callable(const String &name, std::vector<Handle<Class>> sig, ParamBits
 
 }
 
+int Callable::get_cost(std::span<Variant> args) const
+{
+	int cost = 0;
+
+	for (int i = 0; i < args.size(); i++)
+	{
+		auto &v = args[i];
+		// Null variables are compatible with any type
+		if (v.is_null()) continue;
+
+		auto derived = v.get_class();
+		auto base = signature[i].get();
+		int dist = derived->get_distance(base);
+		// If the argument doesn't match, this can't be a candidate.
+		if (dist < 0) return (std::numeric_limits<int>::max)();
+		cost += dist;
+	}
+
+	return cost;
+}
+
+String Callable::get_definition() const
+{
+	String def = name();
+	Array<String> types;
+
+	for (auto &cls : signature) {
+		types.append(cls->name());
+	}
+	def.append('(');
+	def.append(String::join(types, ", "));
+	def.append(')');
+
+	return def;
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -124,7 +159,15 @@ Function::Function(String name, std::shared_ptr<Callable> r) :
 
 void Function::add_routine(std::shared_ptr<Callable> r)
 {
-	if (std::find(routines.begin(), routines.end(), r) == routines.end()) {
+	if (std::find(routines.begin(), routines.end(), r) == routines.end())
+	{
+		for (auto &cand : routines)
+		{
+			// FIXME: this doesn't work when a function with the same signature is redefined.
+			if (r->signature == cand->signature) {
+				throw error("[Type error] Function % is already defined in this scope", r->get_definition());
+			}
+		}
 		routines.push_back(std::move(r));
 	}
 }
@@ -133,45 +176,36 @@ std::shared_ptr<Callable> Function::resolve(std::span<Variant> args)
 {
 	// We use the simplest implementation possible. It finds the routine with the cheapest cost, where cost is defined
 	// as the sum of the distances between each argument's type and the expected parameter type.
-	int best_cost = (std::numeric_limits<int>::max)();
+	int best_cost = (std::numeric_limits<int>::max)() - 1; // We use INT_MAX for signatures that don't match
 	std::shared_ptr<Callable> candidate;
 	bool conflict = false;
 	assert(!routines.empty());
 
 	for (auto &r : routines)
 	{
-		int cost = 0;
-
-
 		if (!r->check_arg_count(args.size())) continue;
+		int cost = r->get_cost(args);
 
-		for (int i = 0; i < args.size(); i++)
-		{
-			auto &v = args[i];
-			// Null variables are compatible with any type
-			if (v.is_null()) continue;
-
-			// Add
-			auto derived = v.get_class();
-			auto base = r->signature[i].get();
-			int dist = derived->get_distance(base);
-			// If the argument doesn't match, this can't be a candidate.
-			if (dist < 0) goto SKIP;
-			cost += dist;
-		}
 		if (cost <= best_cost)
 		{
 			conflict = (cost == best_cost);
 			best_cost = cost;
 			candidate = r;
 		}
-
-		SKIP: (void)(nullptr);
 	}
 
-	if (conflict) {
-		throw error("[Runtime error] Can't resolve call to function '%': "
-			  "there are at least two methods that can accept this list of arguments", name());
+	if (conflict)
+	{
+		Array<String> signatures;
+
+		for (auto &r : routines)
+		{
+			if (r->get_cost(args) == best_cost) {
+				signatures.append(r->get_definition());
+			}
+		}
+		throw error("[Runtime error] Can't resolve call to function '%'.\nCandidates are:\n%",
+				name(), String::join(signatures, "\n"));
 	}
 
 	return candidate;

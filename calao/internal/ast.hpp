@@ -37,7 +37,11 @@ struct Ast
 
 	virtual void visit(AstVisitor &v) = 0;
 
+	virtual bool is_literal() const { return false; }
+
 	virtual void mark_assigned() { is_assigned = true; }
+
+	virtual void mark_reference() { is_reference = true; }
 
 	template<class T>
 	bool is() const { return dynamic_cast<const T*>(this) != nullptr; }
@@ -47,6 +51,9 @@ struct Ast
 
 	// Whether the node is the left hand side of an assignment
 	bool is_assigned = false;
+
+	// Whether a node is a reference.
+	bool is_reference = false;
 };
 
 using AstList = std::vector<AutoAst>;
@@ -70,37 +77,44 @@ struct Assignment final : public Ast
 	AutoAst lhs, rhs;
 };
 
-// null, nan, true, false
-struct ConstantLiteral final : public Ast
+struct Literal : public Ast
 {
-	ConstantLiteral(int line, Lexeme lex) : Ast(line), lex(lex) { }
+	explicit Literal(int line) : Ast(line) { }
+
+	bool is_literal() const override { return true; }
+};
+
+// null, nan, true, false
+struct ConstantLiteral final : public Literal
+{
+	ConstantLiteral(int line, Lexeme lex) : Literal(line), lex(lex) { }
 
 	void visit(AstVisitor &v) override;
 
 	Lexeme lex;
 };
 
-struct FloatLiteral final : public Ast
+struct FloatLiteral final : public Literal
 {
-	FloatLiteral(int line, double value) : Ast(line), value(value) { }
+	FloatLiteral(int line, double value) : Literal(line), value(value) { }
 
 	void visit(AstVisitor &v) override;
 
 	double value;
 };
 
-struct IntegerLiteral final : public Ast
+struct IntegerLiteral final : public Literal
 {
-	IntegerLiteral(int line, intptr_t value) : Ast(line), value(value) { }
+	IntegerLiteral(int line, intptr_t value) : Literal(line), value(value) { }
 
 	void visit(AstVisitor &v) override;
 
 	intptr_t value;
 };
 
-struct StringLiteral final : public Ast
+struct StringLiteral final : public Literal
 {
-	StringLiteral(int line, String value) : Ast(line), value(std::move(value)) { }
+	StringLiteral(int line, String value) : Literal(line), value(std::move(value)) { }
 
 	void visit(AstVisitor &v) override;
 
@@ -110,11 +124,24 @@ struct StringLiteral final : public Ast
 
 //---------------------------------------------------------------------------------------------------------------------
 
+struct ReferenceExpression final : public Ast
+{
+	ReferenceExpression(int line, AutoAst e) : Ast(line), expr(std::move(e)) { }
+
+	void visit(AstVisitor &v) override;
+
+	void mark_reference() override { Ast::mark_reference(); expr->mark_reference(); }
+
+	AutoAst expr;
+};
+
 struct UnaryExpression final : public Ast
 {
 	UnaryExpression(int line, Lexeme op, AutoAst expr) : Ast(line), op(op), expr(std::move(expr)) { }
 
 	void visit(AstVisitor &v) override;
+
+	void mark_reference() override { Ast::mark_reference(); expr->mark_reference(); }
 
 	Lexeme op;
 	AutoAst expr;
@@ -125,6 +152,8 @@ struct BinaryExpression final : public Ast
 	BinaryExpression(int line, Lexeme op, AutoAst lhs, AutoAst rhs) : Ast(line), op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) { }
 
 	void visit(AstVisitor &v) override;
+
+	void mark_reference() override { Ast::mark_reference(); lhs->mark_reference(); rhs->mark_reference(); }
 
 	Lexeme op;
 	AutoAst lhs, rhs;
@@ -314,6 +343,7 @@ public:
 	virtual void visit_for_statement(ForStatement *node) = 0;
 	virtual void visit_loop_exit(LoopExitStatement *node) = 0;
 	virtual void visit_return_statement(ReturnStatement *node) = 0;
+	virtual void visit_reference_expression(ReferenceExpression *node) = 0;
 };
 
 } // namespace calao
