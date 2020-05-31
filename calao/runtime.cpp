@@ -712,6 +712,10 @@ Variant Runtime::interpret(const Routine &routine)
 				math_op('^');
 				break;
 			}
+			case Opcode::Precall:
+			{
+				break;
+			}
 			case Opcode::Print:
 			{
 				trace_op();
@@ -1052,6 +1056,11 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		case Opcode::Power:
 		{
 			return print_simple_instruction("POWER");
+		}
+		case Opcode::Precall:
+		{
+
+			return print_simple_instruction("PRECALL");
 		}
 		case Opcode::Print:
 		{

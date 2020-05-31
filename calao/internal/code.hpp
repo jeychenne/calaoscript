@@ -59,6 +59,7 @@ enum class Opcode : Instruction
 	NotEqual,
 	Pop,
 	Power,
+	Precall,
 	Print,
 	PrintLine,
 	PushBoolean,
