@@ -101,6 +101,10 @@ private:
 
 	// In addition to scope ID's, we record each scope's depth to resolve non-local variables.
 	int scope_depth = 0;
+
+	// When parsing arguments, we emit special opcodes to account for the fact that they might need to be passed by reference.
+	// The runtime will check the function's bitset to see whether this is the case.
+	bool parse_args = false;
 };
 
 } // namespace calao

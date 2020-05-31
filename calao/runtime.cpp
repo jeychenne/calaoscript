@@ -433,16 +433,16 @@ Variant Runtime::interpret(const Routine &routine)
 			{
 				trace_op();
 				int narg = *ip++;
-				auto &v = peek();
+				auto &v = peek(-narg - 1);
 				if (!check_type<Function>(v)) {
 					RUNTIME_ERROR("Expected a Function object, got a %", v.class_name());
 				}
 				auto func = v.handle<Function>();
-				pop();
 				std::span<Variant> args(top - narg, narg);
+
 				try 
 				{
-					auto r = func->resolve(args);
+					auto r = func->find_routine(args);
 					if (!r)
 					{
 						Array<String> types;
@@ -461,7 +461,7 @@ Variant Runtime::interpret(const Routine &routine)
 					{
 						try {
 							auto result = (*r)(*this, args);
-							pop(narg);
+							pop(narg + 1);
 							push(std::move(result));
 						}
 						catch (std::runtime_error &e) {
@@ -1209,7 +1209,7 @@ Variant Runtime::pop_call_frame()
 	// Clean current frame.
 	auto n = int(top - current_frame->locals);
 	assert(n >= 0);
-	pop(n);
+	pop(n + 1); // pop the frame + the function that was left on the stack.
 
 	// Restore previous frame.
 	frames.pop_back();

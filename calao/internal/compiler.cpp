@@ -27,6 +27,8 @@ using Lexeme = Token::Lexeme;
 std::shared_ptr<Routine> Compiler::compile(AutoAst ast)
 {
 	initialize();
+	// dummy value to fill the slot occupied by the function. This slot is popped on return.
+	code->emit(ast->line_no, Opcode::PushNull);
 	code->emit(ast->line_no, Opcode::NewFrame, 0);
 	int offset = code->get_current_offset() - 1;
 	int previous_scope = open_scope(); // open module
@@ -292,13 +294,21 @@ void Compiler::visit_print_statement(PrintStatement *node)
 
 void Compiler::visit_call(CallExpression *node)
 {
-	// First push the arguments.
+	// First push the function.
+	node->expr->visit(*this);
+
+	// Prepare call, leave the function on the stack.
+	EMIT(Opcode::Precall);
+
+	// Next push the arguments.
+	auto flag = this->parse_args;
+	this->parse_args = true;
 	for (auto &arg : node->args) {
 		arg->visit(*this);
 	}
+	this->parse_args = flag;
 
-	// Next push the function and emit the call.
-	node->expr->visit(*this);
+	// Finally, make the call.
 	EMIT(Opcode::Call, Instruction(node->args.size()));
 }
 

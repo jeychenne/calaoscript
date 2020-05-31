@@ -235,7 +235,7 @@ public:
 
 	void add_routine(std::shared_ptr<Callable> r);
 
-	std::shared_ptr<Callable> resolve(std::span<Variant> args);
+	std::shared_ptr<Callable> find_routine(std::span<Variant> args);
 
 private:
 

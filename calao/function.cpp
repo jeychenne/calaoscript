@@ -172,7 +172,7 @@ void Function::add_routine(std::shared_ptr<Callable> r)
 	}
 }
 
-std::shared_ptr<Callable> Function::resolve(std::span<Variant> args)
+std::shared_ptr<Callable> Function::find_routine(std::span<Variant> args)
 {
 	// We use the simplest implementation possible. It finds the routine with the cheapest cost, where cost is defined
 	// as the sum of the distances between each argument's type and the expected parameter type.
