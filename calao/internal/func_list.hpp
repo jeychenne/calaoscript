@@ -19,73 +19,73 @@
 
 namespace calao {
 
-static Variant list_contains(Runtime &, std::span<Variant> args)
+static Variant list_contains(ArgumentList &args)
 {
-	auto &lst = raw_cast<List>(args[0]);
+	auto &lst = args.raw_get<List>(0);
 	return lst.contains(args[1]);
 }
 
-static Variant list_first(Runtime &, std::span<Variant> args)
+static Variant list_first(ArgumentList &args)
 {
-	auto &lst = raw_cast<List>(args[0]);
+	auto &lst = args.raw_get<List>(0);
 	if (lst.empty()) {
 		throw error("[Index error] Cannot get first element in empty list");
 	}
 	return lst.first();
 }
 
-static Variant list_find1(Runtime &, std::span<Variant> args)
+static Variant list_find1(ArgumentList &args)
 {
-	auto &lst = raw_cast<List>(args[0]);
+	auto &lst = args.raw_get<List>(0);
 	return lst.find(args[1]);
 }
 
-static Variant list_find2(Runtime &, std::span<Variant> args)
+static Variant list_find2(ArgumentList &args)
 {
-	auto &lst = raw_cast<List>(args[0]);
-	intptr_t i = raw_cast<intptr_t>(args[1]);
+	auto &lst = args.raw_get<List>(0);
+	intptr_t i = args.raw_get<intptr_t>(1);
 	return lst.find(args[1], i);
 }
 
-static Variant list_rfind1(Runtime &, std::span<Variant> args)
+static Variant list_rfind1(ArgumentList &args)
 {
-	auto &lst = raw_cast<List>(args[0]);
+	auto &lst = args.raw_get<List>(0);
 	return lst.rfind(args[1]);
 }
 
-static Variant list_rfind2(Runtime &, std::span<Variant> args)
+static Variant list_rfind2(ArgumentList &args)
 {
-	auto &lst = raw_cast<List>(args[0]);
-	intptr_t i = raw_cast<intptr_t>(args[1]);
+	auto &lst = args.raw_get<List>(0);
+	intptr_t i = args.raw_get<intptr_t>(1);
 	return lst.rfind(args[1], i);
 }
 
-static Variant list_last(Runtime &, std::span<Variant> args)
+static Variant list_last(ArgumentList &args)
 {
-	auto &lst = raw_cast<List>(args[0]);
+	auto &lst = args.raw_get<List>(0);
 	if (lst.empty()) {
 		throw error("[Index error] Cannot get last element in empty list");
 	}
 	return lst.last();
 }
 
-static Variant list_left(Runtime &rt, std::span<Variant> args)
+static Variant list_left(ArgumentList &args)
 {
-	auto &lst = raw_cast<List>(args[0]);
-	intptr_t count = raw_cast<intptr_t>(args[1]);
+	auto &lst = args.raw_get<List>(0);
+	intptr_t count = args.raw_get<intptr_t>(1);
 	List result;
 
 	for (intptr_t i = 1; i <= count; i++) {
 		result.append(lst.at(i));
 	}
 
-	return make_handle<List>(&rt, std::move(result));
+	return make_handle<List>(&args.runtime(), std::move(result));
 }
 
-static Variant list_right(Runtime &rt, std::span<Variant> args)
+static Variant list_right(ArgumentList &args)
 {
-	auto &lst = raw_cast<List>(args[0]);
-	intptr_t count = raw_cast<intptr_t>(args[1]);
+	auto &lst = args.raw_get<List>(0);
+	intptr_t count = args.raw_get<intptr_t>(1);
 	List result;
 	intptr_t limit = lst.size() - count;
 
@@ -93,7 +93,7 @@ static Variant list_right(Runtime &rt, std::span<Variant> args)
 		result.append(lst.at(i));
 	}
 
-	return make_handle<List>(&rt, std::move(result));
+	return make_handle<List>(&args.runtime(), std::move(result));
 }
 
 } // namespace calao

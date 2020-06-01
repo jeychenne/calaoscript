@@ -45,7 +45,7 @@ void Compiler::initialize()
 {
 	scope_id = 0;
 	current_scope = 0;
-	set_routine(std::make_shared<Routine>(String()));
+	set_routine(std::make_shared<Routine>(String(), 0));
 }
 
 void Compiler::finalize()
@@ -301,12 +301,14 @@ void Compiler::visit_call(CallExpression *node)
 	EMIT(Opcode::Precall);
 
 	// Next push the arguments.
-	auto flag = this->parse_args;
-	this->parse_args = true;
-	for (auto &arg : node->args) {
+	auto arg_flag = this->parse_arg;
+	this->parse_arg = 0;
+	for (auto &arg : node->args)
+	{
 		arg->visit(*this);
+		this->parse_arg++;
 	}
-	this->parse_args = flag;
+	this->parse_arg = arg_flag;
 
 	// Finally, make the call.
 	EMIT(Opcode::Call, Instruction(node->args.size()));
@@ -318,7 +320,10 @@ void Compiler::visit_variable(Variable *node)
 	auto index = routine->find_local(node->name, current_scope);
 	if (index)
 	{
-		if (node->is_reference) {
+		if (parsing_argument()) {
+			EMIT(Opcode::GetLocalArg, *index, Instruction(this->parse_arg));
+		}
+		else if (node->is_reference) {
 			EMIT(Opcode::GetLocalRef, *index);
 		}
 		else {
@@ -328,7 +333,11 @@ void Compiler::visit_variable(Variable *node)
 	else
 	{
 		auto var = routine->add_string_constant(node->name);
-		if (node->is_reference) {
+
+		if (parsing_argument()) {
+			EMIT(Opcode::GetGlobalArg, var, Instruction(this->parse_arg));
+		}
+		else if (node->is_reference) {
 			EMIT(Opcode::GetGlobalRef, var);
 		}
 		else {
@@ -592,15 +601,20 @@ void Compiler::visit_routine(RoutineDefinition *node)
 	// Compile inner routine.
 	auto previous_scope = open_scope();
 	auto outer_routine = routine;
-	set_routine(std::make_shared<Routine>(name));
+	set_routine(std::make_shared<Routine>(name, int(node->params.size())));
 	EMIT(Opcode::NewFrame, 0);
 	int frame_offset = code->get_current_offset() - 1;
 
-	for (auto &param : node->params)
+	for (size_t i = 0; i < node->params.size(); i++)
 	{
+		auto &p = node->params[i];
 		// Compile names in the new function.
-		static_cast<RoutineParameter*>(param.get())->add_names = true;
-		param->visit(*this);
+		auto param = static_cast<RoutineParameter*>(p.get());
+		param->add_names = true;
+		if (param->by_ref) {
+			routine->ref_flags[i] = true;
+		}
+		p->visit(*this);
 	}
 	node->body->visit(*this);
 	EMIT(Opcode::Return);
@@ -609,7 +623,7 @@ void Compiler::visit_routine(RoutineDefinition *node)
 	close_scope(previous_scope);
 
 	auto index = outer_routine->add_routine(routine);
-	func->add_routine(std::move(routine));
+	func->add_routine(std::move(routine), true);
 	set_routine(std::move(outer_routine));
 
 	// Compile type information in the outer routine.

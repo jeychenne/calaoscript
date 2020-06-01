@@ -519,13 +519,14 @@ AstList Parser::parse_parameters()
 
 AutoAst Parser::parse_parameter()
 {
+	bool by_ref = accept(Lexeme::Ref);
 	auto var = parse_identifier("in parameter list");
 	AutoAst type;
 	if (accept(Lexeme::As)) {
 		type = parse_expression();
 	}
 
-	return make<RoutineParameter>(std::move(var), std::move(type));
+	return make<RoutineParameter>(std::move(var), std::move(type), by_ref);
 }
 
 AutoAst Parser::parse_assertion()

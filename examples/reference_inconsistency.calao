@@ -1,0 +1,8 @@
+function test(ref s as String)
+    append(s, " world!")
+end
+
+# This will throw an error
+function test(i as Integer)
+    pass
+end

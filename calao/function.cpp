@@ -20,7 +20,7 @@ namespace calao {
 Callable::Callable(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
 	signature(std::move(sig)), ref_flags(ref_flags), _name(name)
 {
-
+	_argc = int(signature.size());
 }
 
 int Callable::get_cost(std::span<Variant> args) const
@@ -49,8 +49,15 @@ String Callable::get_definition() const
 	String def = name();
 	Array<String> types;
 
-	for (auto &cls : signature) {
-		types.append(cls->name());
+	for (size_t i = 0; i < signature.size(); i++)
+	{
+		auto &cls = signature[i];
+		if (ref_flags[i]) {
+			types.append(String("ref ").append(cls->name()));
+		}
+		else {
+			types.append(cls->name());
+		}
 	}
 	def.append('(');
 	def.append(String::join(types, ", "));
@@ -67,15 +74,15 @@ NativeRoutine::NativeRoutine(const String &name, NativeCallback cb, std::initial
 
 }
 
-Variant NativeRoutine::call(Runtime &rt, std::span<Variant> args)
+Variant NativeRoutine::call(ArgumentList &args)
 {
-	return callback(rt, args);
+	return callback(args);
 }
 
 
 //----------------------------------------------------------------------------------------------------------------------
 
-Routine::Routine(const String &name) : Callable(name)
+Routine::Routine(const String &name, int argc) : Callable(name, argc)
 {
 
 }
@@ -144,9 +151,9 @@ Instruction Routine::add_routine(std::shared_ptr<Routine> r)
 	return add_constant(routine_pool, std::move(r));
 }
 
-Variant Routine::call(Runtime &rt, std::span<Variant> args)
+Variant Routine::call(ArgumentList &args)
 {
-	return rt.interpret(*this, args);
+	return args.runtime().interpret(*this, args);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -154,19 +161,39 @@ Variant Routine::call(Runtime &rt, std::span<Variant> args)
 Function::Function(String name, std::shared_ptr<Callable> r) :
 	Function(std::move(name))
 {
-	add_routine(std::move(r));
+	add_routine(std::move(r), true);
 }
 
-void Function::add_routine(std::shared_ptr<Callable> r)
+void Function::add_routine(std::shared_ptr<Callable> r, bool create)
 {
+	// For user-defined functions, we don't have
 	if (std::find(routines.begin(), routines.end(), r) == routines.end())
 	{
+		// Check for *reference consistency*; that is, ensure that positional argument n is consistently passed by value
+		// or by reference for all routines in this function.
+		int argc = (std::min)(max_argc, r->arg_count());
+		auto rflags = r->ref_flags;
+		for (int i = 0; i < argc; i++)
+		{
+			if (rflags[i] != ref_flags[i]) {
+				throw error("[Reference error] This overload of function \"%\" is not consistent with previous definitions: parameter % must be passed by %",
+						name(), i+1, ref_flags[i] ? "reference" : "value");
+			}
+		}
 		for (auto &cand : routines)
 		{
 			// FIXME: this doesn't work when a function with the same signature is redefined.
-			if (r->signature == cand->signature) {
+			if (!create && r->signature == cand->signature) {
 				throw error("[Type error] Function % is already defined in this scope", r->get_definition());
 			}
+		}
+
+		// If the current routine accepts more arguments than all currently known routines, update the reference flag. Incoming routines
+		// will have to be consistent with this routine and the others.
+		if (r->arg_count() > max_argc)
+		{
+			this->ref_flags = rflags;
+			max_argc = r->arg_count();
 		}
 		routines.push_back(std::move(r));
 	}
@@ -196,6 +223,11 @@ std::shared_ptr<Callable> Function::find_routine(std::span<Variant> args)
 
 	if (conflict)
 	{
+		Array<String> types;
+		for (auto &arg : args) {
+			types.append(arg.class_name());
+		}
+
 		Array<String> signatures;
 
 		for (auto &r : routines)
@@ -204,17 +236,17 @@ std::shared_ptr<Callable> Function::find_routine(std::span<Variant> args)
 				signatures.append(r->get_definition());
 			}
 		}
-		throw error("[Runtime error] Can't resolve call to function '%'.\nCandidates are:\n%",
-				name(), String::join(signatures, "\n"));
+		throw error("[Runtime error] Cannot resolve call to function '%' with the following argument types: (%).\nCandidates are:\n%",
+				name(), String::join(types, ", "), String::join(signatures, "\n"));
 	}
 
 	return candidate;
 }
 
-Function::Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig,
-				   ParamBitset ref_flags)
+Function::Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags) :
+	Function(name)
 {
-	add_routine(std::make_shared<NativeRoutine>(name, std::move(cb), std::move(sig), ref_flags));
+	add_routine(std::make_shared<NativeRoutine>(name, std::move(cb), sig, ref_flags), true);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

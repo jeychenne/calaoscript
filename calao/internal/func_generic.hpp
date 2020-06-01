@@ -19,12 +19,12 @@
 
 namespace calao {
 
-static Variant get_type(Runtime &, std::span<Variant> args)
+static Variant get_type(ArgumentList &args)
 {
 	return args[0].get_class()->object();
 }
 
-static Variant get_length(Runtime &, std::span<Variant> args)
+static Variant get_length(ArgumentList &args)
 {
 	auto &v = args[0];
 

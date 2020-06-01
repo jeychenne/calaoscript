@@ -1,0 +1,19 @@
+print "test inner functions... ",
+
+function outer()
+    function inner()
+        return 1
+    end
+
+    function inner(i as Integer)
+        return i * 2
+    end
+
+    return inner
+end
+
+var f = outer()
+assert f() == 1
+assert f(5) == 10
+
+print "done!"

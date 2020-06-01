@@ -434,9 +434,7 @@ Variant Runtime::interpret(const Routine &routine)
 				trace_op();
 				int narg = *ip++;
 				auto &v = peek(-narg - 1);
-				if (!check_type<Function>(v)) {
-					RUNTIME_ERROR("Expected a Function object, got a %", v.class_name());
-				}
+				// Precall already check that we have a callable object.
 				auto func = v.handle<Function>();
 				std::span<Variant> args(top - narg, narg);
 
@@ -454,13 +452,15 @@ Variant Runtime::interpret(const Routine &routine)
 							candidates.append(r->get_definition());
 							candidates.append('\n');
 						}
-						RUNTIME_ERROR("Cannot resolve call to function '%' with the following signature: (%).\nCandidates are:\n%",
+						RUNTIME_ERROR("Cannot resolve call to function '%' with the following argument types: (%).\nCandidates are:\n%",
 								func->name(), String::join(types, ", "), candidates);
 					}
+					ArgumentList arglist(*this, args);
+
 					if (r->is_native())
 					{
 						try {
-							auto result = (*r)(*this, args);
+							auto result = (*r)(arglist);
 							pop(narg + 1);
 							push(std::move(result));
 						}
@@ -471,7 +471,7 @@ Variant Runtime::interpret(const Routine &routine)
 					else
 					{
 						current_frame->ip = ip;
-						push((*r)(*this, args));
+						push((*r)(arglist));
 					}
 				}
 				catch (std::runtime_error &e) {
@@ -557,6 +557,23 @@ Variant Runtime::interpret(const Routine &routine)
 				push(it->second.resolve());
 				break;
 			}
+			case Opcode::GetGlobalArg:
+			{
+				trace_op();
+				auto name = routine.get_string(*ip++);
+				bool by_ref = current_frame->ref_flags[*ip++];
+				auto it = globals.find(name);
+				if (it == globals.end()) {
+					RUNTIME_ERROR("Undefined variable \"%\"", name);
+				}
+				if (by_ref) {
+					push(it->second.make_alias());
+				}
+				else {
+					push(it->second.resolve());
+				}
+				break;
+			}
 			case Opcode::GetGlobalRef:
 			{
 				trace_op();
@@ -565,23 +582,34 @@ Variant Runtime::interpret(const Routine &routine)
 				if (it == globals.end()) {
 					RUNTIME_ERROR("Undefined variable \"%\"", name);
 				}
-				it->second.make_alias();
-				push(it->second);
+				push(it->second.make_alias());
 				break;
 			}
 			case Opcode::GetLocal:
 			{
 				trace_op();
-				const Variant &v = current_frame->locals[*ip++];
+				auto &v = current_frame->locals[*ip++];
 				push(v.resolve());
+				break;
+			}
+			case Opcode::GetLocalArg:
+			{
+				trace_op();
+				auto &v = current_frame->locals[*ip++];
+				bool by_ref = current_frame->ref_flags[*ip++];
+				if (by_ref) {
+					push(v.make_alias());
+				}
+				else {
+					push(v.resolve());
+				}
 				break;
 			}
 			case Opcode::GetLocalRef:
 			{
 				trace_op();
 				Variant &v = current_frame->locals[*ip++];
-				v.make_alias();
-				push(v);
+				push(v.make_alias());
 				break;
 			}
 			case Opcode::Greater:
@@ -714,6 +742,13 @@ Variant Runtime::interpret(const Routine &routine)
 			}
 			case Opcode::Precall:
 			{
+				trace_op();
+				auto &v = peek();
+				if (!check_type<Function>(v)) {
+					RUNTIME_ERROR("Expected a Function object, got a %", v.class_name());
+				}
+				auto &func = cast<Function>(v);
+				current_frame->ref_flags = func.ref_flags;
 				break;
 			}
 			case Opcode::Print:
@@ -820,7 +855,12 @@ Variant Runtime::interpret(const Routine &routine)
 				}
 				else
 				{
-					it->second = std::move(v);
+					try {
+						it->second = std::move(v);
+					}
+					catch (std::runtime_error &e) {
+						RUNTIME_ERROR(e.what());
+					}
 				}
 				pop();
 				break;
@@ -829,7 +869,12 @@ Variant Runtime::interpret(const Routine &routine)
 			{
 				trace_op();
 				Variant &v = current_frame->locals[*ip++];
-				v = std::move(peek());
+				try {
+					v = std::move(peek());
+				}
+				catch (std::runtime_error &e) {
+					RUNTIME_ERROR(e.what());
+				}
 				pop();
 				break;
 			}
@@ -839,6 +884,7 @@ Variant Runtime::interpret(const Routine &routine)
 				const int index = *ip++;
 				const int narg = *ip++;
 				auto r = routine.get_routine(index);
+				r->clear_signature();
 
 				for (int i = narg; i > 0; i--)
 				{
@@ -959,6 +1005,14 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("GET_GLOBAL     %-5d      ; %s\n", index, value.data());
 			return 2;
 		}
+		case Opcode::GetGlobalArg:
+		{
+			int index = routine.code[offset + 1];
+			int narg = routine.code[offset + 2];
+			String value = routine.get_string(index);
+			printf("GET_GLOBAL_ARG %-5d %-5d; %s\n", index, narg, value.data());
+			return 3;
+		}
 		case Opcode::GetGlobalRef:
 		{
 			int index = routine.code[offset + 1];
@@ -972,6 +1026,14 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			String value = routine.get_local_name(index);
 			printf("GET_LOCAL      %-5d      ; %s\n", index, value.data());
 			return 2;
+		}
+		case Opcode::GetLocalArg:
+		{
+			int index = routine.code[offset + 1];
+			int narg = routine.code[offset + 2];
+			String value = routine.get_local_name(index);
+			printf("GET_LOCAL_ARG  %-5d %-5d; %s\n", index, narg, value.data());
+			return 3;
 		}
 		case Opcode::GetLocalRef:
 		{
@@ -1059,7 +1121,6 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		}
 		case Opcode::Precall:
 		{
-
 			return print_simple_instruction("PRECALL");
 		}
 		case Opcode::Print:
@@ -1238,10 +1299,10 @@ void Runtime::add_global(String name, Variant value)
 	globals.insert({ std::move(name), std::move(value) });
 }
 
-Variant Runtime::interpret(const Routine &routine, std::span<Variant> args)
+Variant Runtime::interpret(const Routine &routine, ArgumentList &args)
 {
 	// The arguments are on top of the stack. We adjust the top of the stack accordingly.
-	top -= args.size();
+	top -= args.count();
 
 	// Now we can just interpret the routine. The first opcode wil be NewFrame.
 	return interpret(routine);

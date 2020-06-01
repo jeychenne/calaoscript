@@ -166,7 +166,7 @@ const std::type_info *Variant::type_info() const
 
 String Variant::class_name() const
 {
-	static String null("null");
+	static String null("Null");
 
 	switch (data_type())
 	{
@@ -422,7 +422,7 @@ String Variant::to_string(bool quote) const
 	throw error("[Internal error] Invalid type ID in to_string function");
 }
 
-Variant &Variant::operator=(Variant other) noexcept
+Variant &Variant::operator=(Variant other)
 {
 	auto &self = resolve();
 
@@ -434,7 +434,7 @@ Variant &Variant::operator=(Variant other) noexcept
 		if (&f1 != &f2)
 		{
 			for (auto &r : f2.routines) {
-				f1.add_routine(r);
+				f1.add_routine(r, false);
 			}
 		}
 	}
@@ -498,11 +498,16 @@ size_t Variant::hash() const
 	return 0; // please GCC
 }
 
-void Variant::make_alias()
+Variant & Variant::make_alias()
 {
-	auto alias = new Alias(std::move(*this));
-	as.alias = alias;
-	m_data_type = Datatype::Alias;
+	if (!this->is_alias())
+	{
+		auto alias = new Alias(std::move(*this));
+		as.alias = alias;
+		m_data_type = Datatype::Alias;
+	}
+
+	return *this;
 }
 
 Variant &Variant::resolve()

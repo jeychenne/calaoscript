@@ -8,7 +8,8 @@
  *                                                                                                                    *
  * Created: 22/05/2020                                                                                                *
  *                                                                                                                    *
- * Purpose: Function object.                                                                                          *
+ * Purpose: Function object. Calao functions support multiple dispatch: a function may have several overloads, and    *
+ * the correct routine is selected at runtime based on the type of the arguments.                                     *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
@@ -33,8 +34,46 @@ class Function;
 static constexpr size_t PARAM_BITSET_SIZE = 64;
 using ParamBitset = std::bitset<PARAM_BITSET_SIZE>;
 
+
+//---------------------------------------------------------------------------------------------------------------------
+
+// A structure to encapsulate a list of arguments passed to a function.
+class ArgumentList final
+{
+public:
+
+	ArgumentList(Runtime &rt, std::span<Variant> args) : _args(args), _rt(rt) { }
+
+	ArgumentList(const ArgumentList &) = delete;
+
+	Variant &operator[](size_t i) { return _args[i].resolve(); }
+
+	template<class T>
+	T &get(size_t i) { return cast<T>(_args[i].resolve()); }
+
+	template<class T>
+	T &raw_get(size_t i) { return raw_cast<T>(_args[i].resolve()); }
+
+	template<class T>
+	bool check_type(size_t i) const { return check_type<T>(_args[i].resolve()); }
+
+	size_t count() const { return _args.size(); }
+
+	Runtime &runtime() { return _rt; }
+
+private:
+
+	std::span<Variant> _args;
+
+	Runtime &_rt;
+};
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+
 // A native C++ callback.
-using NativeCallback = std::function<Variant(Runtime &, std::span<Variant>)>;
+using NativeCallback = std::function<Variant(ArgumentList&)>;
 
 // A Callable is an internal abstract bate type type used to represent one particular signature for a function. Each function has at least
 // one callable, and each callable is owned by at least one function. Callable has two subclasses: NativeRoutine, which is implemented in C++,
@@ -43,7 +82,7 @@ class Callable
 {
 public:
 
-	explicit Callable(const String &name) : _name(name) { } // routine without parameters
+	Callable(const String &name, int argc) : _name(name), _argc(argc) { } // routine without parameters
 
 	Callable(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
 
@@ -51,7 +90,7 @@ public:
 
 	virtual bool is_native() const = 0;
 
-	int arg_count() const { return int(signature.size()); }
+	int arg_count() const { return _argc; }
 
 	bool check_arg_count(int n) const { return arg_count() == n; }
 
@@ -61,7 +100,7 @@ public:
 
 	String name() const { return _name; }
 
-	Variant operator()(Runtime &rt, std::span<Variant> args) { return call(rt, args); }
+	Variant operator()(ArgumentList &args) { return call(args); }
 
 	int get_cost(std::span<Variant> args) const;
 
@@ -71,17 +110,19 @@ protected:
 
 	friend class Function;
 
-	virtual Variant call(Runtime &rt, std::span<Variant> args) = 0;
+	virtual Variant call(ArgumentList &args) = 0;
 
 	// Type of positional arguments.
 	std::vector<Handle<Class>> signature;
 
-	// Indicates whether a parameter is a reference (1) or a value (0). Bit 0 refers to the return value, whereas bits 1
-	// to 63 refer to parameter.
+	// Indicates whether a parameter is a reference (1) or a value (0).
 	ParamBitset ref_flags;
 
 	// For debugging and stack traces.
 	String _name;
+
+	// We store the argument count because user-defined routines only know the number of parameters after their signature is computed.
+	int _argc;
 };
 
 
@@ -96,7 +137,7 @@ struct NativeRoutine final : public Callable
 
 	NativeCallback callback;
 
-	Variant call(Runtime &rt, std::span<Variant> args) override;
+	Variant call(ArgumentList &args) override;
 };
 
 
@@ -113,7 +154,7 @@ public:
 		int scope, depth;
 	};
 
-	explicit Routine(const String &name);
+	Routine(const String &name, int argc);
 
 	Routine(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
 
@@ -155,7 +196,9 @@ private:
 	// Bytecode.
 	Code code;
 
-	Variant call(Runtime &rt, std::span<Variant> args) override;
+	Variant call(ArgumentList &args) override;
+
+	void clear_signature() { signature.clear(); }
 
 	template<class T>
 	Instruction add_constant(std::vector<T> &vec, T value)
@@ -227,15 +270,21 @@ public:
 
 	explicit Function(String name) : _name(std::move(name)) { }
 
+	Function(const Function &) = delete;
+
+	Function(Function &&) noexcept = default;
+
 	Function(String name, std::shared_ptr<Callable> r);
 
 	Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags = 0);
 
 	String name() const { return _name; }
 
-	void add_routine(std::shared_ptr<Callable> r);
+	void add_routine(std::shared_ptr<Callable> r, bool create);
 
 	std::shared_ptr<Callable> find_routine(std::span<Variant> args);
+
+	ParamBitset reference_flags() const { return ref_flags; }
 
 private:
 
@@ -247,6 +296,11 @@ private:
 
 	// Each function signature is represented by a different routine, which may be native or user-defined.
 	std::vector<std::shared_ptr<Callable>> routines;
+
+	ParamBitset ref_flags;
+
+	// Maximum number of arguments that this function allows.
+	int max_argc = 0;
 };
 
 

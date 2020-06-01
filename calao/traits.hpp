@@ -80,19 +80,11 @@ template<typename T, typename U> struct is_collectable<std::unordered_map<T, U>>
 
 //----------------------------------------------------------------------------------------------------------------------
 
-template<typename T> struct is_clonable : std::true_type
+template<typename T> struct is_clonable : std::is_copy_constructible<T>
 {
 
 };
 
-template<> struct is_clonable<File> : std::false_type
-{ };
-
-template<> struct is_clonable<Regex> : std::false_type
-{ };
-
-template<> struct is_clonable<Class> : std::false_type
-{ };
 
 //----------------------------------------------------------------------------------------------------------------------
 

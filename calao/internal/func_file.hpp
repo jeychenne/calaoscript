@@ -20,23 +20,23 @@
 
 namespace calao {
 
-static Variant file_open1(Runtime &, std::span<Variant> args)
+static Variant file_open1(ArgumentList &args)
 {
-	auto &path = raw_cast<String>(args[0]);
+	auto &path = args.raw_get<String>(0);
 	return make_handle<File>(path);
 }
 
-static Variant file_open2(Runtime &, std::span<Variant> args)
+static Variant file_open2(ArgumentList &args)
 {
-	auto &path = raw_cast<String>(args[0]);
-	auto &mode = raw_cast<String>(args[1]);
+	auto &path = args.raw_get<String>(0);
+	auto &mode = args.raw_get<String>(1);
 
 	return make_handle<File>(path, mode.data());
 }
 
-static Variant file_readline(Runtime &, std::span<Variant> args)
+static Variant file_readline(ArgumentList &args)
 {
-	auto &f = raw_cast<File>(args[0]);
+	auto &f = args.raw_get<File>(0);
 	return f.read_line();
 }
 

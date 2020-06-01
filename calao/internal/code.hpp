@@ -37,10 +37,12 @@ enum class Opcode : Instruction
 	DecrementLocal,
 	DefineGlobal,
 	DefineLocal,
-	GetGlobal,
-	GetGlobalRef,
-	GetLocal,
-	GetLocalRef,
+	GetGlobal,			// Get global by value
+	GetGlobalArg,		// Get global either by value or by reference
+	GetGlobalRef,		// Get global by reference
+	GetLocal,			// Get global by value
+	GetLocalArg,		// Get global either by value or by reference
+	GetLocalRef,		// Get global by reference
 	Divide,
 	Equal,
 	Greater,

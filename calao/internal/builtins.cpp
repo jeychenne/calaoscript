@@ -18,6 +18,7 @@
 #include <calao/internal/func_list.hpp>
 
 #define CLS(T) get_class<T>()
+#define REF(bits) ParamBitset(bits)
 
 namespace calao {
 
@@ -48,6 +49,7 @@ void Runtime::set_global_namespace()
 	add_global("is_empty", string_isempty, { CLS(String) });
 	add_global("char", string_char, { CLS(String), CLS(intptr_t) });
 	add_global("split", string_split, { CLS(String), CLS(String) });
+	add_global("append", string_append, { CLS(String), CLS(String) }, REF("01"));
 
 	// List type
 	add_global("contains", list_contains, { CLS(List), CLS(Object) });
@@ -69,3 +71,4 @@ void Runtime::set_global_namespace()
 } // namespace calao
 
 #undef CLS
+#undef REF

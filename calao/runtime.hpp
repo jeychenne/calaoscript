@@ -188,7 +188,7 @@ public:
 	Variant interpret(const Routine &routine);
 
 	// Call a user-defined function in Opcode::Call.
-	Variant interpret(const Routine &routine, std::span<Variant> args);
+	Variant interpret(const Routine &routine, ArgumentList &args);
 
 	void disassemble(const Routine &routine, const String &name);
 
@@ -198,7 +198,7 @@ public:
 
 	void add_global(String name, Variant value);
 
-	void add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref = 0);
+	void add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref = ParamBitset());
 
 private:
 
@@ -212,6 +212,9 @@ private:
 
 		// Arguments and local variables on the stack.
 		Variant *locals = nullptr;
+
+		// Reference flags (only used to prepare a call).
+		ParamBitset ref_flags;
 
 		// Number of local variables.
 		int nlocal = -1;

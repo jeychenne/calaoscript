@@ -274,12 +274,14 @@ struct LoopExitStatement final : public Ast
 
 struct RoutineParameter final : public Ast
 {
-	RoutineParameter(int line, AutoAst var, AutoAst type) : Ast(line), variable(std::move(var)), type(std::move(type)) { }
+	RoutineParameter(int line, AutoAst var, AutoAst type, bool ref) :
+		Ast(line), variable(std::move(var)), type(std::move(type)), by_ref(ref) { }
 
 	void visit(AstVisitor &v) override;
 
 	AutoAst variable, type;
-	bool add_names = false; // flag for the compiler
+	bool by_ref;             // passed by value or by reference?
+	bool add_names = false;  // flag for the compiler
 };
 
 struct RoutineDefinition final : public Ast

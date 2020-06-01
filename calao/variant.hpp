@@ -94,7 +94,7 @@ public:
 
 	void swap(Variant &other) noexcept;
 
-	Variant &operator=(Variant other) noexcept;
+	Variant &operator=(Variant other);
 
 	Datatype data_type() const { return m_data_type; }
 
@@ -118,7 +118,7 @@ public:
 
 	const std::type_info *type_info() const;
 
-	void make_alias();
+	Variant & make_alias();
 
 	Variant &resolve();
 

@@ -80,6 +80,8 @@ private:
 
 	void set_routine(std::shared_ptr<Routine> r);
 
+	bool parsing_argument() const { return parse_arg >= 0; }
+
 	// Code of the routine being compiled.
 	Code *code = nullptr;
 
@@ -103,8 +105,9 @@ private:
 	int scope_depth = 0;
 
 	// When parsing arguments, we emit special opcodes to account for the fact that they might need to be passed by reference.
-	// The runtime will check the function's bitset to see whether this is the case.
-	bool parse_args = false;
+	// The runtime will check the function's bitset to see whether this is the case. This flag provides the index of the argument
+	// currently being parsed. -1 indicates that we're not parsing any argument.
+	int parse_arg = -1;
 };
 
 } // namespace calao
