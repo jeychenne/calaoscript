@@ -41,8 +41,6 @@ struct Ast
 
 	virtual void mark_assigned() { is_assigned = true; }
 
-	virtual void mark_reference() { is_reference = true; }
-
 	template<class T>
 	bool is() const { return dynamic_cast<const T*>(this) != nullptr; }
 
@@ -51,9 +49,6 @@ struct Ast
 
 	// Whether the node is the left hand side of an assignment
 	bool is_assigned = false;
-
-	// Whether a node is a reference.
-	bool is_reference = false;
 };
 
 using AstList = std::vector<AutoAst>;
@@ -121,6 +116,14 @@ struct StringLiteral final : public Literal
 	String value;
 };
 
+struct ListLiteral final : public Literal
+{
+	ListLiteral(int line, AstList items) : Literal(line), items(std::move(items)){ }
+
+	void visit(AstVisitor &v) override;
+
+	AstList items;
+};
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -129,8 +132,6 @@ struct ReferenceExpression final : public Ast
 	ReferenceExpression(int line, AutoAst e) : Ast(line), expr(std::move(e)) { }
 
 	void visit(AstVisitor &v) override;
-
-	void mark_reference() override { Ast::mark_reference(); expr->mark_reference(); }
 
 	AutoAst expr;
 };
@@ -141,8 +142,6 @@ struct UnaryExpression final : public Ast
 
 	void visit(AstVisitor &v) override;
 
-	void mark_reference() override { Ast::mark_reference(); expr->mark_reference(); }
-
 	Lexeme op;
 	AutoAst expr;
 };
@@ -152,8 +151,6 @@ struct BinaryExpression final : public Ast
 	BinaryExpression(int line, Lexeme op, AutoAst lhs, AutoAst rhs) : Ast(line), op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) { }
 
 	void visit(AstVisitor &v) override;
-
-	void mark_reference() override { Ast::mark_reference(); lhs->mark_reference(); rhs->mark_reference(); }
 
 	Lexeme op;
 	AutoAst lhs, rhs;
@@ -327,6 +324,7 @@ public:
 	virtual void visit_integer(IntegerLiteral *node) = 0;
 	virtual void visit_float(FloatLiteral *node) = 0;
 	virtual void visit_string(StringLiteral *node) = 0;
+	virtual void visit_list(ListLiteral *node) = 0;
 	virtual void visit_unary(UnaryExpression *node) = 0;
 	virtual void visit_binary(BinaryExpression *node) = 0;
 	virtual void visit_statements(StatementList *node) = 0;

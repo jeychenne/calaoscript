@@ -648,11 +648,11 @@ public:
 	// Remove the rightmost occurrence of `value` in the array.
 	void remove_last(const_reference value)
 	{
-		for (auto it = rbegin(); it != rend(); it++)
+		for (auto i = this->size(); i > 0; i--)
 		{
-			if (*it == value)
+			if (m_data[i-1] == value)
 			{
-				remove_at(it);
+				remove_at(i);
 				return;
 			}
 		}

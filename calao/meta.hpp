@@ -24,48 +24,24 @@ namespace meta {
 
 // Convert type to string.
 template<typename T>
-String to_string(const T &, bool /* quote */, bool /* seen */)
+String to_string(const T &)
 {
 	throw error("[Type error] Type % cannot be converted to string", Class::get_name<T>());
 }
 
-inline String to_string(bool value, bool quote)
+inline String to_string(bool value)
 {
-	auto s = String::convert(value);
-
-	if (quote)
-	{
-		s.prepend("\"");
-		s.append(("\""));
-	}
-
-	return s;
+	return String::convert(value);
 }
 
-inline String to_string(intptr_t value, bool quote)
+inline String to_string(intptr_t value)
 {
-	auto s = String::convert(value);
-
-	if (quote)
-	{
-		s.prepend("\"");
-		s.append(("\""));
-	}
-
-	return s;
+	return String::convert(value);
 }
 
-inline String to_string(double value, bool quote)
+inline String to_string(double value)
 {
-	auto s = String::convert(value);
-
-	if (quote)
-	{
-		s.prepend("\"");
-		s.append(("\""));
-	}
-
-	return s;
+	return String::convert(value);
 }
 
 

@@ -68,6 +68,7 @@ static Array<String> token_names = {
         "var",
         "while",
         "=",
+        "@",
         "<=>",
         "&",
         "==",

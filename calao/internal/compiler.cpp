@@ -160,7 +160,7 @@ void Compiler::visit_unary(UnaryExpression *node)
 			if (!noop) EMIT(Opcode::Negate);
 			break;
 		default:
-			THROW("[Internal error] Invalid operator in unary expression");
+			THROW("[Internal error] Invalid operator in unary expression: %", Token::get_name(node->op));
 	}
 }
 
@@ -183,6 +183,25 @@ void Compiler::visit_binary(BinaryExpression *node)
 		auto jmp = code->emit_jump(node->line_no, Opcode::JumpTrue);
 		node->rhs->visit(*this);
 		code->backpatch(jmp);
+		return;
+	}
+	// Handle indexing.
+	if (node->op == Lexeme::LSquare)
+	{
+		visiting_indexed_lhs = true;
+		node->lhs->visit(*this);
+		visiting_indexed_lhs = false;
+		node->rhs->visit(*this);
+
+		if (parsing_argument()) {
+			EMIT(Opcode::GetIndexArg, Instruction(visit_arg));
+		}
+		else if (visiting_reference) {
+			EMIT(Opcode::GetIndexRef);
+		}
+		else {
+			EMIT(Opcode::GetIndex);
+		}
 		return;
 	}
 
@@ -235,7 +254,7 @@ void Compiler::visit_binary(BinaryExpression *node)
 			EMIT(Opcode::Compare);
 			break;
 		default:
-			THROW("[Internal error] Invalid operator in binary expression");
+			THROW("[Internal error] Invalid operator in binary expression: ", Token::get_name(node->op));
 	}
 }
 
@@ -301,14 +320,14 @@ void Compiler::visit_call(CallExpression *node)
 	EMIT(Opcode::Precall);
 
 	// Next push the arguments.
-	auto arg_flag = this->parse_arg;
-	this->parse_arg = 0;
+	auto arg_flag = this->visit_arg;
+	this->visit_arg = 0;
 	for (auto &arg : node->args)
 	{
 		arg->visit(*this);
-		this->parse_arg++;
+		this->visit_arg++;
 	}
-	this->parse_arg = arg_flag;
+	this->visit_arg = arg_flag;
 
 	// Finally, make the call.
 	EMIT(Opcode::Call, Instruction(node->args.size()));
@@ -320,11 +339,18 @@ void Compiler::visit_variable(Variable *node)
 	auto index = routine->find_local(node->name, current_scope);
 	if (index)
 	{
-		if (parsing_argument()) {
-			EMIT(Opcode::GetLocalArg, *index, Instruction(this->parse_arg));
+		if (parsing_argument())
+		{
+			EMIT(Opcode::GetLocalArg, *index, Instruction(this->visit_arg));
 		}
-		else if (node->is_reference) {
-			EMIT(Opcode::GetLocalRef, *index);
+		else if (visiting_reference)
+		{
+			if (visiting_indexed_lhs) {
+				EMIT(Opcode::GetUniqueLocal, *index);
+			}
+			else {
+				EMIT(Opcode::GetLocalRef, *index);
+			}
 		}
 		else {
 			EMIT(Opcode::GetLocal, *index);
@@ -334,11 +360,18 @@ void Compiler::visit_variable(Variable *node)
 	{
 		auto var = routine->add_string_constant(node->name);
 
-		if (parsing_argument()) {
-			EMIT(Opcode::GetGlobalArg, var, Instruction(this->parse_arg));
+		if (parsing_argument())
+		{
+			EMIT(Opcode::GetGlobalArg, var, Instruction(this->visit_arg));
 		}
-		else if (node->is_reference) {
-			EMIT(Opcode::GetGlobalRef, var);
+		else if (visiting_reference)
+		{
+			if (visiting_indexed_lhs) {
+				EMIT(Opcode::GetUniqueGlobal, var);
+			}
+			else {
+				EMIT(Opcode::GetGlobalRef, var);
+			}
 		}
 		else {
 			EMIT(Opcode::GetGlobal, var);
@@ -695,8 +728,18 @@ void Compiler::visit_return_statement(ReturnStatement *node)
 
 void Compiler::visit_reference_expression(ReferenceExpression *node)
 {
-	node->mark_reference();
+	auto flag = visiting_reference;
+	visiting_reference = true;
 	node->expr->visit(*this);
+	visiting_reference = flag;
+}
+
+void Compiler::visit_list(ListLiteral *node)
+{
+	for (auto &item : node->items) {
+		item->visit(*this);
+	}
+	EMIT(Opcode::NewList, Instruction(node->items.size()));
 }
 
 

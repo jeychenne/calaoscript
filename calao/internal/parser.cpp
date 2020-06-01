@@ -408,6 +408,13 @@ AutoAst Parser::parse_call_expression()
 		e = make<BinaryExpression>(Lexeme::Dot, std::move(e), parse_identifier("in dot expression"));
 		goto LOOP;
 	}
+	else if (accept(Lexeme::LSquare))
+	{
+		auto e2 = parse_expression();
+		expect(Lexeme::RSquare, "in index");
+		e = make<BinaryExpression>(Lexeme::LSquare, std::move(e), std::move(e2));
+		goto LOOP;
+	}
 	else if (accept(Lexeme::LParen))
 	{
 		e = make<CallExpression>(std::move(e), parse_arguments());
@@ -422,7 +429,7 @@ AutoAst Parser::parse_new_expression()
 	trace_ast();
 	// TODO: new and function
 	if (accept(Lexeme::Ref)) {
-		return make<ReferenceExpression>(parse_member_expression());
+		return make<ReferenceExpression>(parse_expression());
 	}
 
 	return parse_primary_expression();
@@ -466,6 +473,15 @@ AutoAst Parser::parse_primary_expression()
 		accept();
 		return make<ConstantLiteral>(value);
 	}
+	else if (accept(Lexeme::LSquare))
+	{
+		return parse_list_literal();
+	}
+//	else if (accept(Lexeme::OpAt))
+//	{
+//		expect(Lexeme::LSquare, "in array literal");
+//		return parse_array_literal();
+//	}
 	else if (accept(Lexeme::LParen))
 	{
 		auto e = parse_expression();
@@ -672,18 +688,28 @@ AutoAst Parser::parse_member_expression()
 {
 	auto e = parse_new_expression();
 
-	LOOP:
 	while (accept(Lexeme::Dot))
 	{
 		e = make<BinaryExpression>(Lexeme::Dot, std::move(e), parse_identifier("in member expression"));
-
-	}
-	if (accept(Lexeme::LSquare)) {
-		e = make<BinaryExpression>(Lexeme::LSquare, std::move(e), parse_expression());
-		goto LOOP;
 	}
 
 	return e;
+}
+
+AutoAst Parser::parse_list_literal()
+{
+	auto line = get_line();
+	if (accept(Lexeme::RSquare)) {
+		return make<ListLiteral>(AstList());
+	}
+	AstList items;
+	items.push_back(parse_expression());
+	while (accept(Lexeme::Comma)) {
+		items.push_back(parse_expression());
+	}
+	expect(Lexeme::RSquare, "at the end of list or array literal");
+
+	return std::make_unique<ListLiteral>(line, std::move(items));
 }
 
 

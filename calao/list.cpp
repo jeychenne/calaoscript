@@ -6,62 +6,55 @@
  * this file except in compliance with the License. You may obtain a copy of the License at                           *
  * http://www.mozilla.org/MPL/.                                                                                       *
  *                                                                                                                    *
- * Created: 31/05/2020                                                                                                *
+ * Created: 01/06/2020                                                                                                *
  *                                                                                                                    *
- * Purpose: generic builtin functions.                                                                                *
+ * Purpose: see header.                                                                                               *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#ifndef CALAO_FUNC_GENERIC_HPP
-#define CALAO_FUNC_GENERIC_HPP
-
-#include <calao/runtime.hpp>
+#include <calao/list.hpp>
 
 namespace calao {
 
-static Variant get_type(ArgumentList &args)
+List::List(const List &other) : _items(other._items)
 {
-	return args[0].get_class()->object();
-}
-
-static Variant get_length(ArgumentList &args)
-{
-	auto &v = args[0];
-
-	if (check_type<String>(v)) {
-		return raw_cast<String>(v).grapheme_count();
+	// When we clone a list, we need to make sure that aliases are resolved, otherwise both lists may get mutated if
+	// we mutate a reference in one of them.
+	for (auto &item : _items) {
+		item.unalias();
 	}
-	else if (check_type<List>(v)) {
-		return raw_cast<List>(v).size();
+}
+
+void List::traverse(const GCCallback &callback)
+{
+	for (auto &item : _items) {
+		item.traverse(callback);
 	}
-	else if (check_type<Table>(v)) {
-		return raw_cast<Table>(v).size();
+}
+
+String List::to_string() const
+{
+	bool flag = this->seen;
+	String s("[");
+	if (this->seen)
+	{
+		s.append("...");
 	}
+	else
+	{
+		for (intptr_t i = 1; i <= _items.size(); i++)
+		{
+			s.append(_items[i].to_string(true));
+			if (i < _items.size()) {
+				s.append(", ");
+			}
+		}
+	}
+	s.append(']');
+	this->seen = flag;
 
-	throw error("[Type error] Cannot calculate length of % value", v.class_name());
+	return s;
 }
 
-
-static Variant to_string(ArgumentList &args)
-{
-	return args[0].to_string();
-}
-
-static Variant to_boolean(ArgumentList &args)
-{
-	return args[0].to_boolean();
-}
-
-static Variant to_integer(ArgumentList &args)
-{
-	return args[0].to_integer();
-}
-
-static Variant to_float(ArgumentList &args)
-{
-	return args[0].to_float();
-}
 
 } // namespace calao
-
-#endif // CALAO_FUNC_GENERIC_HPP

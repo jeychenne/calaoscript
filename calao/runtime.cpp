@@ -21,12 +21,15 @@
 #include <calao/file.hpp>
 #include <calao/utils/helpers.hpp>
 
+#define CATCH_ERROR catch (std::runtime_error &e) { RUNTIME_ERROR(e.what()); }
 #define RUNTIME_ERROR(...) throw RuntimeError(get_current_line(), __VA_ARGS__)
+
 #if 0
 #	define trace_op() std::cerr << std::setw(6) << std::left << (ip-1-code->data()) << "\t" << std::setw(15) << Code::get_opcode_name(*(ip-1)) << "stack size = " << intptr_t(top - stack.data()) << std::endl;
 #else
 #	define trace_op()
 #endif
+
 
 namespace calao {
 
@@ -464,9 +467,7 @@ Variant Runtime::interpret(const Routine &routine)
 							pop(narg + 1);
 							push(std::move(result));
 						}
-						catch (std::runtime_error &e) {
-							RUNTIME_ERROR(e.what());
-						}
+						CATCH_ERROR
 					}
 					else
 					{
@@ -474,9 +475,7 @@ Variant Runtime::interpret(const Routine &routine)
 						push((*r)(arglist));
 					}
 				}
-				catch (std::runtime_error &e) {
-					RUNTIME_ERROR(e.what());
-				}
+				CATCH_ERROR
 				break;
 			}
 			case Opcode::Compare:
@@ -585,6 +584,50 @@ Variant Runtime::interpret(const Routine &routine)
 				push(it->second.make_alias());
 				break;
 			}
+			case Opcode::GetIndex:
+			{
+				trace_op();
+				auto &v = peek(-2);
+				if (check_type<List>(v))
+				{
+					auto &lst = raw_cast<List>(v);
+					if (!check_type<intptr_t>(peek())) {
+						RUNTIME_ERROR("[Index error] List index must be an Integer, not a %", peek().class_name());
+					}
+					auto i = raw_cast<intptr_t>(peek());
+					pop();
+					try {
+						push(lst.at(i).resolve());
+					}
+					CATCH_ERROR
+				}
+				break;
+			}
+			case Opcode::GetIndexArg:
+			{
+				trace_op();
+				RUNTIME_ERROR("GET_INDEX_ARG Not implemented");
+				break;
+			}
+			case Opcode::GetIndexRef:
+			{
+				trace_op();
+				auto &v = peek(-2);
+				if (check_type<List>(v))
+				{
+					auto &lst = raw_cast<List>(v);
+					if (!check_type<intptr_t>(peek())) {
+						RUNTIME_ERROR("[Index error] List index must be an Integer, not a %", peek().class_name());
+					}
+					auto i = raw_cast<intptr_t>(peek());
+					pop();
+					try {
+						push(lst.at(i).make_alias());
+					}
+					CATCH_ERROR
+				}
+				break;
+			}
 			case Opcode::GetLocal:
 			{
 				trace_op();
@@ -610,6 +653,23 @@ Variant Runtime::interpret(const Routine &routine)
 				trace_op();
 				Variant &v = current_frame->locals[*ip++];
 				push(v.make_alias());
+				break;
+			}
+			case Opcode::GetUniqueGlobal:
+			{
+				trace_op();
+				auto name = routine.get_string(*ip++);
+				auto it = globals.find(name);
+				if (it == globals.end()) {
+					RUNTIME_ERROR("Undefined variable \"%\"", name);
+				}
+				push(it->second.unshare());
+				break;
+			}
+			case Opcode::GetUniqueLocal:
+			{
+				trace_op();
+				push(current_frame->locals[*ip++].unshare());
 				break;
 			}
 			case Opcode::Greater:
@@ -704,10 +764,28 @@ Variant Runtime::interpret(const Routine &routine)
 				negate();
 				break;
 			}
+			case Opcode::NewArray:
+			{
+				trace_op();
+				RUNTIME_ERROR("Array not implemented yet");
+				break;
+			}
 			case Opcode::NewFrame:
 			{
 				trace_op();
 				push_call_frame(*ip++);
+				break;
+			}
+			case Opcode::NewList:
+			{
+				trace_op();
+				int narg = *ip++;
+				List lst(narg);
+				for (int i = narg; i > 0; i--) {
+					lst[narg+1-i] = std::move(peek(-i));
+				}
+				pop(narg);
+				push(make_handle<List>(this, std::move(lst)));
 				break;
 			}
 			case Opcode::Not:
@@ -858,9 +936,7 @@ Variant Runtime::interpret(const Routine &routine)
 					try {
 						it->second = std::move(v);
 					}
-					catch (std::runtime_error &e) {
-						RUNTIME_ERROR(e.what());
-					}
+					CATCH_ERROR
 				}
 				pop();
 				break;
@@ -872,9 +948,7 @@ Variant Runtime::interpret(const Routine &routine)
 				try {
 					v = std::move(peek());
 				}
-				catch (std::runtime_error &e) {
-					RUNTIME_ERROR(e.what());
-				}
+				CATCH_ERROR
 				pop();
 				break;
 			}
@@ -1020,6 +1094,20 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("GET_GLOBAL_REF %-5d      ; %s\n", index, value.data());
 			return 2;
 		}
+		case Opcode::GetIndex:
+		{
+			return print_simple_instruction("GET_INDEX");
+		}
+		case Opcode::GetIndexArg:
+		{
+			int index = routine.code[offset + 1];
+			printf("GET_INDEX_ARG %-5d\n", index);
+			return 2;
+		}
+		case Opcode::GetIndexRef:
+		{
+			return print_simple_instruction("GET_INDEX_REF");
+		}
 		case Opcode::GetLocal:
 		{
 			int index = routine.code[offset + 1];
@@ -1040,6 +1128,20 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			int index = routine.code[offset + 1];
 			String value = routine.get_local_name(index);
 			printf("GET_LOCAL_REF  %-5d      ; %s\n", index, value.data());
+			return 2;
+		}
+		case Opcode::GetUniqueGlobal:
+		{
+			int index = routine.code[offset + 1];
+			String value = routine.get_string(index);
+			printf("GET_UNIQUE_GLOBAL %-5d   ; %s\n", index, value.data());
+			return 2;
+		}
+		case Opcode::GetUniqueLocal:
+		{
+			int index = routine.code[offset + 1];
+			String value = routine.get_local_name(index);
+			printf("GET_UNIQUE_LOCAL  %-5d   ; %s\n", index, value.data());
 			return 2;
 		}
 		case Opcode::Greater:
@@ -1097,10 +1199,22 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		{
 			return print_simple_instruction("NEGATE");
 		}
+		case Opcode::NewArray:
+		{
+			int nlocal = routine.code[offset+1];
+			printf("NEW_ARRAY      %-5d\n", nlocal);
+			return 2;
+		}
 		case Opcode::NewFrame:
 		{
 			int nlocal = routine.code[offset+1];
 			printf("NEW_FRAME      %-5d\n", nlocal);
+			return 2;
+		}
+		case Opcode::NewList:
+		{
+			int nlocal = routine.code[offset+1];
+			printf("NEW_LIST       %-5d\n", nlocal);
 			return 2;
 		}
 		case Opcode::Not:
@@ -1315,5 +1429,6 @@ void Runtime::add_global(const String &name, NativeCallback cb, std::initializer
 
 } // namespace calao
 
+#undef CATCH_ERROR
 #undef RUNTIME_ERROR
 #undef trace_op

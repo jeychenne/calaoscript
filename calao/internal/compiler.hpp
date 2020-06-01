@@ -35,6 +35,7 @@ public:
 	void visit_integer(IntegerLiteral *node) override;
 	void visit_float(FloatLiteral *node) override;
 	void visit_string(StringLiteral *node) override;
+	void visit_list(ListLiteral *node) override;
 	void visit_unary(UnaryExpression *node) override;
 	void visit_binary(BinaryExpression *node) override;
 	void visit_statements(StatementList *node) override;
@@ -80,7 +81,7 @@ private:
 
 	void set_routine(std::shared_ptr<Routine> r);
 
-	bool parsing_argument() const { return parse_arg >= 0; }
+	bool parsing_argument() const { return visit_arg >= 0; }
 
 	// Code of the routine being compiled.
 	Code *code = nullptr;
@@ -104,10 +105,16 @@ private:
 	// In addition to scope ID's, we record each scope's depth to resolve non-local variables.
 	int scope_depth = 0;
 
-	// When parsing arguments, we emit special opcodes to account for the fact that they might need to be passed by reference.
+	// When visiting arguments, we emit special opcodes to account for the fact that they might need to be passed by reference.
 	// The runtime will check the function's bitset to see whether this is the case. This flag provides the index of the argument
 	// currently being parsed. -1 indicates that we're not parsing any argument.
-	int parse_arg = -1;
+	int visit_arg = -1;
+
+	// Flag used when visiting a reference.
+	bool visiting_reference = false;
+
+	// When visiting a mutated indexed expression, we need to emit special opcodes to ensure it is unshared.
+	bool visiting_indexed_lhs = false;
 };
 
 } // namespace calao

@@ -142,6 +142,8 @@ private:
 
 	AutoAst parse_member_expression();
 
+	AutoAst parse_list_literal();
+
 
 	// Instance of the scanner (reads one token at a time).
 	Scanner scanner;

@@ -40,9 +40,14 @@ enum class Opcode : Instruction
 	GetGlobal,			// Get global by value
 	GetGlobalArg,		// Get global either by value or by reference
 	GetGlobalRef,		// Get global by reference
+	GetIndex,			// Get index by value
+	GetIndexArg,		// Get index by value or by reference
+	GetIndexRef,		// Get index by reference
 	GetLocal,			// Get global by value
 	GetLocalArg,		// Get global either by value or by reference
 	GetLocalRef,		// Get global by reference
+	GetUniqueGlobal,	// Unshare and push a global
+	GetUniqueLocal,		// Unshare and push a local
 	Divide,
 	Equal,
 	Greater,
@@ -56,7 +61,9 @@ enum class Opcode : Instruction
 	Modulus,
 	Multiply,
 	Negate,
+	NewArray,
 	NewFrame,
+	NewList,
 	Not,
 	NotEqual,
 	Pop,
@@ -78,7 +85,7 @@ enum class Opcode : Instruction
 	SetGlobal,
 	SetLocal,
 	SetSignature,
-	Subtract,
+	Subtract
 };
 
 

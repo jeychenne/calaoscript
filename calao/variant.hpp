@@ -116,9 +116,13 @@ public:
 
 	bool is_null() const { return m_data_type == Datatype::Null; }
 
+	bool is_string() const { return m_data_type == Datatype::String; }
+
 	const std::type_info *type_info() const;
 
 	Variant & make_alias();
+
+	void unalias();
 
 	Variant &resolve();
 
@@ -132,11 +136,17 @@ public:
 
 	bool operator!=(const Variant &other) const;
 
+	bool operator<(const Variant &other) const;
+
 	int compare(const Variant &other) const;
 
 	String to_string(bool quote = false) const;
 
 	bool to_boolean() const;
+
+	intptr_t to_integer() const;
+
+	double to_float() const;
 
 	size_t hash() const;
 
@@ -144,6 +154,8 @@ public:
 
 	template<class T>
 	Handle<T> handle() { return reinterpret_cast<Handle<T> &>(as.storage); }
+
+	Variant & unshare();
 
 private:
 
@@ -167,6 +179,8 @@ private:
 	void finalize(); // for the runtime only
 
 	void copy_fields(const Variant &other);
+
+	String as_string() const;
 
 	using largest_type_t = typename std::conditional<sizeof(void *) >= sizeof(double), void *, double>::type;
 	using storage_t = std::aligned_storage<sizeof(largest_type_t), alignof(largest_type_t)>::type;

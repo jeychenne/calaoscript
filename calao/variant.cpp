@@ -375,42 +375,42 @@ bool Variant::to_boolean() const
 
 String Variant::to_string(bool quote) const
 {
+	auto s = as_string();
+	if (quote && resolve().is_string()) { s.prepend('"'); s.append('"'); }
+
+	return s;
+}
+
+String Variant::as_string() const
+{
 	switch (m_data_type)
 	{
 		case Datatype::String:
 		{
-			auto s = raw_cast<String>(*this);
-			if (quote) { s.prepend('"'); s.append('"'); }
-
-			return s;
+			return raw_cast<String>(*this);
 		}
 		case Datatype::Object:
 		{
-			bool seen = as.object->is_seen();
-			as.object->mark_seen(true);
-			auto s = as.object->to_string(quote, seen);
-			as.object->mark_seen(seen);
-
-			return s;
+			return as.object->to_string();
 		}
 		case Datatype::Integer:
 		{
 			intptr_t num = raw_cast<intptr_t>(*this);
-			return meta::to_string(num, quote);
+			return meta::to_string(num);
 		}
 		case Datatype::Float:
 		{
 			double num = raw_cast<double>(*this);
-			return meta::to_string(num, quote);
+			return meta::to_string(num);
 		}
 		case Datatype::Boolean:
 		{
 			bool b = raw_cast<bool>(*this);
-			return meta::to_string(b, quote);
+			return meta::to_string(b);
 		}
 		case Datatype::Alias:
 		{
-			return resolve().to_string(quote);
+			return resolve().to_string();
 		}
 		case Datatype::Null:
 		{
@@ -421,6 +421,7 @@ String Variant::to_string(bool quote) const
 
 	throw error("[Internal error] Invalid type ID in to_string function");
 }
+
 
 Variant &Variant::operator=(Variant other)
 {
@@ -533,5 +534,83 @@ void Variant::finalize()
 	zero();
 }
 
+void Variant::unalias()
+{
+	if (is_alias())
+	{
+		Variant tmp(resolve());
+		as.alias->release();
+		zero();
+		swap(tmp);
+	}
+}
+
+Variant & Variant::unshare()
+{
+	// Note: we don't need to handle String here because it will be unshared automatically.
+	switch (data_type())
+	{
+		case Datatype::Object:
+		{
+			if (as.object->shared() && as.object->clonable())
+			{
+				auto obj = as.object->clone();
+				as.object->release();
+				as.object = obj;
+			}
+			// Non-clonable objects are unaffected.
+			break;
+		}
+		case Datatype::Alias:
+			resolve().unshare();
+			break;
+		default:
+			break;
+	}
+
+	return *this;
+}
+
+bool Variant::operator<(const Variant &other) const
+{
+	return compare(other) < 0;
+}
+
+intptr_t Variant::to_integer() const
+{
+	switch (data_type())
+	{
+		case Datatype::Integer:
+			return raw_cast<intptr_t>(*this);
+		case Datatype::Float:
+			return intptr_t(raw_cast<double>(*this));
+		case Datatype::Boolean:
+			return intptr_t(raw_cast<bool>(*this));
+		case Datatype::Alias:
+			return resolve().to_integer();
+		default:
+			throw error("[Cast error] Value of type % cannot be converted to Integer", class_name());
+	}
+
+	return 0;
+}
+
+double Variant::to_float() const
+{
+	switch (data_type())
+	{
+		case Datatype::Integer:
+		case Datatype::Float:
+			return get_number();
+		case Datatype::Boolean:
+			return double(raw_cast<bool>(*this));
+		case Datatype::Alias:
+			return resolve().to_float();
+		default:
+			throw error("[Cast error] Value of type % cannot be converted to Float", class_name());
+	}
+
+	return 0.0;
+}
 
 } // namespace calao

@@ -27,7 +27,7 @@ static Variant string_contains(ArgumentList &args)
 	return s1.contains(s2);
 }
 
-static Variant string_startswith(ArgumentList &args)
+static Variant string_starts_with(ArgumentList &args)
 {
 	auto &s1 = args.raw_get<String>(0);
 	auto &s2 = args.raw_get<String>(1);
@@ -35,7 +35,7 @@ static Variant string_startswith(ArgumentList &args)
 	return s1.starts_with(s2);
 }
 
-static Variant string_endswith(ArgumentList &args)
+static Variant string_ends_with(ArgumentList &args)
 {
 	auto &s1 = args.raw_get<String>(0);
 	auto &s2 = args.raw_get<String>(1);
@@ -130,13 +130,13 @@ static Variant string_count(ArgumentList &args)
 	return s1.count(s2);
 }
 
-static Variant string_toupper(ArgumentList &args)
+static Variant string_to_upper(ArgumentList &args)
 {
 	auto &s = args.raw_get<String>(0);
 	return s.to_upper();
 }
 
-static Variant string_tolower(ArgumentList &args)
+static Variant string_to_lower(ArgumentList &args)
 {
 	auto &s = args.raw_get<String>(0);
 	return s.to_lower();
@@ -145,10 +145,12 @@ static Variant string_tolower(ArgumentList &args)
 static Variant string_reverse(ArgumentList &args)
 {
 	auto &s = args.raw_get<String>(0);
-	return s.reverse();
+	s = s.reverse();
+
+	return Variant();
 }
 
-static Variant string_isempty(ArgumentList &args)
+static Variant string_is_empty(ArgumentList &args)
 {
 	auto &s = args.raw_get<String>(0);
 	return s.empty();
@@ -166,7 +168,7 @@ static Variant string_split(ArgumentList &args)
 {
 	auto &s = args.raw_get<String>(0);
 	auto &delim = args.raw_get<String>(1);
-	List result;
+	Array<Variant> result;
 	for (auto &p : s.split(delim)) {
 		result.append(std::move(p));
 	}
@@ -179,6 +181,127 @@ static Variant string_append(ArgumentList &args)
 	auto &s1 = args.raw_get<String>(0);
 	auto &s2 = args.raw_get<String>(1);
 	s1.append(s2);
+
+	return Variant();
+}
+
+static Variant string_prepend(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	auto &s2 = args.raw_get<String>(1);
+	s1.prepend(s2);
+
+	return Variant();
+}
+
+static Variant string_insert(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	intptr_t pos = args.raw_get<intptr_t>(1);
+	auto &s2 = args.raw_get<String>(2);
+	s1.insert(pos, s2);
+
+	return Variant();
+}
+
+static Variant string_trim(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	s1.trim();
+
+	return Variant();
+}
+
+static Variant string_ltrim(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	s1.trim();
+
+	return Variant();
+}
+
+static Variant string_rtrim(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	s1.trim();
+
+	return Variant();
+}
+
+static Variant string_remove(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	auto &s2 = args.raw_get<String>(1);
+	s1.remove(s2);
+
+	return Variant();
+}
+
+static Variant string_remove_first(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	auto &s2 = args.raw_get<String>(1);
+	s1.remove_first(s2);
+
+	return Variant();
+}
+
+static Variant string_remove_last(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	auto &s2 = args.raw_get<String>(1);
+	s1.remove_last(s2);
+
+	return Variant();
+}
+
+static Variant string_remove_at(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	intptr_t pos = args.raw_get<intptr_t>(1);
+	intptr_t count = args.raw_get<intptr_t>(2);
+	s1.remove(pos, count);
+
+	return Variant();
+}
+
+static Variant string_replace(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	auto &s2 = args.raw_get<String>(1);
+	auto &s3 = args.raw_get<String>(2);
+	s1.replace(s2, s3);
+
+	return Variant();
+}
+
+static Variant string_replace_first(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	auto &s2 = args.raw_get<String>(1);
+	auto &s3 = args.raw_get<String>(2);
+	s1.replace_first(s2, s3);
+
+	return Variant();
+}
+
+static Variant string_replace_last(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	auto &s2 = args.raw_get<String>(1);
+	auto &s3 = args.raw_get<String>(2);
+	s1.replace_last(s2, s3);
+
+	return Variant();
+}
+
+static Variant string_replace_at(ArgumentList &args)
+{
+	auto &s1 = args.raw_get<String>(0);
+	intptr_t pos = args.raw_get<intptr_t>(1);
+	intptr_t count = args.raw_get<intptr_t>(2);
+	auto &s2 = args.raw_get<String>(0);
+	s1.replace(pos, count, s2);
 
 	return Variant();
 }

@@ -73,10 +73,10 @@ class Runtime final
 			}
 		}
 
-		static String to_string(const Object *o, bool quote, bool seen)
+		static String to_string(const Object *o)
 		{
 			auto obj = reinterpret_cast<const TObject<T> *>(o);
-			return meta::to_string(obj->value(), quote, seen);
+			return meta::to_string(obj->value());
 		}
 
 		static int compare(const Object *o1, const Object *o2)
@@ -109,10 +109,10 @@ public:
 	{
 		// Sanity checks.
 		static_assert(!(std::is_same<T, String>::value && traits::is_collectable<T>::value), "String is not collectable");
-		static_assert(!(std::is_same<T, Class>::value && traits::is_collectable<T>::value), "Class is not collectable");
+		static_assert(!(std::is_same<T, File>::value && traits::is_collectable<T>::value), "File is not collectable");
 
 		using Type = typename traits::bare_type<T>::type;
-		auto klass = make_handle<Class>(name, base, &typeid(Type));
+		auto klass = make_handle<Class>(this, name, base, &typeid(Type));
 		classes.push_back(klass);
 		klass->set_object(classes.back().object());
 

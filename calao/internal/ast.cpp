@@ -132,5 +132,10 @@ void ReferenceExpression::visit(AstVisitor &v)
 {
 	VISIT(reference_expression);
 }
+
+void ListLiteral::visit(AstVisitor &v)
+{
+	VISIT(list);
+}
 } // namespace calao
 #undef VISIT

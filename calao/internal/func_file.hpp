@@ -34,11 +34,69 @@ static Variant file_open2(ArgumentList &args)
 	return make_handle<File>(path, mode.data());
 }
 
-static Variant file_readline(ArgumentList &args)
+static Variant file_read_line(ArgumentList &args)
 {
 	auto &f = args.raw_get<File>(0);
 	return f.read_line();
 }
+
+static Variant file_write_line(ArgumentList &args)
+{
+	auto &f = args.raw_get<File>(0);
+	auto &text = args.raw_get<String>(1);
+	f.write_line(text);
+
+	return Variant();
+}
+
+static Variant file_write(ArgumentList &args)
+{
+	auto &f = args.raw_get<File>(0);
+	auto &text = args.raw_get<String>(1);
+	f.write(text);
+
+	return Variant();
+}
+
+static Variant file_close(ArgumentList &args)
+{
+	auto &f = args.raw_get<File>(0);
+	f.close();
+
+	return Variant();
+}
+
+static Variant file_read_all1(ArgumentList &args)
+{
+	auto &f = args.raw_get<File>(0);
+	String line, text;
+
+	while (!f.at_end())
+	{
+		text.append(f.read_line());
+	}
+
+	return text;
+}
+
+static Variant file_read_all2(ArgumentList &args)
+{
+	auto &path = args.raw_get<String>(0);
+	return File::read_all(path);
+}
+
+static Variant file_read_lines(ArgumentList &args)
+{
+	auto &f = args.raw_get<File>(0);
+	Array<Variant> result;
+
+	for (auto &ln : f.read_lines()) {
+		result.append(std::move(ln));
+	}
+
+	return make_handle<List>(&args.runtime(), std::move(result));
+}
+
 
 } // namespace calao
 

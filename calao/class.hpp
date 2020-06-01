@@ -96,7 +96,7 @@ private:
 	size_t (*hash)(const Object*) = nullptr;
 	void (*traverse)(Collectable*, const GCCallback&) = nullptr;
 	Object *(*clone)(const Object*) = nullptr;
-	String (*to_string)(const Object*, bool, bool) = nullptr;
+	String (*to_string)(const Object*) = nullptr;
 	int (*compare)(const Object*, const Object*) = nullptr;
 	bool (*equal)(const Object*, const Object*) = nullptr;
 

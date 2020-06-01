@@ -99,7 +99,7 @@ public:
 
 	size_t hash() const;
 
-	String to_string(bool quote, bool seen) const;
+	String to_string() const;
 
 	int compare(const Object *other) const;
 
@@ -108,10 +108,6 @@ public:
 	void traverse(const GCCallback &callback);
 
 	bool equal(const Object *other) const;
-
-	bool is_seen() const { return seen; }
-
-	void mark_seen(bool value) { seen = value; }
 
 	String class_name() const;
 
@@ -134,9 +130,6 @@ protected:
 
 	// Information for the garbage collector.
 	GCColor gc_color;
-
-	// Flag used during conversion to string in case an object contains cyclic references
-	bool seen = false;
 };
 
 

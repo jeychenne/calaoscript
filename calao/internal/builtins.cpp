@@ -27,11 +27,15 @@ void Runtime::set_global_namespace()
 	// Generic functions
 	add_global("type", get_type, { CLS(Object) });
 	add_global("len", get_length, { CLS(Object) });
+	add_global("str", to_string, { CLS(Object) });
+	add_global("bool", to_boolean, { CLS(Object) });
+	add_global("int", to_integer, { CLS(Object) });
+	add_global("float", to_float, { CLS(Object) });
 
-	// String type
+	// String
 	add_global("contains", string_contains, { CLS(String), CLS(String) });
-	add_global("starts_with", string_startswith, { CLS(String), CLS(String) });
-	add_global("ends_with", string_endswith, { CLS(String), CLS(String) });
+	add_global("starts_with", string_starts_with, {CLS(String), CLS(String)});
+	add_global("ends_with", string_ends_with, {CLS(String), CLS(String)});
 	add_global("find", string_find1, { CLS(String), CLS(String) });
 	add_global("find", string_find2, { CLS(String), CLS(String), CLS(intptr_t) });
 	add_global("rfind", string_rfind1, { CLS(String), CLS(String) });
@@ -43,15 +47,28 @@ void Runtime::set_global_namespace()
 	add_global("first", string_first, {CLS(String)});
 	add_global("last", string_last, {CLS(String)});
 	add_global("count", string_count,  { CLS(String), CLS(String) });
-	add_global("to_upper", string_toupper, {CLS(String)});
-	add_global("to_lower", string_tolower, {CLS(String)});
-	add_global("reverse", string_reverse, { CLS(String) });
-	add_global("is_empty", string_isempty, { CLS(String) });
+	add_global("to_upper", string_to_upper, {CLS(String)});
+	add_global("to_lower", string_to_lower, {CLS(String)});
+	add_global("reverse", string_reverse, { CLS(String) }, REF("1"));
+	add_global("is_empty", string_is_empty, {CLS(String)});
 	add_global("char", string_char, { CLS(String), CLS(intptr_t) });
 	add_global("split", string_split, { CLS(String), CLS(String) });
 	add_global("append", string_append, { CLS(String), CLS(String) }, REF("01"));
+	add_global("prepend", string_prepend, { CLS(String), CLS(String) }, REF("01"));
+	add_global("insert", string_insert, { CLS(String), CLS(intptr_t), CLS(String) }, REF("001"));
+	add_global("trim", string_trim, { CLS(String) }, REF("1"));
+	add_global("ltrim", string_ltrim, { CLS(String) }, REF("1"));
+	add_global("rtrim", string_rtrim, { CLS(String) }, REF("1"));
+	add_global("remove", string_remove, { CLS(String), CLS(String) }, REF("01"));
+	add_global("remove_first", string_remove_first, {CLS(String), CLS(String)}, REF("01"));
+	add_global("remove_last", string_remove_last, {CLS(String), CLS(String)}, REF("01"));
+	add_global("remove_at", string_remove_at, {CLS(String), CLS(intptr_t), CLS(intptr_t)}, REF("001"));
+	add_global("replace", string_replace, { CLS(String), CLS(String), CLS(String) }, REF("001"));
+	add_global("replace_first", string_replace_first, {CLS(String), CLS(String), CLS(String)}, REF("001"));
+	add_global("replace_last", string_replace_last, {CLS(String), CLS(String), CLS(String)}, REF("001"));
+	add_global("replace_at", string_replace_at, {CLS(String), CLS(intptr_t), CLS(intptr_t), CLS(String)}, REF("0001"));
 
-	// List type
+	// List
 	add_global("contains", list_contains, { CLS(List), CLS(Object) });
 	add_global("first", list_first, { CLS(List) });
 	add_global("last", list_last, { CLS(List) });
@@ -61,11 +78,36 @@ void Runtime::set_global_namespace()
 	add_global("rfind", list_rfind2, { CLS(List), CLS(Object), CLS(intptr_t) });
 	add_global("left", list_left, { CLS(List), CLS(intptr_t) });
 	add_global("right", list_right, { CLS(List), CLS(intptr_t) });
+	add_global("join", list_join, { CLS(List), CLS(String) });
+	add_global("clear", list_clear, { CLS(List) });
+	add_global("append", list_append1, { CLS(List), CLS(Object) }, REF("01"));
+	add_global("append", list_append2, { CLS(List), CLS(List) }, REF("01"));
+	add_global("prepend", list_prepend1, { CLS(List), CLS(Object) }, REF("01"));
+	add_global("prepend", list_prepend2, { CLS(List), CLS(List) }, REF("01"));
+	add_global("is_empty", list_is_empty, {CLS(List)});
+	add_global("pop", list_pop, { CLS(List) }, REF("1"));
+	add_global("shift", list_shift, { CLS(List) }, REF("1"));
+	add_global("sort", list_sort, { CLS(List) }, REF("1"));
+	add_global("reverse", list_reverse, { CLS(List) }, REF("1"));
+	add_global("remove", list_remove, { CLS(List), CLS(Object) }, REF("01"));
+	add_global("remove_first", list_remove_first, { CLS(List), CLS(Object) }, REF("01"));
+	add_global("remove_last", list_remove_last, { CLS(List), CLS(Object) }, REF("01"));
+	add_global("remove_at", list_remove_at, { CLS(List), CLS(intptr_t) }, REF("01"));
+	add_global("shuffle", list_shuffle, { CLS(List) }, REF("1"));
+	add_global("sample", list_sample, { CLS(List), CLS(intptr_t) });
+	add_global("insert", list_insert, { CLS(List), CLS(intptr_t), CLS(Object) }, REF("001"));
 
-	// File type
+	// File
 	add_global("open", file_open1, { CLS(String) });
 	add_global("open", file_open2, { CLS(String), CLS(String) });
-	add_global("read_line", file_readline, { CLS(File) });
+	add_global("read_line", file_read_line, { CLS(File) });
+	add_global("read_lines", file_read_lines, { CLS(File) });
+	add_global("write_line", file_write_line, {CLS(File), CLS(String) });
+	add_global("write", file_write, {CLS(File), CLS(String) });
+	add_global("close", file_close, {CLS(File) });
+	add_global("read_all", file_read_all1, { CLS(File) });
+	add_global("read_all", file_read_all2, { CLS(String) });
+
 }
 
 } // namespace calao

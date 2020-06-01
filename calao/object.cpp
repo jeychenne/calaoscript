@@ -103,10 +103,10 @@ size_t Object::hash() const
 	throw error("[Type error] Type % is not hashable", class_name());
 }
 
-String Object::to_string(bool quote, bool seen) const
+String Object::to_string() const
 {
 	if (this->printable()) {
-		return klass->to_string(this, quote, seen);
+		return klass->to_string(this);
 	}
 
 	throw error("[Type error] Type % cannot be converted to string", class_name());
@@ -116,7 +116,7 @@ Object *Object::clone() const
 {
 	if (this->clonable())
 	{
-		klass->clone(this);
+		return klass->clone(this);
 	}
 
 	throw error("[Type error] Type % is not cloneable", class_name());

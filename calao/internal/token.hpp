@@ -74,6 +74,7 @@ struct Token final
 		While,
 
 		OpAssign,
+		OpAt,
 		OpCompare,
 		OpConcat,
 		OpEqual,

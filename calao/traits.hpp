@@ -46,7 +46,6 @@ template<typename T> struct maybe_cyclic : std::true_type
 NON_CYCLIC(String);
 NON_CYCLIC(File);
 NON_CYCLIC(Regex);
-NON_CYCLIC(Class);
 NON_CYCLIC(Function);
 NON_CYCLIC(Closure);
 

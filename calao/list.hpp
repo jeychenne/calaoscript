@@ -20,7 +20,70 @@
 
 namespace calao {
 
-using List = Array<Variant>;
+class List final
+{
+	using Storage = Array<Variant>;
+
+public:
+
+	using iterator = Storage::iterator;
+	using const_iterator = Storage::const_iterator;
+
+	List() = default;
+
+	explicit List(intptr_t size) : _items(size, Variant()) { }
+
+	List(const List &other);
+
+	List(List &&other) noexcept = default;
+
+	List(Storage items) : _items(std::move(items)) { }
+
+	intptr_t size() { return _items.size(); }
+
+	Variant *data() { return _items.data(); }
+
+	const Variant *data() const { return _items.data(); }
+
+	Variant &operator[](intptr_t i) { return _items[i]; }
+
+	Variant &at(intptr_t i) { return _items.at(i); }
+
+	iterator begin() { return _items.begin(); }
+	const_iterator cbegin() { return _items.begin(); }
+
+	iterator end() { return _items.end(); }
+	const_iterator cend() { return _items.end(); }
+
+	void traverse(const GCCallback &callback);
+
+	Storage &items() { return _items; }
+	const Storage &items() const { return _items; }
+
+	String to_string() const;
+
+private:
+
+	Storage _items;
+	mutable bool seen = false; // for printing
+};
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+namespace meta {
+
+static inline void traverse(List &lst, const GCCallback &callback)
+{
+	lst.traverse(callback);
+}
+
+
+static inline String to_string(const List &lst)
+{
+	return lst.to_string();
+}
+} // namespace calao::meta
 
 } // namespace calao
 
