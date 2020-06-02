@@ -16,6 +16,7 @@
 #include <calao/internal/func_file.hpp>
 #include <calao/internal/func_string.hpp>
 #include <calao/internal/func_list.hpp>
+#include <calao/internal/func_table.hpp>
 
 #define CLS(T) get_class<T>()
 #define REF(bits) ParamBitset(bits)
@@ -79,7 +80,7 @@ void Runtime::set_global_namespace()
 	add_global("left", list_left, { CLS(List), CLS(intptr_t) });
 	add_global("right", list_right, { CLS(List), CLS(intptr_t) });
 	add_global("join", list_join, { CLS(List), CLS(String) });
-	add_global("clear", list_clear, { CLS(List) });
+	add_global("clear", list_clear, { CLS(List) }, REF("1"));
 	add_global("append", list_append1, { CLS(List), CLS(Object) }, REF("01"));
 	add_global("append", list_append2, { CLS(List), CLS(List) }, REF("01"));
 	add_global("prepend", list_prepend1, { CLS(List), CLS(Object) }, REF("01"));
@@ -103,11 +104,24 @@ void Runtime::set_global_namespace()
 	add_global("read_line", file_read_line, { CLS(File) });
 	add_global("read_lines", file_read_lines, { CLS(File) });
 	add_global("write_line", file_write_line, {CLS(File), CLS(String) });
+	add_global("write_lines", file_write_lines, {CLS(File), CLS(List) });
 	add_global("write", file_write, {CLS(File), CLS(String) });
 	add_global("close", file_close, {CLS(File) });
-	add_global("read_all", file_read_all1, { CLS(File) });
-	add_global("read_all", file_read_all2, { CLS(String) });
+	add_global("read", file_read_all1, { CLS(File) });
+	add_global("read", file_read_all2, { CLS(String) });
+	add_global("tell", file_tell, { CLS(File) });
+	add_global("seek", file_seek, { CLS(File), CLS(intptr_t) });
+	add_global("eof", file_eof, { CLS(File) });
 
+	// Table
+	add_global("contains", table_contains, { CLS(Table), CLS(Object) });
+	add_global("is_empty", table_is_empty, { CLS(Table) });
+	add_global("clear", table_clear, { CLS(Table) }, REF("1"));
+	add_global("get_keys", table_get_keys, { CLS(Table) });
+	add_global("get_values", table_get_values, { CLS(Table) });
+	add_global("remove", table_remove, { CLS(Table), CLS(Object) }, REF("01"));
+	add_global("get", table_get1, { CLS(Table), CLS(Object) });
+	add_global("get", table_get2, { CLS(Table), CLS(Object), CLS(Object) });
 }
 
 } // namespace calao

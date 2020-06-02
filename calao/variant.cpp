@@ -16,6 +16,7 @@
 #include <calao/meta.hpp>
 #include <calao/class.hpp>
 #include <calao/function.hpp>
+#include <calao/list.hpp>
 
 namespace calao {
 

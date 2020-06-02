@@ -6,52 +6,29 @@
  * this file except in compliance with the License. You may obtain a copy of the License at                           *
  * http://www.mozilla.org/MPL/.                                                                                       *
  *                                                                                                                    *
- * Created: 01/06/2020                                                                                                *
+ * Created: 02/06/2020                                                                                                *
  *                                                                                                                    *
  * Purpose: see header.                                                                                               *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#include <calao/list.hpp>
+#include <calao/internal/iterator.hpp>
 
 namespace calao {
 
-List::List(const List &other) : _items(other._items)
+ListIterator::ListIterator(Variant v) : Iterator(std::move(v))
 {
-	// When we clone a list, we need to make sure that aliases are resolved, otherwise both lists may get mutated if
-	// we mutate a reference in one of them.
-	for (auto &item : _items) {
-		item.unalias();
-	}
+	it = raw_cast<List>(object).items().begin();
 }
 
-void List::traverse(const GCCallback &callback)
+Variant ListIterator::get_key()
 {
-	for (auto &item : _items) {
-		item.traverse(callback);
-	}
+	return *it++;
 }
 
-String List::to_string() const
+bool ListIterator::at_end() const
 {
-	if (this->seen)
-	{
-		return "[...]";
-	}
-
-	bool flag = this->seen;
-	String s("[");
-	for (intptr_t i = 1; i <= _items.size(); i++)
-	{
-		s.append(_items[i].to_string(true));
-		if (i < _items.size()) {
-			s.append(", ");
-		}
-	}
-	s.append(']');
-	this->seen = flag;
-
-	return s;
+	return it == raw_cast<List>(object).items().end();
 }
 
 } // namespace calao

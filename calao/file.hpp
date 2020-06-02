@@ -95,6 +95,10 @@ public:
 
 	void rewind();
 
+	void seek(intptr_t);
+
+	intptr_t tell();
+
 	intptr_t size();
 
 	void close();

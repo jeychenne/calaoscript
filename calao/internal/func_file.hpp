@@ -49,6 +49,17 @@ static Variant file_write_line(ArgumentList &args)
 	return Variant();
 }
 
+static Variant file_write_lines(ArgumentList &args)
+{
+	auto &f = args.raw_get<File>(0);
+	auto &lines = args.raw_get<List>(1).items();
+	for (auto &line : lines) {
+		f.write_line(line.to_string());
+	}
+
+	return Variant();
+}
+
 static Variant file_write(ArgumentList &args)
 {
 	auto &f = args.raw_get<File>(0);
@@ -97,6 +108,26 @@ static Variant file_read_lines(ArgumentList &args)
 	return make_handle<List>(&args.runtime(), std::move(result));
 }
 
+static Variant file_seek(ArgumentList &args)
+{
+	auto &f = args.raw_get<File>(0);
+	auto pos = args.raw_get<intptr_t>(1);
+	f.seek(pos);
+
+	return Variant();
+}
+
+static Variant file_tell(ArgumentList &args)
+{
+	auto &f = args.raw_get<File>(0);
+	return f.tell();
+}
+
+static Variant file_eof(ArgumentList &args)
+{
+	auto &f = args.raw_get<File>(0);
+	return f.at_end();
+}
 
 } // namespace calao
 

@@ -438,6 +438,7 @@ Variant Runtime::interpret(const Routine &routine)
 				int narg = *ip++;
 				auto &v = peek(-narg - 1);
 				// Precall already check that we have a callable object.
+				assert(check_type<Function>(v));
 				auto func = v.handle<Function>();
 				std::span<Variant> args(top - narg, narg);
 
@@ -565,10 +566,13 @@ Variant Runtime::interpret(const Routine &routine)
 				if (it == globals.end()) {
 					RUNTIME_ERROR("Undefined variable \"%\"", name);
 				}
-				if (by_ref) {
+				if (by_ref)
+				{
+					it->second.unshare();
 					push(it->second.make_alias());
 				}
-				else {
+				else
+				{
 					push(it->second.resolve());
 				}
 				break;
@@ -581,51 +585,30 @@ Variant Runtime::interpret(const Routine &routine)
 				if (it == globals.end()) {
 					RUNTIME_ERROR("Undefined variable \"%\"", name);
 				}
+				it->second.unshare();
 				push(it->second.make_alias());
 				break;
 			}
 			case Opcode::GetIndex:
 			{
 				trace_op();
-				auto &v = peek(-2);
-				if (check_type<List>(v))
-				{
-					auto &lst = raw_cast<List>(v);
-					if (!check_type<intptr_t>(peek())) {
-						RUNTIME_ERROR("[Index error] List index must be an Integer, not a %", peek().class_name());
-					}
-					auto i = raw_cast<intptr_t>(peek());
-					pop();
-					try {
-						push(lst.at(i).resolve());
-					}
-					CATCH_ERROR
-				}
+				get_index(false);
 				break;
 			}
 			case Opcode::GetIndexArg:
 			{
 				trace_op();
-				RUNTIME_ERROR("GET_INDEX_ARG Not implemented");
+				bool by_ref = current_frame->ref_flags[*ip++];
+				if (by_ref) {
+					RUNTIME_ERROR("Passing indexed expression as an argument by reference is not yet supported");
+				}
+				get_index(by_ref);
 				break;
 			}
 			case Opcode::GetIndexRef:
 			{
 				trace_op();
-				auto &v = peek(-2);
-				if (check_type<List>(v))
-				{
-					auto &lst = raw_cast<List>(v);
-					if (!check_type<intptr_t>(peek())) {
-						RUNTIME_ERROR("[Index error] List index must be an Integer, not a %", peek().class_name());
-					}
-					auto i = raw_cast<intptr_t>(peek());
-					pop();
-					try {
-						push(lst.at(i).make_alias());
-					}
-					CATCH_ERROR
-				}
+				get_index(true);
 				break;
 			}
 			case Opcode::GetLocal:
@@ -788,6 +771,24 @@ Variant Runtime::interpret(const Routine &routine)
 				push(make_handle<List>(this, std::move(lst)));
 				break;
 			}
+			case Opcode::NewTable:
+			{
+				trace_op();
+				int narg = *ip++ * 2;
+				Table::Storage tab;
+				for (int i = narg; i > 0; i -= 2)
+				{
+					auto &key = peek(-i).resolve();
+					auto &val = peek(-i+1).resolve();
+					try {
+						tab.insert({ std::move(key), std::move(val) });
+					}
+					CATCH_ERROR
+				}
+				pop(narg);
+				push(make_handle<Table>(this, std::move(tab)));
+				break;
+			}
 			case Opcode::Not:
 			{
 				trace_op();
@@ -939,6 +940,40 @@ Variant Runtime::interpret(const Routine &routine)
 					CATCH_ERROR
 				}
 				pop();
+				break;
+			}
+			case Opcode::SetIndex:
+			{
+				trace_op();
+				auto &v = peek(-3).resolve();
+				if (check_type<List>(v))
+				{
+					auto &index = peek(-2);
+					if (!check_type<intptr_t>(index)) {
+						RUNTIME_ERROR("[Index error] Expected an integer in list index, got a %", index.class_name());
+					}
+					auto i = raw_cast<intptr_t>(index);
+					auto &lst = raw_cast<List>(v);
+					try {
+						lst.at(i) = std::move(peek(-1));
+					}
+					CATCH_ERROR
+					pop(3);
+				}
+				else if (check_type<Table>(v))
+				{
+					auto &key = peek(-2);
+					auto &map = raw_cast<Table>(v).map();
+					try {
+						map[key] = std::move(peek(-1));
+					}
+					CATCH_ERROR
+					pop(3);
+				}
+				else
+				{
+					RUNTIME_ERROR("[Index error] Expected a list in indexed expression, got a %", v.class_name());
+				}
 				break;
 			}
 			case Opcode::SetLocal:
@@ -1217,6 +1252,12 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("NEW_LIST       %-5d\n", nlocal);
 			return 2;
 		}
+		case Opcode::NewTable:
+		{
+			int len = routine.code[offset+1];
+			printf("NEW_TABLE      %-5d\n", len);
+			return 2;
+		}
 		case Opcode::Not:
 		{
 			return print_simple_instruction("NOT");
@@ -1312,6 +1353,10 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			String value = routine.get_string(index);
 			printf("SET_GLOBAL     %-5d      ; %s\n", index, value.data());
 			return 2;
+		}
+		case Opcode::SetIndex:
+		{
+			return print_simple_instruction("SET_INDEX");
 		}
 		case Opcode::SetLocal:
 		{
@@ -1425,6 +1470,40 @@ Variant Runtime::interpret(const Routine &routine, ArgumentList &args)
 void Runtime::add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref)
 {
 	globals[name] = make_handle<Function>(name, std::move(cb), sig, ref);
+}
+
+void Runtime::get_index(bool by_ref)
+{
+	auto v = std::move(peek(-2));
+	if (check_type<List>(v))
+	{
+		auto &lst = raw_cast<List>(v);
+		if (!check_type<intptr_t>(peek())) {
+			RUNTIME_ERROR("[Index error] List index must be an Integer, not a %", peek().class_name());
+		}
+		auto i = raw_cast<intptr_t>(peek());
+		pop(2);
+		try {
+			auto &val = by_ref ? lst.at(i).make_alias() : lst.at(i).resolve();
+			push(val);
+		}
+		CATCH_ERROR
+	}
+	else if (check_type<Table>(v))
+	{
+		auto &tab = raw_cast<Table>(v);
+		Variant key = std::move(peek());
+		pop(2);
+		try {
+			auto &val = by_ref ? tab.get(key).make_alias() : tab.get(key).resolve();
+			push(val);
+		}
+		CATCH_ERROR
+	}
+	else
+	{
+		RUNTIME_ERROR("[Index error] Cannot index value of type %", v.class_name());
+	}
 }
 
 } // namespace calao

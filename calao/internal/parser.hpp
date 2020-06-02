@@ -136,6 +136,8 @@ private:
 
 	AutoAst parse_for_statement();
 
+	AutoAst parse_foreach_statement();
+
 	AutoAst parse_function_declaration(bool local);
 
 	AutoAst parse_return_statement();
@@ -143,6 +145,8 @@ private:
 	AutoAst parse_member_expression();
 
 	AutoAst parse_list_literal();
+
+	AutoAst parse_table_literal();
 
 
 	// Instance of the scanner (reads one token at a time).

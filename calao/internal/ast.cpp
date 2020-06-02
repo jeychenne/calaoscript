@@ -137,5 +137,15 @@ void ListLiteral::visit(AstVisitor &v)
 {
 	VISIT(list);
 }
+
+void TableLiteral::visit(AstVisitor &v)
+{
+	VISIT(table);
+}
+
+void ForeachStatement::visit(AstVisitor &v)
+{
+	VISIT(foreach_statement);
+}
 } // namespace calao
 #undef VISIT

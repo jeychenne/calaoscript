@@ -36,6 +36,7 @@ public:
 	void visit_float(FloatLiteral *node) override;
 	void visit_string(StringLiteral *node) override;
 	void visit_list(ListLiteral *node) override;
+	void visit_table(TableLiteral *node) override;
 	void visit_unary(UnaryExpression *node) override;
 	void visit_binary(BinaryExpression *node) override;
 	void visit_statements(StatementList *node) override;
@@ -52,6 +53,7 @@ public:
 	void visit_if_statement(IfStatement *node) override;
 	void visit_while_statement(WhileStatement *node) override;
 	void visit_for_statement(ForStatement *node) override;
+	void visit_foreach_statement(ForeachStatement *node) override;
 	void visit_loop_exit(LoopExitStatement *node) override;
 	void visit_return_statement(ReturnStatement *node) override;
 	void visit_reference_expression(ReferenceExpression *node) override;
@@ -115,6 +117,8 @@ private:
 
 	// When visiting a mutated indexed expression, we need to emit special opcodes to ensure it is unshared.
 	bool visiting_indexed_lhs = false;
+
+	bool visiting_assigned_lhs = false;
 };
 
 } // namespace calao

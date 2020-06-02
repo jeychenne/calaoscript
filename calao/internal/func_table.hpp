@@ -8,63 +8,74 @@
  *                                                                                                                    *
  * Created: 31/05/2020                                                                                                *
  *                                                                                                                    *
- * Purpose: generic builtin functions.                                                                                *
+ * Purpose: Table builtin functions.                                                                                  *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#ifndef CALAO_FUNC_GENERIC_HPP
-#define CALAO_FUNC_GENERIC_HPP
+#ifndef CALAO_FUNC_TABLE_HPP
+#define CALAO_FUNC_TABLE_HPP
 
+#include <calao/table.hpp>
 #include <calao/runtime.hpp>
-#include <calao/file.hpp>
 
 namespace calao {
 
-static Variant get_type(ArgumentList &args)
+static Variant table_contains(ArgumentList &args)
 {
-	return args[0].get_class()->object();
+	auto &map = args.raw_get<Table>(0).map();
+	return map.contains(args[1]);
 }
 
-static Variant get_length(ArgumentList &args)
+static Variant table_is_empty(ArgumentList &args)
 {
-	auto &v = args[0];
-
-	if (check_type<String>(v)) {
-		return raw_cast<String>(v).grapheme_count();
-	}
-	else if (check_type<List>(v)) {
-		return raw_cast<List>(v).size();
-	}
-	else if (check_type<Table>(v)) {
-		return raw_cast<Table>(v).size();
-	}
-	else if (check_type<File>(v)) {
-		return raw_cast<File>(v).size();
-	}
-
-	throw error("[Type error] Cannot get length of % value", v.class_name());
+	auto &map = args.raw_get<Table>(0).map();
+	return map.empty();
 }
 
-static Variant to_string(ArgumentList &args)
+static Variant table_clear(ArgumentList &args)
 {
-	return args[0].to_string();
+	auto &map = args.raw_get<Table>(0).map();
+	map.clear();
+
+	return Variant();
 }
 
-static Variant to_boolean(ArgumentList &args)
+static Variant table_get_keys(ArgumentList &args)
 {
-	return args[0].to_boolean();
+	auto &tab = args.raw_get<Table>(0);
+	return make_handle<List>(&args.runtime(), tab.keys());
 }
 
-static Variant to_integer(ArgumentList &args)
+static Variant table_get_values(ArgumentList &args)
 {
-	return args[0].to_integer();
+	auto &tab = args.raw_get<Table>(0);
+	return make_handle<List>(&args.runtime(), tab.values());
 }
 
-static Variant to_float(ArgumentList &args)
+static Variant table_remove(ArgumentList &args)
 {
-	return args[0].to_float();
+	auto &map = args.raw_get<Table>(0).map();
+	map.erase(args[1]);
+
+	return Variant();
+}
+
+static Variant table_get1(ArgumentList &args)
+{
+	auto &map = args.raw_get<Table>(0).map();
+	auto it = map.find(args[1]);
+
+	return (it != map.end()) ? it->second : Variant();
+}
+
+static Variant table_get2(ArgumentList &args)
+{
+	auto &map = args.raw_get<Table>(0).map();
+	auto it = map.find(args[1]);
+
+	return (it != map.end()) ? it->second : args[2];
 }
 
 } // namespace calao
 
-#endif // CALAO_FUNC_GENERIC_HPP
+#endif // CALAO_FUNC_TABLE_HPP

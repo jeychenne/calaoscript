@@ -150,6 +150,10 @@ AutoAst Parser::parse_statement()
 	{
 		return parse_for_statement();
 	}
+	else if (accept(Lexeme::Foreach))
+	{
+		return parse_foreach_statement();
+	}
 	else if (accept(Lexeme::Function))
 	{
 		return parse_function_declaration(false);
@@ -482,6 +486,10 @@ AutoAst Parser::parse_primary_expression()
 //		expect(Lexeme::LSquare, "in array literal");
 //		return parse_array_literal();
 //	}
+	else if (accept(Lexeme::LCurl))
+	{
+		return parse_table_literal();
+	}
 	else if (accept(Lexeme::LParen))
 	{
 		auto e = parse_expression();
@@ -641,6 +649,31 @@ AutoAst Parser::parse_for_statement()
 	return std::make_unique<ForStatement>(line, std::move(var), std::move(e1), std::move(e2), std::move(e3), std::move(block), down);
 }
 
+AutoAst Parser::parse_foreach_statement()
+{
+	constexpr const char *hint = "in foreach loop";
+	auto line = get_line();
+	auto key = parse_identifier(hint);
+	AutoAst val;
+
+	if (accept(Lexeme::Comma))
+	{
+		if (accept(Lexeme::Ref)) {
+			val = make<ReferenceExpression>(parse_identifier(hint));
+		}
+		else {
+			val = parse_identifier(hint);
+		}
+	}
+	expect(Lexeme::In, hint);
+	auto coll = parse_expression();
+	expect(Lexeme::Do, hint);
+	// Don't open a scope for the block: we will open it ourselves so that we can include the loop variable in it.
+	auto block = parse_statements(false);
+
+	return std::make_unique<ForeachStatement>(line, std::move(key), std::move(val), std::move(coll), std::move(block));
+}
+
 AutoAst Parser::parse_conditional_expression()
 {
 	trace_ast();
@@ -712,6 +745,28 @@ AutoAst Parser::parse_list_literal()
 	return std::make_unique<ListLiteral>(line, std::move(items));
 }
 
+AutoAst Parser::parse_table_literal()
+{
+	constexpr const char *hint = "in table literal";
+	auto line = get_line();
+	if (accept(Lexeme::RCurl)) {
+		return make<TableLiteral>(AstList(), AstList());
+	}
+	AstList keys, values;
+	keys.push_back(parse_expression());
+	expect(Lexeme::Colon, hint);
+	values.push_back(parse_expression());
+
+	while (accept(Lexeme::Comma))
+	{
+		keys.push_back(parse_expression());
+		expect(Lexeme::Colon, hint);
+		values.push_back(parse_expression());
+	}
+	expect(Lexeme::RCurl, hint);
+
+	return std::make_unique<TableLiteral>(line, std::move(keys), std::move(values));
+}
 
 } // namespace calao
 

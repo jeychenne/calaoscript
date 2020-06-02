@@ -20,8 +20,79 @@
 
 namespace calao {
 
-using Table = Hashmap<Variant, Variant>;
 
+class Table final
+{
+public:
+
+	using Storage = Hashmap<Variant, Variant>;
+
+	Table() = default;
+
+	Table(Storage dat) : _map(std::move(dat)) { }
+
+	Table(Table &&) = default;
+
+	Storage &data() { return _map; }
+
+	intptr_t size() const { return intptr_t(_map.size()); }
+
+	Variant &get(const Variant &key);
+
+	String to_string() const;
+
+	String to_json() const;
+
+	void traverse(const GCCallback &callback);
+
+	Array<Variant> keys() const
+	{
+		Array<Variant> result;
+		result.reserve(_map.size());
+
+		for (auto &it : _map) {
+			result.append(it.first);
+		}
+
+		return result;
+	}
+
+	Array<Variant> values() const
+	{
+		Array<Variant> result;
+		result.reserve(_map.size());
+
+		for (auto &it : _map) {
+			result.append(it.second);
+		}
+
+		return result;
+	}
+
+	Storage &map() { return _map; }
+
+private:
+
+	Storage _map;
+	mutable bool seen = false;
+};
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+namespace meta {
+
+static inline void traverse(Table &tab, const GCCallback &callback)
+{
+	tab.traverse(callback);
+}
+
+
+static inline String to_string(const Table &tab)
+{
+	return tab.to_string();
+}
+} // namespace calao::meta
 } // namespace calao
 
 #endif // CALAO_TABLE_HPP

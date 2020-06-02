@@ -193,11 +193,14 @@ void Compiler::visit_binary(BinaryExpression *node)
 		visiting_indexed_lhs = false;
 		node->rhs->visit(*this);
 
-		if (parsing_argument()) {
-			EMIT(Opcode::GetIndexArg, Instruction(visit_arg));
+		if (visiting_assigned_lhs) {
+			return; // SetIndex will be added by the assignment once we visit the RHS.
 		}
-		else if (visiting_reference) {
+		if (visiting_reference) {
 			EMIT(Opcode::GetIndexRef);
+		}
+		else if (parsing_argument()) {
+			EMIT(Opcode::GetIndexArg, Instruction(visit_arg));
 		}
 		else {
 			EMIT(Opcode::GetIndex);
@@ -336,16 +339,16 @@ void Compiler::visit_call(CallExpression *node)
 void Compiler::visit_variable(Variable *node)
 {
 	// Try to find a local variable, otherwise try to get a global.
-	auto index = routine->find_local(node->name, current_scope);
+	auto index = routine->find_local(node->name);
 	if (index)
 	{
 		if (parsing_argument())
 		{
 			EMIT(Opcode::GetLocalArg, *index, Instruction(this->visit_arg));
 		}
-		else if (visiting_reference)
+		else if (visiting_reference || visiting_assigned_lhs)
 		{
-			if (visiting_indexed_lhs) {
+			if (visiting_indexed_lhs || visiting_assigned_lhs) {
 				EMIT(Opcode::GetUniqueLocal, *index);
 			}
 			else {
@@ -364,9 +367,9 @@ void Compiler::visit_variable(Variable *node)
 		{
 			EMIT(Opcode::GetGlobalArg, var, Instruction(this->visit_arg));
 		}
-		else if (visiting_reference)
+		else if (visiting_reference || visiting_assigned_lhs)
 		{
-			if (visiting_indexed_lhs) {
+			if (visiting_indexed_lhs || visiting_assigned_lhs) {
 				EMIT(Opcode::GetUniqueGlobal, var);
 			}
 			else {
@@ -381,22 +384,39 @@ void Compiler::visit_variable(Variable *node)
 
 void Compiler::visit_assignment(Assignment *node)
 {
-	auto var = dynamic_cast<Variable*>(node->lhs.get());
-	if (!var) {
-		THROW("[Syntax error] Expected a variable name in assignment");
-	}
-	node->rhs->visit(*this);
+	Variable *var;
 
-	// Try to find a local variable, otherwise try to get a global.
-	auto index = routine->find_local(var->name, current_scope);
-	if (index)
+	if ((var = dynamic_cast<Variable*>(node->lhs.get())))
 	{
-		EMIT(Opcode::SetLocal, *index);
+		node->rhs->visit(*this);
+
+		// Try to find a local variable, otherwise try to get a global.
+		auto index = routine->find_local(var->name);
+		if (index)
+		{
+			EMIT(Opcode::SetLocal, *index);
+		}
+		else
+		{
+			auto arg = routine->add_string_constant(var->name);
+			EMIT(Opcode::SetGlobal, arg);
+		}
+		return;
+	}
+
+	BinaryExpression *lhs;
+
+	if ((lhs = dynamic_cast<BinaryExpression*>(node->lhs.get())) && lhs->op == Lexeme::LSquare)
+	{
+		visiting_assigned_lhs = true;
+		node->lhs->visit(*this);
+		visiting_assigned_lhs = false;
+		node->rhs->visit(*this);
+		EMIT(Opcode::SetIndex);
 	}
 	else
 	{
-		auto arg = routine->add_string_constant(var->name);
-		EMIT(Opcode::SetGlobal, arg);
+		THROW("[Syntax error] Expected a variable name or an indexed expression on the left hand side in assignment");
 	}
 }
 
@@ -559,6 +579,20 @@ void Compiler::visit_for_statement(ForStatement *node)
 	close_scope(scope);
 }
 
+void Compiler::visit_foreach_statement(ForeachStatement *node)
+{
+	auto scope = open_scope();
+	int previous_break_count = break_count;
+	int previous_continue_count = continue_count;
+	break_count = continue_count = 0;
+
+	// Initialize loop variables.
+//	auto ident = dynamic_cast<Variable*>(node->key.get());
+//	node->start->visit(*this);
+//	auto var_index = add_local(ident->name);
+//	EMIT(Opcode::DefineLocal, var_index);
+}
+
 void Compiler::backpatch_breaks(int previous)
 {
 	for (int i = 0; i < break_count; i++)
@@ -674,7 +708,7 @@ Handle<Function> Compiler::create_function_symbol(RoutineDefinition *node, const
 
 	if (node->local || scope_depth > 1)
 	{
-		auto symbol = routine->find_local(name, current_scope);
+		auto symbol = routine->find_local(name);
 
 		if (symbol)
 		{
@@ -740,6 +774,17 @@ void Compiler::visit_list(ListLiteral *node)
 		item->visit(*this);
 	}
 	EMIT(Opcode::NewList, Instruction(node->items.size()));
+}
+
+void Compiler::visit_table(TableLiteral *node)
+{
+	auto size = node->keys.size();
+	for (size_t i = 0; i < size; i++)
+	{
+		node->keys[i]->visit(*this);
+		node->values[i]->visit(*this);
+	}
+	EMIT(Opcode::NewTable, Instruction(size));
 }
 
 

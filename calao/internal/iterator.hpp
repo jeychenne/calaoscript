@@ -6,52 +6,57 @@
  * this file except in compliance with the License. You may obtain a copy of the License at                           *
  * http://www.mozilla.org/MPL/.                                                                                       *
  *                                                                                                                    *
- * Created: 01/06/2020                                                                                                *
+ * Created: 02/06/2020                                                                                                *
  *                                                                                                                    *
- * Purpose: see header.                                                                                               *
+ * Purpose: Iterator object, to iterate over sequences such as List and Table.                                        *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
+#ifndef CALAO_ITERATOR_HPP
+#define CALAO_ITERATOR_HPP
+
 #include <calao/list.hpp>
+#include <calao/table.hpp>
 
 namespace calao {
 
-List::List(const List &other) : _items(other._items)
+class Iterator
 {
-	// When we clone a list, we need to make sure that aliases are resolved, otherwise both lists may get mutated if
-	// we mutate a reference in one of them.
-	for (auto &item : _items) {
-		item.unalias();
-	}
-}
+public:
 
-void List::traverse(const GCCallback &callback)
+	explicit Iterator(Variant v) : object(std::move(v)) { }
+
+	virtual ~Iterator() = default;
+
+	virtual Variant get_key() = 0;
+
+	virtual Variant get_value() { return Variant(); };
+
+	virtual bool at_end() const = 0;
+
+protected:
+
+	Variant object;
+};
+
+//---------------------------------------------------------------------------------------------------------------------
+
+class ListIterator : public Iterator
 {
-	for (auto &item : _items) {
-		item.traverse(callback);
-	}
-}
+public:
 
-String List::to_string() const
-{
-	if (this->seen)
-	{
-		return "[...]";
-	}
+	explicit ListIterator(Variant v);
 
-	bool flag = this->seen;
-	String s("[");
-	for (intptr_t i = 1; i <= _items.size(); i++)
-	{
-		s.append(_items[i].to_string(true));
-		if (i < _items.size()) {
-			s.append(", ");
-		}
-	}
-	s.append(']');
-	this->seen = flag;
+	Variant get_key() override;
 
-	return s;
-}
+	bool at_end() const override;
+
+private:
+
+	List::iterator it;
+};
+
 
 } // namespace calao
+
+#endif // CALAO_ITERATOR_HPP

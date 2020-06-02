@@ -172,7 +172,7 @@ public:
 
 	Instruction add_local(const String &name, int scope, int depth);
 
-	std::optional<Instruction> find_local(const String &name, int scope) const;
+	std::optional<Instruction> find_local(const String &name) const;
 
 	double get_float(intptr_t i) const { return float_pool[i]; }
 

@@ -125,6 +125,18 @@ struct ListLiteral final : public Literal
 	AstList items;
 };
 
+// Table or Set
+struct TableLiteral final : public Literal
+{
+	TableLiteral(int line, AstList keys, AstList values) : Literal(line), keys(std::move(keys)), values(std::move(values)) { }
+
+	void visit(AstVisitor &v) override;
+
+	bool is_set() const { return !keys.empty() && values.empty(); }
+
+	AstList keys, values;
+};
+
 //---------------------------------------------------------------------------------------------------------------------
 
 struct ReferenceExpression final : public Ast
@@ -258,6 +270,16 @@ struct ForStatement final : public Ast
 	bool down;
 };
 
+struct ForeachStatement final : public Ast
+{
+	ForeachStatement(int line, AutoAst k, AutoAst v, AutoAst coll, AutoAst block) : Ast(line),
+		key(std::move(k)), value(std::move(v)), collection(std::move(coll)), block(std::move(block)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst key, value, collection, block;
+};
+
 struct LoopExitStatement final : public Ast
 {
 	LoopExitStatement(int line, Lexeme lex) : Ast(line), lex(lex) { }
@@ -325,6 +347,7 @@ public:
 	virtual void visit_float(FloatLiteral *node) = 0;
 	virtual void visit_string(StringLiteral *node) = 0;
 	virtual void visit_list(ListLiteral *node) = 0;
+	virtual void visit_table(TableLiteral *node) = 0;
 	virtual void visit_unary(UnaryExpression *node) = 0;
 	virtual void visit_binary(BinaryExpression *node) = 0;
 	virtual void visit_statements(StatementList *node) = 0;
@@ -341,6 +364,7 @@ public:
 	virtual void visit_if_statement(IfStatement *node) = 0;
 	virtual void visit_while_statement(WhileStatement *node) = 0;
 	virtual void visit_for_statement(ForStatement *node) = 0;
+	virtual void visit_foreach_statement(ForeachStatement *node) = 0;
 	virtual void visit_loop_exit(LoopExitStatement *node) = 0;
 	virtual void visit_return_statement(ReturnStatement *node) = 0;
 	virtual void visit_reference_expression(ReferenceExpression *node) = 0;

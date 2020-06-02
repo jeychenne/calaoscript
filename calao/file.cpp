@@ -330,6 +330,17 @@ void File::rewind()
 	std::rewind(m_handle);
 }
 
+void File::seek(intptr_t pos)
+{
+	check_handle();
+	std::fseek(m_handle, pos, SEEK_SET);
+}
+
+intptr_t File::tell()
+{
+	return std::ftell(m_handle);
+}
+
 String File::read_line_utf8()
 {
     const size_t limit = 32;

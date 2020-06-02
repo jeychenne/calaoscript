@@ -1,0 +1,7 @@
+var tab = { "hello": "world", "john": "smith", 3.14: "pi" }
+
+print get(tab, 3.14)
+print get(tab, "xxx")
+print get(tab, "xxx", "three")
+tab["hello"] = "WORLD"
+print tab

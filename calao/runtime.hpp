@@ -256,6 +256,8 @@ private:
 
 	Variant pop_call_frame();
 
+	void get_index(bool by_ref);
+
 	// Garbage collector.
 	Recycler gc;
 

@@ -201,8 +201,9 @@ private:
 
 
 template<class T>
-bool check_type(const Variant &var)
+bool check_type(const Variant &v)
 {
+	auto &var = v.resolve();
 	using Type = typename traits::bare_type<T>::type;
 	return var.is_object() and var.type_info() == &typeid(Type);
 }

@@ -1,0 +1,16 @@
+function test(x, ref y, z)
+    append(x, "x")
+    append(y, "x")
+    append(z, "x")
+end
+
+
+var s1 = "aaa"
+var s2 = "bbb"
+var s3 = "ccc"
+test(s1, s2, s3)
+assert s1 == "aaa"
+assert s2 == "bbbx"
+assert s3 == "ccc"
+
+print "done!"

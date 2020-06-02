@@ -64,6 +64,7 @@ enum class Opcode : Instruction
 	NewArray,
 	NewFrame,
 	NewList,
+	NewTable,
 	Not,
 	NotEqual,
 	Pop,
@@ -83,6 +84,7 @@ enum class Opcode : Instruction
 	PushTrue,
 	Return,
 	SetGlobal,
+	SetIndex,
 	SetLocal,
 	SetSignature,
 	Subtract

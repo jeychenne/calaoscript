@@ -1,0 +1,15 @@
+print "testing local redefinition of builtin function... ",
+
+var tab = { "hello": "world", "john": "smith", 3.14: "pi" }
+
+do
+    function len(t as Table)
+        return -1
+    end
+
+    assert len(tab) == -1
+end
+
+assert len(tab) == 3
+
+print "done!"
