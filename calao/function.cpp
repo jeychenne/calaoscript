@@ -129,12 +129,12 @@ Instruction Routine::add_local(const String &name, int scope, int depth)
 	return Instruction(locals.size() - 1);
 }
 
-std::optional<Instruction> Routine::find_local(const String &name) const
+std::optional<Instruction> Routine::find_local(const String &name, int scope_depth) const
 {
 	for (size_t i = locals.size(); i-- > 0; )
 	{
 		auto &local = locals[i];
-		if (local.name == name) {
+		if (local.depth <= scope_depth  && local.name == name) {
 			return Instruction(i);
 		}
 	}

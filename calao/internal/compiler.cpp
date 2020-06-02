@@ -339,7 +339,7 @@ void Compiler::visit_call(CallExpression *node)
 void Compiler::visit_variable(Variable *node)
 {
 	// Try to find a local variable, otherwise try to get a global.
-	auto index = routine->find_local(node->name);
+	auto index = routine->find_local(node->name, scope_depth);
 	if (index)
 	{
 		if (parsing_argument())
@@ -391,7 +391,7 @@ void Compiler::visit_assignment(Assignment *node)
 		node->rhs->visit(*this);
 
 		// Try to find a local variable, otherwise try to get a global.
-		auto index = routine->find_local(var->name);
+		auto index = routine->find_local(var->name, scope_depth);
 		if (index)
 		{
 			EMIT(Opcode::SetLocal, *index);
@@ -708,7 +708,7 @@ Handle<Function> Compiler::create_function_symbol(RoutineDefinition *node, const
 
 	if (node->local || scope_depth > 1)
 	{
-		auto symbol = routine->find_local(name);
+		auto symbol = routine->find_local(name, scope_depth);
 
 		if (symbol)
 		{
