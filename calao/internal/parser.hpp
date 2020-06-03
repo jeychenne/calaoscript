@@ -74,6 +74,8 @@ private:
 
 	void expect(Lexeme lex, const char *hint);
 
+	void skip_empty_lines() { while (token.is(Lexeme::Eol)) accept(); }
+
 	void expect_separator();
 
 	void report_error(const std::string &hint, const char *error_type = "Syntax");

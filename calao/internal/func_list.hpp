@@ -21,73 +21,73 @@
 
 namespace calao {
 
-static Variant list_contains(ArgumentList &args)
+static Variant list_contains(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	return lst.contains(args[1]);
 }
 
-static Variant list_first(ArgumentList &args)
+static Variant list_first(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	if (lst.empty()) {
 		throw error("[Index error] Cannot get first element in empty list");
 	}
 	return lst.first();
 }
 
-static Variant list_find1(ArgumentList &args)
+static Variant list_find1(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	return lst.find(args[1]);
 }
 
-static Variant list_find2(ArgumentList &args)
+static Variant list_find2(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
-	intptr_t i = args.raw_get<intptr_t>(1);
+	auto &lst = raw_cast<List>(args[0]).items();
+	intptr_t i = raw_cast<intptr_t>(args[1]);
 	return lst.find(args[1], i);
 }
 
-static Variant list_rfind1(ArgumentList &args)
+static Variant list_rfind1(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	return lst.rfind(args[1]);
 }
 
-static Variant list_rfind2(ArgumentList &args)
+static Variant list_rfind2(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
-	intptr_t i = args.raw_get<intptr_t>(1);
+	auto &lst = raw_cast<List>(args[0]).items();
+	intptr_t i = raw_cast<intptr_t>(args[1]);
 	return lst.rfind(args[1], i);
 }
 
-static Variant list_last(ArgumentList &args)
+static Variant list_last(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	if (lst.empty()) {
 		throw error("[Index error] Cannot get last element in empty list");
 	}
 	return lst.last();
 }
 
-static Variant list_left(ArgumentList &args)
+static Variant list_left(Runtime &rt, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
-	intptr_t count = args.raw_get<intptr_t>(1);
+	auto &lst = raw_cast<List>(args[0]).items();
+	intptr_t count = raw_cast<intptr_t>(args[1]);
 	Array<Variant> result;
 
 	for (intptr_t i = 1; i <= count; i++) {
 		result.append(lst.at(i));
 	}
 
-	return make_handle<List>(&args.runtime(), std::move(result));
+	return make_handle<List>(&rt, std::move(result));
 }
 
-static Variant list_right(ArgumentList &args)
+static Variant list_right(Runtime &rt, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
-	intptr_t count = args.raw_get<intptr_t>(1);
+	auto &lst = raw_cast<List>(args[0]).items();
+	intptr_t count = raw_cast<intptr_t>(args[1]);
 	Array<Variant> result;
 	intptr_t limit = lst.size() - count;
 
@@ -95,13 +95,13 @@ static Variant list_right(ArgumentList &args)
 		result.append(lst.at(i));
 	}
 
-	return make_handle<List>(&args.runtime(), std::move(result));
+	return make_handle<List>(&rt, std::move(result));
 }
 
-static Variant list_join(ArgumentList &args)
+static Variant list_join(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
-	auto &delim = args.raw_get<String>(1);
+	auto &lst = raw_cast<List>(args[0]).items();
+	auto &delim = raw_cast<String>(args[1]);
 	String result;
 
 	for (intptr_t i = 1; i <= lst.size(); i++)
@@ -115,26 +115,26 @@ static Variant list_join(ArgumentList &args)
 	return result;
 }
 
-static Variant list_clear(ArgumentList &args)
+static Variant list_clear(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	lst.clear();
 
 	return Variant();
 }
 
-static Variant list_append1(ArgumentList &args)
+static Variant list_append1(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	lst.append(args[1]);
 
 	return Variant();
 }
 
-static Variant list_append2(ArgumentList &args)
+static Variant list_append2(Runtime &, std::span<Variant> args)
 {
-	auto &lst1 = args.raw_get<List>(0).items();
-	auto &lst2 = args.raw_get<List>(0).items();
+	auto &lst1 = raw_cast<List>(args[0]).items();
+	auto &lst2 = raw_cast<List>(args[0]).items();
 
 	for (auto &item : lst2) {
 		lst1.append(item.resolve());
@@ -143,18 +143,18 @@ static Variant list_append2(ArgumentList &args)
 	return Variant();
 }
 
-static Variant list_prepend1(ArgumentList &args)
+static Variant list_prepend1(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	lst.prepend(args[1]);
 
 	return Variant();
 }
 
-static Variant list_prepend2(ArgumentList &args)
+static Variant list_prepend2(Runtime &, std::span<Variant> args)
 {
-	auto &lst1 = args.raw_get<List>(0).items();
-	auto &lst2 = args.raw_get<List>(0).items();
+	auto &lst1 = raw_cast<List>(args[0]).items();
+	auto &lst2 = raw_cast<List>(args[0]).items();
 
 	for (intptr_t i = lst2.size(); i > 0; i--) {
 		lst1.prepend(lst2[i].resolve());
@@ -163,79 +163,79 @@ static Variant list_prepend2(ArgumentList &args)
 	return Variant();
 }
 
-static Variant list_is_empty(ArgumentList &args)
+static Variant list_is_empty(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 
 	return lst.empty();
 }
 
-static Variant list_pop(ArgumentList &args)
+static Variant list_pop(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 
 	return lst.take_last().resolve();
 }
 
-static Variant list_shift(ArgumentList &args)
+static Variant list_shift(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 
 	return lst.take_first().resolve();
 }
 
-static Variant list_sort(ArgumentList &args)
+static Variant list_sort(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	std::sort(lst.begin(), lst.end());
 
 	return Variant();
 }
 
-static Variant list_reverse(ArgumentList &args)
+static Variant list_reverse(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	std::reverse(lst.begin(), lst.end());
 
 	return Variant();
 }
 
-static Variant list_remove(ArgumentList &args)
+static Variant list_remove(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	lst.remove(args[1].resolve());
 
 	return Variant();
 }
 
-static Variant list_remove_first(ArgumentList &args)
+static Variant list_remove_first(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	lst.remove_first(args[1].resolve());
 
 	return Variant();
 }
 
-static Variant list_remove_last(ArgumentList &args)
+static Variant list_remove_last(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	lst.remove_last(args[1].resolve());
 
 	return Variant();
 }
 
-static Variant list_remove_at(ArgumentList &args)
+static Variant list_remove_at(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
-	intptr_t pos = args.raw_get<intptr_t>(1);
+	auto &lst = raw_cast<List>(args[0]).items();
+	intptr_t pos = raw_cast<intptr_t>(args[1]);
 	lst.remove_at(pos);
 
 	return Variant();
 }
 
-static Variant list_shuffle(ArgumentList &args)
+static Variant list_shuffle(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
+	auto &lst = raw_cast<List>(args[0]).items();
 	std::random_device rd;
 	std::mt19937 g(rd());
 	std::shuffle(lst.begin(), lst.end(), g);
@@ -243,22 +243,22 @@ static Variant list_shuffle(ArgumentList &args)
 	return Variant();
 }
 
-static Variant list_sample(ArgumentList &args)
+static Variant list_sample(Runtime &rt, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
-	intptr_t n = args.raw_get<intptr_t>(1);
+	auto &lst = raw_cast<List>(args[0]).items();
+	intptr_t n = raw_cast<intptr_t>(args[1]);
 	Array<Variant> result;
 	std::random_device rd;
 	std::mt19937 g(rd());
 	std::sample(lst.begin(), lst.end(), std::back_inserter(result), n, g);
 
-	return make_handle<List>(&args.runtime(), std::move(result));
+	return make_handle<List>(&rt, std::move(result));
 }
 
-static Variant list_insert(ArgumentList &args)
+static Variant list_insert(Runtime &, std::span<Variant> args)
 {
-	auto &lst = args.raw_get<List>(0).items();
-	intptr_t pos = args.raw_get<intptr_t>(1);
+	auto &lst = raw_cast<List>(args[0]).items();
+	intptr_t pos = raw_cast<intptr_t>(args[1]);
 	lst.insert(pos, args[2]);
 
 	return Variant();

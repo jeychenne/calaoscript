@@ -20,57 +20,57 @@
 
 namespace calao {
 
-static Variant table_contains(ArgumentList &args)
+static Variant table_contains(Runtime &, std::span<Variant> args)
 {
-	auto &map = args.raw_get<Table>(0).map();
+	auto &map = raw_cast<Table>(args[0]).map();
 	return map.contains(args[1]);
 }
 
-static Variant table_is_empty(ArgumentList &args)
+static Variant table_is_empty(Runtime &, std::span<Variant> args)
 {
-	auto &map = args.raw_get<Table>(0).map();
+	auto &map = raw_cast<Table>(args[0]).map();
 	return map.empty();
 }
 
-static Variant table_clear(ArgumentList &args)
+static Variant table_clear(Runtime &, std::span<Variant> args)
 {
-	auto &map = args.raw_get<Table>(0).map();
+	auto &map = raw_cast<Table>(args[0]).map();
 	map.clear();
 
 	return Variant();
 }
 
-static Variant table_get_keys(ArgumentList &args)
+static Variant table_get_keys(Runtime &rt, std::span<Variant> args)
 {
-	auto &tab = args.raw_get<Table>(0);
-	return make_handle<List>(&args.runtime(), tab.keys());
+	auto &tab = raw_cast<Table>(args[0]);
+	return make_handle<List>(&rt, tab.keys());
 }
 
-static Variant table_get_values(ArgumentList &args)
+static Variant table_get_values(Runtime &rt, std::span<Variant> args)
 {
-	auto &tab = args.raw_get<Table>(0);
-	return make_handle<List>(&args.runtime(), tab.values());
+	auto &tab = raw_cast<Table>(args[0]);
+	return make_handle<List>(&rt, tab.values());
 }
 
-static Variant table_remove(ArgumentList &args)
+static Variant table_remove(Runtime &, std::span<Variant> args)
 {
-	auto &map = args.raw_get<Table>(0).map();
+	auto &map = raw_cast<Table>(args[0]).map();
 	map.erase(args[1]);
 
 	return Variant();
 }
 
-static Variant table_get1(ArgumentList &args)
+static Variant table_get1(Runtime &, std::span<Variant> args)
 {
-	auto &map = args.raw_get<Table>(0).map();
+	auto &map = raw_cast<Table>(args[0]).map();
 	auto it = map.find(args[1]);
 
 	return (it != map.end()) ? it->second : Variant();
 }
 
-static Variant table_get2(ArgumentList &args)
+static Variant table_get2(Runtime &, std::span<Variant> args)
 {
-	auto &map = args.raw_get<Table>(0).map();
+	auto &map = raw_cast<Table>(args[0]).map();
 	auto it = map.find(args[1]);
 
 	return (it != map.end()) ? it->second : args[2];

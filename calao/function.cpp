@@ -74,9 +74,9 @@ NativeRoutine::NativeRoutine(const String &name, NativeCallback cb, std::initial
 
 }
 
-Variant NativeRoutine::call(ArgumentList &args)
+Variant NativeRoutine::call(Runtime &rt, std::span<Variant> args)
 {
-	return callback(args);
+	return callback(rt, args);
 }
 
 
@@ -151,9 +151,9 @@ Instruction Routine::add_routine(std::shared_ptr<Routine> r)
 	return add_constant(routine_pool, std::move(r));
 }
 
-Variant Routine::call(ArgumentList &args)
+Variant Routine::call(Runtime &rt, std::span<Variant> args)
 {
-	return args.runtime().interpret(*this, args);
+	return rt.interpret(*this, args);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

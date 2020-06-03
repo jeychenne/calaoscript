@@ -371,6 +371,16 @@ struct Alias final
 	Variant variant;
 };
 
+
+inline
+std::ostream &operator<<(std::ostream &stream, const Variant &v)
+{
+	auto s = v.to_string();
+	stream.write(s.data(), s.size());
+
+	return stream;
+}
+
 } // namespace calao
 
 

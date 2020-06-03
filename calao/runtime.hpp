@@ -189,7 +189,7 @@ public:
 	Variant interpret(const Routine &routine);
 
 	// Call a user-defined function in Opcode::Call.
-	Variant interpret(const Routine &routine, ArgumentList &args);
+	Variant interpret(const Routine &routine, std::span<Variant> args);
 
 	void disassemble(const Routine &routine, const String &name);
 

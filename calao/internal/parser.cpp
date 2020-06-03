@@ -68,6 +68,7 @@ bool Parser::check(Lexeme lex)
 
 bool Parser::accept(Lexeme lex)
 {
+
 	if (check(lex))
 	{
 		accept();
@@ -737,14 +738,20 @@ AutoAst Parser::parse_member_expression()
 AutoAst Parser::parse_list_literal()
 {
 	auto line = get_line();
+	skip_empty_lines();
 	if (accept(Lexeme::RSquare)) {
 		return make<ListLiteral>(AstList());
 	}
 	AstList items;
 	items.push_back(parse_expression());
-	while (accept(Lexeme::Comma)) {
+	skip_empty_lines();
+
+	while (accept(Lexeme::Comma))
+	{
+		skip_empty_lines();
 		items.push_back(parse_expression());
 	}
+	skip_empty_lines();
 	expect(Lexeme::RSquare, "at the end of list or array literal");
 
 	return std::make_unique<ListLiteral>(line, std::move(items));
@@ -754,6 +761,7 @@ AutoAst Parser::parse_table_literal()
 {
 	constexpr const char *hint = "in table literal";
 	auto line = get_line();
+	skip_empty_lines();
 	if (accept(Lexeme::RCurl)) {
 		return make<TableLiteral>(AstList(), AstList());
 	}
@@ -764,10 +772,12 @@ AutoAst Parser::parse_table_literal()
 
 	while (accept(Lexeme::Comma))
 	{
+		skip_empty_lines();
 		keys.push_back(parse_expression());
 		expect(Lexeme::Colon, hint);
 		values.push_back(parse_expression());
 	}
+	skip_empty_lines();
 	expect(Lexeme::RCurl, hint);
 
 	return std::make_unique<TableLiteral>(line, std::move(keys), std::move(values));

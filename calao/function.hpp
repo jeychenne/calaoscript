@@ -9,7 +9,7 @@
  * Created: 22/05/2020                                                                                                *
  *                                                                                                                    *
  * Purpose: Function object. Calao functions support multiple dispatch: a function may have several overloads, and    *
- * the correct routine is selected at runtime based on the type of the arguments.                                     *
+ * the correct routine is selected at runtime based on the number and types of arguments.                             *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
@@ -37,45 +37,11 @@ using ParamBitset = std::bitset<PARAM_BITSET_SIZE>;
 
 //---------------------------------------------------------------------------------------------------------------------
 
-// A structure to encapsulate a list of arguments passed to a function.
-class ArgumentList final
-{
-public:
-
-	ArgumentList(Runtime &rt, std::span<Variant> args) : _args(args), _rt(rt) { }
-
-	ArgumentList(const ArgumentList &) = delete;
-
-	Variant &operator[](size_t i) { return _args[i]; }
-
-	template<class T>
-	T &get(size_t i) { return cast<T>(_args[i]); }
-
-	template<class T>
-	T &raw_get(size_t i) { return raw_cast<T>(_args[i]); }
-
-	template<class T>
-	bool check_type(size_t i) const { return check_type<T>(_args[i]); }
-
-	size_t count() const { return _args.size(); }
-
-	Runtime &runtime() { return _rt; }
-
-private:
-
-	std::span<Variant> _args;
-
-	Runtime &_rt;
-};
-
-
-//---------------------------------------------------------------------------------------------------------------------
-
 
 // A native C++ callback.
-using NativeCallback = std::function<Variant(ArgumentList&)>;
+using NativeCallback = std::function<Variant(Runtime &rt, std::span<Variant> args)>;
 
-// A Callable is an internal abstract bate type type used to represent one particular signature for a function. Each function has at least
+// A Callable is an internal abstract base type type used to represent one particular signature for a function. Each function has at least
 // one callable, and each callable is owned by at least one function. Callable has two subclasses: NativeRoutine, which is implemented in C++,
 // and Routine, which a user-defined function. Callables are an implementation detail and are not visible to users.
 class Callable
@@ -100,7 +66,7 @@ public:
 
 	String name() const { return _name; }
 
-	Variant operator()(ArgumentList &args) { return call(args); }
+	Variant operator()(Runtime &rt, std::span<Variant> args) { return call(rt, args); }
 
 	int get_cost(std::span<Variant> args) const;
 
@@ -110,7 +76,7 @@ protected:
 
 	friend class Function;
 
-	virtual Variant call(ArgumentList &args) = 0;
+	virtual Variant call(Runtime &rt, std::span<Variant> args) = 0;
 
 	// Type of positional arguments.
 	std::vector<Handle<Class>> signature;
@@ -137,7 +103,7 @@ struct NativeRoutine final : public Callable
 
 	NativeCallback callback;
 
-	Variant call(ArgumentList &args) override;
+	Variant call(Runtime &rt, std::span<Variant> args) override;
 };
 
 
@@ -196,7 +162,7 @@ private:
 	// Bytecode.
 	Code code;
 
-	Variant call(ArgumentList &args) override;
+	Variant call(Runtime &rt, std::span<Variant> args) override;
 
 	void clear_signature() { signature.clear(); }
 
@@ -256,6 +222,17 @@ private:
 	std::vector<Local> locals;
 };
 
+//----------------------------------------------------------------------------------------------------------------------
+
+// Instantiation of a Routine that capture over its environment.
+class Closure final
+{
+public:
+
+private:
+
+};
+
 
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -303,17 +280,6 @@ private:
 	int max_argc = 0;
 };
 
-
-//----------------------------------------------------------------------------------------------------------------------
-
-// Instantiation of a Function that capture over its environment.
-class Closure final
-{
-public:
-
-private:
-
-};
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------

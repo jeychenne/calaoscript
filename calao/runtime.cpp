@@ -465,12 +465,11 @@ Variant Runtime::interpret(const Routine &routine)
 						RUNTIME_ERROR("Cannot resolve call to function '%' with the following argument types: (%).\nCandidates are:\n%",
 								func->name(), String::join(types, ", "), candidates);
 					}
-					ArgumentList arglist(*this, args);
 
 					if (r->is_native())
 					{
 						try {
-							auto result = (*r)(arglist);
+							auto result = (*r)(*this, args);
 							pop(narg + 1);
 							push(std::move(result));
 						}
@@ -479,7 +478,7 @@ Variant Runtime::interpret(const Routine &routine)
 					else
 					{
 						current_frame->ip = ip;
-						push((*r)(arglist));
+						push((*r)(*this, args));
 					}
 				}
 				CATCH_ERROR
@@ -1484,7 +1483,10 @@ void Runtime::do_file(const String &path)
 	auto routine = compiler.compile(std::move(ast));
 	disassemble(*routine, "main");
 	printf("--------------------------------------------------------\n");
-	interpret(*routine);
+	auto v = interpret(*routine);
+//	auto &map = cast<Table>(v).map();
+//	std::cout << "name: " << map["name"] << std::endl;
+//	std::cout << "age: " << map["age"] << std::endl;
 }
 
 int Runtime::get_current_line() const
@@ -1556,10 +1558,10 @@ void Runtime::add_global(String name, Variant value)
 	globals.insert({ std::move(name), std::move(value) });
 }
 
-Variant Runtime::interpret(const Routine &routine, ArgumentList &args)
+Variant Runtime::interpret(const Routine &routine, std::span<Variant> args)
 {
 	// The arguments are on top of the stack. We adjust the top of the stack accordingly.
-	top -= args.count();
+	top -= args.size();
 
 	// Now we can just interpret the routine. The first opcode wil be NewFrame.
 	return interpret(routine);

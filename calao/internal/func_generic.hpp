@@ -20,12 +20,12 @@
 
 namespace calao {
 
-static Variant get_type(ArgumentList &args)
+static Variant get_type(Runtime &, std::span<Variant> args)
 {
 	return args[0].get_class()->object();
 }
 
-static Variant get_length(ArgumentList &args)
+static Variant get_length(Runtime &, std::span<Variant> args)
 {
 	auto &v = args[0];
 
@@ -45,22 +45,22 @@ static Variant get_length(ArgumentList &args)
 	throw error("[Type error] Cannot get length of % value", v.class_name());
 }
 
-static Variant to_string(ArgumentList &args)
+static Variant to_string(Runtime &, std::span<Variant> args)
 {
 	return args[0].to_string();
 }
 
-static Variant to_boolean(ArgumentList &args)
+static Variant to_boolean(Runtime &, std::span<Variant> args)
 {
 	return args[0].to_boolean();
 }
 
-static Variant to_integer(ArgumentList &args)
+static Variant to_integer(Runtime &, std::span<Variant> args)
 {
 	return args[0].to_integer();
 }
 
-static Variant to_float(ArgumentList &args)
+static Variant to_float(Runtime &, std::span<Variant> args)
 {
 	return args[0].to_float();
 }
