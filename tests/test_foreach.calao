@@ -1,0 +1,16 @@
+print "testing foreach loop... ",
+
+var lst = [10, 20, 30, 40]
+
+foreach i, ref val in lst do
+    if i > 2 then
+        val = val * 10
+    end
+end
+
+assert lst[1] == 10
+assert lst[2] == 20
+assert lst[3] == 300
+assert lst[4] == 400
+
+print "done!"

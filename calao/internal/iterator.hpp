@@ -20,23 +20,27 @@
 
 namespace calao {
 
+// We can't make this an abstract interface because we need to store iterators in handles, and Handle<T> would complain that it can't
+// instantiate an abstract class.
 class Iterator
 {
 public:
 
-	explicit Iterator(Variant v) : object(std::move(v)) { }
+	explicit Iterator(Variant v, bool with_val, bool ref_val) : object(std::move(v)), with_val(with_val), ref_val(ref_val) { }
 
 	virtual ~Iterator() = default;
 
-	virtual Variant get_key() = 0;
+	virtual Variant get_key() { return Variant(); }
 
-	virtual Variant get_value() { return Variant(); };
+	virtual Variant get_value();
 
-	virtual bool at_end() const = 0;
+	virtual bool at_end() const { return true; };
 
 protected:
 
 	Variant object;
+	bool with_val;
+	bool ref_val;
 };
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -45,17 +49,59 @@ class ListIterator : public Iterator
 {
 public:
 
-	explicit ListIterator(Variant v);
+	explicit ListIterator(Variant v, bool with_val, bool ref_val);
 
 	Variant get_key() override;
+
+	Variant get_value() override;
 
 	bool at_end() const override;
 
 private:
 
-	List::iterator it;
+	List::Storage *lst;
+	intptr_t pos;
 };
 
+//---------------------------------------------------------------------------------------------------------------------
+
+class TableIterator : public Iterator
+{
+public:
+
+	explicit TableIterator(Variant v, bool with_val, bool ref_val);
+
+	Variant get_key() override;
+
+	Variant get_value() override;
+
+	bool at_end() const override;
+
+private:
+
+	Table::Storage *map;
+	Table::iterator it;
+};
+
+//---------------------------------------------------------------------------------------------------------------------
+
+class StringIterator : public Iterator
+{
+public:
+
+	explicit StringIterator(Variant v, bool with_val, bool ref_val);
+
+	Variant get_key() override;
+
+	Variant get_value() override;
+
+	bool at_end() const override;
+
+private:
+
+	String *str;
+	intptr_t pos = 1;
+};
 
 } // namespace calao
 

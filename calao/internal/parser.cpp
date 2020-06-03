@@ -667,6 +667,10 @@ AutoAst Parser::parse_foreach_statement()
 	}
 	expect(Lexeme::In, hint);
 	auto coll = parse_expression();
+	// We need a reference, which will be grabbed by the iterator.
+	if (!dynamic_cast<ReferenceExpression*>(coll.get())) {
+		coll = make<ReferenceExpression>(std::move(coll));
+	}
 	expect(Lexeme::Do, hint);
 	// Don't open a scope for the block: we will open it ourselves so that we can include the loop variable in it.
 	auto block = parse_statements(false);

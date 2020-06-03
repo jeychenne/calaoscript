@@ -211,25 +211,25 @@ bool check_type(const Variant &v)
 template<>
 inline bool check_type<bool>(const Variant &var)
 {
-	return var.data_type() == Variant::Datatype::Boolean;
+	return var.resolve().data_type() == Variant::Datatype::Boolean;
 }
 
 template<>
 inline bool check_type<intptr_t>(const Variant &var)
 {
-	return var.data_type() == Variant::Datatype::Integer;
+	return var.resolve().data_type() == Variant::Datatype::Integer;
 }
 
 template<>
 inline bool check_type<double>(const Variant &var)
 {
-	return var.data_type() == Variant::Datatype::Float;
+	return var.resolve().data_type() == Variant::Datatype::Float;
 }
 
 template<>
 inline bool check_type<String>(const Variant &var)
 {
-	return var.data_type() == Variant::Datatype::String;
+	return var.resolve().data_type() == Variant::Datatype::String;
 }
 
 //------------------------------------------------------------------------------------------------------------------
@@ -237,7 +237,7 @@ inline bool check_type<String>(const Variant &var)
 template<class T>
 T &raw_cast(Variant &var)
 {
-	return reinterpret_cast<Handle<T> &>(var.as.storage).value();
+	return reinterpret_cast<Handle<T> &>(var.resolve().as.storage).value();
 }
 
 
@@ -250,25 +250,25 @@ const T &raw_cast(const Variant &var)
 template<>
 inline bool &raw_cast<bool>(Variant &var)
 {
-	return reinterpret_cast<bool &>(var.as.storage);
+	return reinterpret_cast<bool &>(var.resolve().as.storage);
 }
 
 template<>
 inline intptr_t &raw_cast<intptr_t>(Variant &var)
 {
-	return reinterpret_cast<intptr_t &>(var.as.storage);
+	return reinterpret_cast<intptr_t &>(var.resolve().as.storage);
 }
 
 template<>
 inline double &raw_cast<double>(Variant &var)
 {
-	return reinterpret_cast<double &>(var.as.storage);
+	return reinterpret_cast<double &>(var.resolve().as.storage);
 }
 
 template<>
 inline String &raw_cast<String>(Variant &var)
 {
-	return reinterpret_cast<String &>(var.as.storage);
+	return reinterpret_cast<String &>(var.resolve().as.storage);
 }
 
 //------------------------------------------------------------------------------------------------------------------

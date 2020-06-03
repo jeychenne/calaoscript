@@ -32,6 +32,7 @@ enum class Opcode : Instruction
 	Assert,
 	Add,
 	Call,
+	ClearLocal,
 	Compare,
 	Concat,
 	DecrementLocal,
@@ -63,8 +64,11 @@ enum class Opcode : Instruction
 	Negate,
 	NewArray,
 	NewFrame,
+	NewIterator,
 	NewList,
 	NewTable,
+	NextKey,
+	NextValue,
 	Not,
 	NotEqual,
 	Pop,
@@ -87,7 +91,8 @@ enum class Opcode : Instruction
 	SetIndex,
 	SetLocal,
 	SetSignature,
-	Subtract
+	Subtract,
+	TestIterator
 };
 
 

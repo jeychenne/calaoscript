@@ -281,19 +281,18 @@ void Compiler::visit_declaration(Declaration *node)
 	if (!ident) {
 		THROW("[Syntax error] Expected a variable name in declaration");
 	}
-	if (node->rhs.empty()) {
-		EMIT(Opcode::PushNull);
-	}
-	else {
-		node->rhs.front()->visit(*this);
-	}
 
 	if (node->local || scope_depth > 1)
 	{
 		try
 		{
 			auto index = add_local(ident->name);
-			EMIT(Opcode::DefineLocal, index);
+			// Locals don't need to be defined if they are null because they are automatically null-initialized by NewFrame.
+			if (!node->rhs.empty())
+			{
+				node->rhs.front()->visit(*this);
+				EMIT(Opcode::DefineLocal, index);
+			}
 		}
 		catch (std::runtime_error &e)
 		{
@@ -303,6 +302,12 @@ void Compiler::visit_declaration(Declaration *node)
 	else
 	{
 		auto index = routine->add_string_constant(ident->name);
+		if (node->rhs.empty()) {
+			EMIT(Opcode::PushNull);
+		}
+		else {
+			node->rhs.front()->visit(*this);
+		}
 		EMIT(Opcode::DefineGlobal, index);
 	}
 }
@@ -503,11 +508,13 @@ void Compiler::visit_if_statement(IfStatement *node)
 void Compiler::visit_while_statement(WhileStatement *node)
 {
 	int previous_break_count = break_count;
-	break_count = 0;
+	int previous_continue_count = continue_count;
+	break_count = continue_count = 0;
 	int loop_start = code->get_current_offset();
 	node->cond->visit(*this);
 	int exit_jump = code->emit_jump(node->line_no, Opcode::JumpFalse);
 	node->block->visit(*this);
+	backpatch_continues(previous_continue_count);
 	code->emit_jump(node->line_no, Opcode::Jump, loop_start);
 	code->backpatch(exit_jump);
 	backpatch_breaks(previous_break_count);
@@ -515,6 +522,7 @@ void Compiler::visit_while_statement(WhileStatement *node)
 
 void Compiler::visit_for_statement(ForStatement *node)
 {
+	static String end_name("$end"), step_name("$step");
 	auto scope = open_scope();
 	int previous_break_count = break_count;
 	int previous_continue_count = continue_count;
@@ -528,7 +536,7 @@ void Compiler::visit_for_statement(ForStatement *node)
 
 	// Evaluate end condition once and store it in a hidden variable.
 	node->end->visit(*this);
-	auto end_index = add_local("$end");
+	auto end_index = add_local(end_name);
 	EMIT(Opcode::DefineLocal, end_index);
 
 	// Evaluate step condition if it was provided and store it in a hidden variable;
@@ -538,7 +546,7 @@ void Compiler::visit_for_statement(ForStatement *node)
 	if (node->step)
 	{
 		node->step->visit(*this);
-		step_index = add_local("$step");
+		step_index = add_local(step_name);
 		EMIT(Opcode::DefineLocal, step_index);
 	}
 
@@ -581,16 +589,68 @@ void Compiler::visit_for_statement(ForStatement *node)
 
 void Compiler::visit_foreach_statement(ForeachStatement *node)
 {
+	static String iter_name("$iter");
 	auto scope = open_scope();
 	int previous_break_count = break_count;
 	int previous_continue_count = continue_count;
 	break_count = continue_count = 0;
 
-	// Initialize loop variables.
-//	auto ident = dynamic_cast<Variable*>(node->key.get());
-//	node->start->visit(*this);
-//	auto var_index = add_local(ident->name);
-//	EMIT(Opcode::DefineLocal, var_index);
+	// Create the loop variables.
+	auto ident = dynamic_cast<Variable*>(node->key.get());
+	auto key_index = add_local(ident->name);
+	Instruction val_index;
+	bool ref_val = false;
+	AutoAst val_expr;
+	if (node->value)
+	{
+		ReferenceExpression *re;
+		if ((re = dynamic_cast<ReferenceExpression*>(node->value.get())))
+		{
+			ref_val = true;
+			val_expr = std::move(re->expr);
+		}
+		else
+		{
+			val_expr = std::move(node->value);
+		}
+		auto val_ident = dynamic_cast<Variable*>(val_expr.get());
+		val_index = add_local(val_ident->name);
+	}
+	auto iter_index = add_local(iter_name);
+
+	// Create the iterator.
+	node->collection->visit(*this);
+	unsigned flags = ref_val ? iterator_ref_mask : 0;
+	if (val_expr) flags |= iterator_value_mask;
+	EMIT(Opcode::NewIterator, Instruction(flags));
+	EMIT(Opcode::DefineLocal, iter_index);
+
+	// The loop starts here.
+	auto loop_start = code->get_current_offset();
+	EMIT(Opcode::GetLocal, iter_index);
+	EMIT(Opcode::TestIterator);
+	auto jump_end = code->emit_jump(node->line_no, Opcode::JumpFalse);
+	// We need to clear the key and value in case they contain a reference.
+	EMIT(Opcode::ClearLocal, key_index);
+	if (val_expr) EMIT(Opcode::ClearLocal, val_index);
+	EMIT(Opcode::GetLocal, iter_index);
+	EMIT(Opcode::NextKey);
+	EMIT(Opcode::SetLocal, key_index);
+	if (val_expr)
+	{
+		EMIT(Opcode::GetLocal, iter_index);
+		EMIT(Opcode::NextValue);
+		EMIT(Opcode::SetLocal, val_index);
+	}
+
+	// Visit body.
+	node->block->visit(*this);
+	backpatch_continues(previous_continue_count);
+	code->emit_jump(node->line_no, Opcode::Jump, loop_start);
+	code->backpatch(jump_end);
+	backpatch_breaks(previous_break_count);
+
+	close_scope(scope);
 }
 
 void Compiler::backpatch_breaks(int previous)

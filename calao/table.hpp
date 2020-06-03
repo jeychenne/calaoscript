@@ -26,6 +26,8 @@ class Table final
 public:
 
 	using Storage = Hashmap<Variant, Variant>;
+	using iterator = Storage::iterator;
+	using const_iterator = Storage::const_iterator;
 
 	Table() = default;
 
@@ -70,6 +72,8 @@ public:
 	}
 
 	Storage &map() { return _map; }
+
+	const Storage &map() const { return _map; }
 
 private:
 

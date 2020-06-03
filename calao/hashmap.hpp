@@ -112,7 +112,7 @@ public:
 			return (*this);
 		}
 
-		iterator &operator++(int)
+		iterator operator++(int)
 		{
 			auto tmp(*this);
 			do { ++pos; } while (pos < map->capacity() && !map->node(pos)->used());

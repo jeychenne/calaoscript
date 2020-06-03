@@ -518,7 +518,7 @@ Variant &Variant::resolve()
 
 	while (v->is_alias())
 	{
-		v = &as.alias->variant;
+		v = &v->as.alias->variant;
 	}
 
 	return *v;

@@ -28,6 +28,10 @@ class Regex;
 class Variant;
 class Function;
 class Closure;
+class Iterator;
+class ListIterator;
+class TableIterator;
+class StringIterator;
 
 // Dummy base class for Float and Integer
 class Number {};
@@ -48,6 +52,10 @@ NON_CYCLIC(File);
 NON_CYCLIC(Regex);
 NON_CYCLIC(Function);
 NON_CYCLIC(Closure);
+NON_CYCLIC(Iterator);
+NON_CYCLIC(ListIterator);
+NON_CYCLIC(TableIterator);
+NON_CYCLIC(StringIterator);
 
 #undef NON_CYCLIC
 

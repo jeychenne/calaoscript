@@ -46,16 +46,16 @@ public:
 
 	ArgumentList(const ArgumentList &) = delete;
 
-	Variant &operator[](size_t i) { return _args[i].resolve(); }
+	Variant &operator[](size_t i) { return _args[i]; }
 
 	template<class T>
-	T &get(size_t i) { return cast<T>(_args[i].resolve()); }
+	T &get(size_t i) { return cast<T>(_args[i]); }
 
 	template<class T>
-	T &raw_get(size_t i) { return raw_cast<T>(_args[i].resolve()); }
+	T &raw_get(size_t i) { return raw_cast<T>(_args[i]); }
 
 	template<class T>
-	bool check_type(size_t i) const { return check_type<T>(_args[i].resolve()); }
+	bool check_type(size_t i) const { return check_type<T>(_args[i]); }
 
 	size_t count() const { return _args.size(); }
 

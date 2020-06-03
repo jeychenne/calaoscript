@@ -23,6 +23,7 @@
 #include <calao/meta.hpp>
 #include <calao/typed_object.hpp>
 #include <calao/internal/recycler.hpp>
+#include <calao/internal/iterator.hpp>
 #include <calao/variant.hpp>
 #include <calao/class.hpp>
 #include <calao/list.hpp>
@@ -105,14 +106,14 @@ public:
 	~Runtime();
 
 	template<typename T>
-	Handle<Class> create_type(const char *name, Class *base)
+	Handle<Class> create_type(const char *name, Class *base, Class::Index index = Class::Index::Foreign)
 	{
 		// Sanity checks.
 		static_assert(!(std::is_same<T, String>::value && traits::is_collectable<T>::value), "String is not collectable");
 		static_assert(!(std::is_same<T, File>::value && traits::is_collectable<T>::value), "File is not collectable");
 
 		using Type = typename traits::bare_type<T>::type;
-		auto klass = make_handle<Class>(this, name, base, &typeid(Type));
+		auto klass = make_handle<Class>(this, name, base, &typeid(Type), index);
 		classes.push_back(klass);
 		klass->set_object(classes.back().object());
 

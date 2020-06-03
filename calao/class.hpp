@@ -50,8 +50,30 @@ class Class final
 
 public:
 
+	enum class Index
+	{
+		Object,
+		Class,
+		Boolean,
+		Number,
+		Integer,
+		Float,
+		String,
+		Regex,
+		List,
+		Table,
+		File,
+		Function,
+		Closure,
+		Iterator,
+		ListIterator,
+		TableIterator,
+		StringIterator,
+		Foreign
+	};
 
-	Class(String name, Class *parent, const std::type_info *info);
+
+	Class(String name, Class *parent, const std::type_info *info, Index index = Index::Foreign);
 
 	Class(const Class &) = delete;
 
@@ -120,6 +142,9 @@ private:
 	// the top-most class, and is always Object. The last element is the class itself. This allows constant-time lookup
 	// using the class's inheritance depth.
 	std::vector<Class*> _bases;
+
+	// For debugging.
+	Index index;
 };
 
 

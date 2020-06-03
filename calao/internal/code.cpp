@@ -53,8 +53,11 @@ const char *opcode_names[] = {
 	"Negate",
 	"NewArray",
 	"NewFrame",
+	"NewIterator",
 	"NewList",
 	"NewTable",
+	"NextKey",
+	"NextValue",
 	"Not",
 	"NotEqual",
 	"Pop",
@@ -78,6 +81,7 @@ const char *opcode_names[] = {
 	"SetLocal",
 	"SetSignature",
 	"Subtract",
+	"TestIterator"
 };
 
 void Code::add_line(intptr_t line_no)

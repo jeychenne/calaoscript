@@ -22,10 +22,9 @@ namespace calao {
 
 class List final
 {
-	using Storage = Array<Variant>;
-
 public:
 
+	using Storage = Array<Variant>;
 	using iterator = Storage::iterator;
 	using const_iterator = Storage::const_iterator;
 
@@ -39,7 +38,7 @@ public:
 
 	List(Storage items) : _items(std::move(items)) { }
 
-	intptr_t size() { return _items.size(); }
+	intptr_t size() const { return _items.size(); }
 
 	Variant *data() { return _items.data(); }
 

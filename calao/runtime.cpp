@@ -86,10 +86,10 @@ void Runtime::create_builtins()
 {
 	// We need to boostrap the class system, since we are creating class instances but the class type doesn't exist
 	// yet. We can't create it first because it inherits from Object.
-	auto object_class = create_type<Object>("Object", nullptr);
+	auto object_class = create_type<Object>("Object", nullptr, Class::Index::Object);
 	auto raw_object_class = object_class.get();
 
-	auto class_class = create_type<Class>("Class", raw_object_class);
+	auto class_class = create_type<Class>("Class", raw_object_class, Class::Index::Class);
 	assert(class_class->inherits(raw_object_class));
 
 	assert(object_class.object()->get_class() == nullptr);
@@ -99,19 +99,25 @@ void Runtime::create_builtins()
 	class_class.object()->set_class(class_class.get());
 
 	// Create other builtin types.
-	auto bool_class = create_type<bool>("Boolean", raw_object_class);
-	auto num_class = create_type<Number>("Number", raw_object_class);
-	auto int_class = create_type<intptr_t>("Integer", num_class.get());
-	auto float_class = create_type<double>("Float", num_class.get());
-	auto string_class = create_type<String>("String", raw_object_class);
-	auto regex_class = create_type<Regex>("Regex", raw_object_class);
-	auto list_class = create_type<List>("List", raw_object_class);
-	auto table_class = create_type<Table>("Table", raw_object_class);
-	auto file_class = create_type<File>("File", raw_object_class);
+	auto bool_class = create_type<bool>("Boolean", raw_object_class, Class::Index::Boolean);
+	auto num_class = create_type<Number>("Number", raw_object_class, Class::Index::Number);
+	auto int_class = create_type<intptr_t>("Integer", num_class.get(), Class::Index::Integer);
+	auto float_class = create_type<double>("Float", num_class.get(), Class::Index::Float);
+	auto string_class = create_type<String>("String", raw_object_class, Class::Index::String);
+	auto regex_class = create_type<Regex>("Regex", raw_object_class, Class::Index::Regex);
+	auto list_class = create_type<List>("List", raw_object_class, Class::Index::List);
+	auto table_class = create_type<Table>("Table", raw_object_class, Class::Index::Table);
+	auto file_class = create_type<File>("File", raw_object_class, Class::Index::File);
 	// Function and Closure have the same name because the difference is an implementation detail.
-	create_type<Function>("Function", raw_object_class);
-	auto func_class = create_type<Closure>("Function", raw_object_class);
+	create_type<Function>("Function", raw_object_class, Class::Index::Function);
+	auto func_class = create_type<Closure>("Function", raw_object_class, Class::Index::Closure);
 //	create_type<Module>("Module", object_class);
+
+	// Iterators are currently not exposed to users.
+	create_type<Iterator>("Iterator", raw_object_class, Class::Index::Iterator);
+	create_type<ListIterator>("Iterator", raw_object_class, Class::Index::ListIterator);
+	create_type<TableIterator>("Iterator", raw_object_class, Class::Index::TableIterator);
+	create_type<StringIterator>("Iterator", raw_object_class, Class::Index::StringIterator);
 
 	// Sanity checks
 	assert(object_class.object()->get_class() != nullptr);
@@ -479,6 +485,13 @@ Variant Runtime::interpret(const Routine &routine)
 				CATCH_ERROR
 				break;
 			}
+			case Opcode::ClearLocal:
+			{
+				trace_op();
+				auto &v = current_frame->locals[*ip++];
+				v.clear();
+				break;
+			}
 			case Opcode::Compare:
 			{
 				trace_op();
@@ -759,6 +772,28 @@ Variant Runtime::interpret(const Routine &routine)
 				push_call_frame(*ip++);
 				break;
 			}
+			case Opcode::NewIterator:
+			{
+				trace_op();
+				int flags = *ip++;
+				bool with_val = flags & iterator_value_mask;
+				bool ref_val = flags & iterator_ref_mask;
+				auto v = std::move(peek());
+				pop();
+				if (check_type<List>(v)) {
+					push(make_handle<ListIterator>(std::move(v), with_val, ref_val));
+				}
+				else if (check_type<Table>(v)) {
+					push(make_handle<TableIterator>(std::move(v), with_val, ref_val));
+				}
+				else if (check_type<String>(v)) {
+					push(make_handle<StringIterator>(std::move(v), with_val, ref_val));
+				}
+				else {
+					RUNTIME_ERROR("Type % is not iterable", v.class_name());
+				}
+				break;
+			}
 			case Opcode::NewList:
 			{
 				trace_op();
@@ -787,6 +822,31 @@ Variant Runtime::interpret(const Routine &routine)
 				}
 				pop(narg);
 				push(make_handle<Table>(this, std::move(tab)));
+				break;
+			}
+			case Opcode::NextKey:
+			{
+				trace_op();
+				try {
+					auto v = std::move(peek());
+					pop();
+					auto &it = raw_cast<Iterator>(v);
+					push(it.get_key());
+				}
+				CATCH_ERROR
+				break;
+			}
+			case Opcode::NextValue:
+			{
+				trace_op();
+				try {
+					auto v = std::move(peek());
+					pop();
+					auto &it = raw_cast<Iterator>(v);
+					push(it.get_value());
+				}
+				CATCH_ERROR
+
 				break;
 			}
 			case Opcode::Not:
@@ -1012,6 +1072,15 @@ Variant Runtime::interpret(const Routine &routine)
 				math_op('-');
 				break;
 			}
+			case Opcode::TestIterator:
+			{
+				trace_op();
+				auto v = std::move(peek());
+				pop();
+				auto &it = raw_cast<Iterator>(v);
+				push(!it.at_end());
+				break;
+			}
 			default:
 				throw error("[Internal error] Invalid opcode: %", (int)op);
 		}
@@ -1067,6 +1136,13 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		{
 			int narg = routine.code[offset + 1];
 			printf("CALL           %-5d\n", narg);
+			return 2;
+		}
+		case Opcode::ClearLocal:
+		{
+			int index = routine.code[offset + 1];
+			String value = routine.get_local_name(index);
+			printf("CLEAR_LOCAL    %-5d     ; %s\n", index, value.data());
 			return 2;
 		}
 		case Opcode::Compare:
@@ -1246,6 +1322,12 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("NEW_FRAME      %-5d\n", nlocal);
 			return 2;
 		}
+		case Opcode::NewIterator:
+		{
+			bool ref_val = bool(routine.code[offset+1]);
+			printf("NEW_ITER       %-5d\n", ref_val);
+			return 2;
+		}
 		case Opcode::NewList:
 		{
 			int nlocal = routine.code[offset+1];
@@ -1257,6 +1339,14 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			int len = routine.code[offset+1];
 			printf("NEW_TABLE      %-5d\n", len);
 			return 2;
+		}
+		case Opcode::NextKey:
+		{
+			return print_simple_instruction("NEXT_KEY");
+		}
+		case Opcode::NextValue:
+		{
+			return print_simple_instruction("NEXT_VALUE");
 		}
 		case Opcode::Not:
 		{
@@ -1377,6 +1467,10 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		{
 			return print_simple_instruction("SUBTRACT");
 		}
+		case Opcode::TestIterator:
+		{
+			return print_simple_instruction("TEST_ITER");
+		}
 		default:
 			printf("Unknown opcode %d", static_cast<int>(op));
 	}
@@ -1413,7 +1507,11 @@ void Runtime::push_call_frame(int nlocal)
 	ensure_capacity(nlocal);
 	current_frame->locals = top;
 	current_frame->nlocal = nlocal;
-	top += nlocal;
+	int argc = current_routine->arg_count();
+	top += argc;
+	for (int i = argc; i < nlocal; i++) {
+		new (top++) Variant;
+	}
 }
 
 Variant Runtime::pop_call_frame()
