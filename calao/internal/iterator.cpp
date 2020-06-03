@@ -94,7 +94,7 @@ Variant StringIterator::get_value()
 {
 	assert(with_val);
 	if (ref_val) {
-		throw error("[Reference error] Cannot take a reference to a character in a string.\nHint: take the value by value, not by reference");
+		throw error("[Reference error] Cannot take a reference to a character in a string.\nHint: take the second loop variable by value, not by reference");
 	}
 	return str->next_grapheme(pos++);
 }

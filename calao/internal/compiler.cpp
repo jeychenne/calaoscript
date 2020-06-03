@@ -286,12 +286,17 @@ void Compiler::visit_declaration(Declaration *node)
 	{
 		try
 		{
-			auto index = add_local(ident->name);
-			// Locals don't need to be defined if they are null because they are automatically null-initialized by NewFrame.
 			if (!node->rhs.empty())
 			{
+				// Make we don't add the local before visiting the RHS, otherwise the RHS could reference the LHS which doesn't exist yet.
 				node->rhs.front()->visit(*this);
+				auto index = add_local(ident->name);
 				EMIT(Opcode::DefineLocal, index);
+			}
+			else
+			{
+				// Locals don't need to be defined if they are null because they are automatically null-initialized by NewFrame.
+				add_local(ident->name);
 			}
 		}
 		catch (std::runtime_error &e)
@@ -301,13 +306,13 @@ void Compiler::visit_declaration(Declaration *node)
 	}
 	else
 	{
-		auto index = routine->add_string_constant(ident->name);
 		if (node->rhs.empty()) {
 			EMIT(Opcode::PushNull);
 		}
 		else {
 			node->rhs.front()->visit(*this);
 		}
+		auto index = routine->add_string_constant(ident->name);
 		EMIT(Opcode::DefineGlobal, index);
 	}
 }

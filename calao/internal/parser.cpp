@@ -127,12 +127,13 @@ AutoAst Parser::parse_statement()
 	if (accept(Lexeme::Local))
 	{
 		while (accept(Lexeme::Eol)) { }
-		if (accept(Lexeme::Var)) {
-			return parse_declaration(true);
+		if (accept(Lexeme::Function)) {
+			return parse_function_declaration(true);
 		}
-		expect(Lexeme::Function, "or \"var\" after \"local\"");
-		return parse_function_declaration(true);
+		// "var" is optional after "local".
+		accept(Lexeme::Var);
 
+		return parse_declaration(true);
 	}
 	else if (accept(Lexeme::Var))
 	{

@@ -266,8 +266,8 @@ void Runtime::negate()
 
 void Runtime::math_op(char op)
 {
-	auto &v1 = peek(-2);
-	auto &v2 = peek(-1);
+	auto &v1 = peek(-2).resolve();
+	auto &v2 = peek(-1).resolve();
 	std::feclearexcept(FE_ALL_EXCEPT);
 
 	if (v1.is_number() && v2.is_number())
@@ -565,7 +565,7 @@ Variant Runtime::interpret(const Routine &routine)
 				auto name = routine.get_string(*ip++);
 				auto it = globals.find(name);
 				if (it == globals.end()) {
-					RUNTIME_ERROR("Undefined variable \"%\"", name);
+					RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
 				}
 				push(it->second.resolve());
 				break;
@@ -577,7 +577,7 @@ Variant Runtime::interpret(const Routine &routine)
 				bool by_ref = current_frame->ref_flags[*ip++];
 				auto it = globals.find(name);
 				if (it == globals.end()) {
-					RUNTIME_ERROR("Undefined variable \"%\"", name);
+					RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
 				}
 				if (by_ref)
 				{
@@ -596,7 +596,7 @@ Variant Runtime::interpret(const Routine &routine)
 				auto name = routine.get_string(*ip++);
 				auto it = globals.find(name);
 				if (it == globals.end()) {
-					RUNTIME_ERROR("Undefined variable \"%\"", name);
+					RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
 				}
 				it->second.unshare();
 				push(it->second.make_alias());
@@ -657,7 +657,7 @@ Variant Runtime::interpret(const Routine &routine)
 				auto name = routine.get_string(*ip++);
 				auto it = globals.find(name);
 				if (it == globals.end()) {
-					RUNTIME_ERROR("Undefined variable \"%\"", name);
+					RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
 				}
 				push(it->second.unshare());
 				break;
@@ -989,7 +989,7 @@ Variant Runtime::interpret(const Routine &routine)
 						globals.insert({name, std::move(v)});
 					}
 					else {
-						RUNTIME_ERROR("Undefined variable \"%\"", name);
+						RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
 					}
 				}
 				else
