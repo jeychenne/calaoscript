@@ -71,6 +71,8 @@ public:
 
 	~File();
 
+	bool readable() const;
+
 	bool writable() const;
 
 	File &operator=(File &&other) noexcept;

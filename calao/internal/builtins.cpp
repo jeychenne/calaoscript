@@ -115,7 +115,7 @@ void Runtime::set_global_namespace()
 	add_global("eof", file_eof, { CLS(File) });
 	auto file_class = Class::get<File>();
 	auto &v = (*globals)["open"];
-	file_class->set_initializer(v.handle<Function>());
+	file_class->add_initializer(v.handle<Function>());
 
 	// Table
 	add_global("contains", table_contains, { CLS(Table), CLS(Object) });

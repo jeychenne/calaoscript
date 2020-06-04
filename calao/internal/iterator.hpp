@@ -26,7 +26,7 @@ class Iterator
 {
 public:
 
-	explicit Iterator(Variant v, bool with_val, bool ref_val) : object(std::move(v)), with_val(with_val), ref_val(ref_val) { }
+	Iterator(Variant v, bool with_val, bool ref_val) : object(std::move(v)), with_val(with_val), ref_val(ref_val) { }
 
 	virtual ~Iterator() = default;
 
@@ -49,7 +49,7 @@ class ListIterator : public Iterator
 {
 public:
 
-	explicit ListIterator(Variant v, bool with_val, bool ref_val);
+	ListIterator(Variant v, bool with_val, bool ref_val);
 
 	Variant get_key() override;
 
@@ -69,7 +69,7 @@ class TableIterator : public Iterator
 {
 public:
 
-	explicit TableIterator(Variant v, bool with_val, bool ref_val);
+	TableIterator(Variant v, bool with_val, bool ref_val);
 
 	Variant get_key() override;
 
@@ -89,7 +89,7 @@ class StringIterator : public Iterator
 {
 public:
 
-	explicit StringIterator(Variant v, bool with_val, bool ref_val);
+	StringIterator(Variant v, bool with_val, bool ref_val);
 
 	Variant get_key() override;
 
@@ -100,6 +100,48 @@ public:
 private:
 
 	String *str;
+	intptr_t pos = 1;
+};
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+class RegexIterator : public Iterator
+{
+public:
+
+	RegexIterator(Variant v, bool with_val, bool ref_val);
+
+	Variant get_key() override;
+
+	Variant get_value() override;
+
+	bool at_end() const override;
+
+private:
+
+	Regex *re;
+	intptr_t pos = 1;
+};
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+class FileIterator : public Iterator
+{
+public:
+
+	FileIterator(Variant v, bool with_val, bool ref_val);
+
+	Variant get_key() override;
+
+	Variant get_value() override;
+
+	bool at_end() const override;
+
+private:
+
+	File *file;
 	intptr_t pos = 1;
 };
 

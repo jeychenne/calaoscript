@@ -32,6 +32,8 @@ class Iterator;
 class ListIterator;
 class TableIterator;
 class StringIterator;
+class FileIterator;
+class RegexIterator;
 
 // Dummy base class for Float and Integer
 class Number {};
@@ -56,6 +58,8 @@ NON_CYCLIC(Iterator);
 NON_CYCLIC(ListIterator);
 NON_CYCLIC(TableIterator);
 NON_CYCLIC(StringIterator);
+NON_CYCLIC(FileIterator);
+NON_CYCLIC(RegexIterator);
 
 #undef NON_CYCLIC
 

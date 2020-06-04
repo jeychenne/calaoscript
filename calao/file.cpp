@@ -577,6 +577,11 @@ void File::write_bom()
 	if (is_utf8()) fputs("\xef\xbb\xbf", m_handle);
 }
 
+bool File::readable() const
+{
+	return m_mode & Read;
+}
+
 bool File::writable() const
 {
     return m_mode & Write;

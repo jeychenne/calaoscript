@@ -13,6 +13,8 @@
  **********************************************************************************************************************/
 
 #include <calao/internal/iterator.hpp>
+#include <calao/regex.hpp>
+#include <calao/file.hpp>
 
 namespace calao {
 
@@ -102,5 +104,64 @@ Variant StringIterator::get_value()
 bool StringIterator::at_end() const
 {
 	return pos > str->grapheme_count();
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+RegexIterator::RegexIterator(Variant v, bool with_val, bool ref_val) : Iterator(std::move(v), with_val, ref_val)
+{
+	re = &raw_cast<Regex>(object.resolve());
+}
+
+Variant RegexIterator::get_key()
+{
+	return with_val ? pos : pos++;
+}
+
+Variant RegexIterator::get_value()
+{
+	assert(with_val);
+	if (ref_val) {
+		throw error("[Reference error] Cannot take a reference to a group in a regular expression.\nHint: take the second loop variable by value, not by reference");
+	}
+	return re->capture(pos++);
+}
+
+bool RegexIterator::at_end() const
+{
+	return pos > re->count();
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+FileIterator::FileIterator(Variant v, bool with_val, bool ref_val) : Iterator(std::move(v), with_val, ref_val)
+{
+	file = &raw_cast<File>(object.resolve());
+
+	if (!file->readable()) {
+		throw error("[Iterator error] Cannot iterate File object: the file is not readable");
+	}
+}
+
+Variant FileIterator::get_key()
+{
+	return with_val ? pos : pos++;
+}
+
+Variant FileIterator::get_value()
+{
+	assert(with_val);
+	if (ref_val) {
+		throw error("[Reference error] Cannot take a reference to a line in a file.\nHint: take the second loop variable by value, not by reference");
+	}
+
+	return file->read_line();
+}
+
+bool FileIterator::at_end() const
+{
+	return file->at_end();
 }
 } // namespace calao

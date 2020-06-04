@@ -51,6 +51,8 @@ public:
 		ListIterator,
 		TableIterator,
 		StringIterator,
+		FileIterator,
+		RegexIterator,
 		Foreign
 	};
 
@@ -94,7 +96,7 @@ public:
 
 	void add_initializer(NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref = ParamBitset());
 
-	void set_initializer(Handle<Function> f) { ctor = std::move(f); }
+	void add_initializer(Handle<Function> f) { ctor = std::move(f); }
 
 private:
 

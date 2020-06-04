@@ -50,7 +50,7 @@ void Class::add_initializer(NativeCallback cb, std::initializer_list<Handle<Clas
 		ctor->add_closure(make_handle<Closure>(std::make_shared<NativeRoutine>(init, std::move(cb), sig, ref)), false);
 	}
 	else {
-		set_initializer(make_handle<Function>(init, std::move(cb), sig, ref));
+		add_initializer(make_handle<Function>(init, std::move(cb), sig, ref));
 	}
 }
 

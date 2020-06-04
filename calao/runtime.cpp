@@ -122,6 +122,8 @@ void Runtime::create_builtins()
 	create_type<ListIterator>("Iterator", raw_object_class, Class::Index::ListIterator);
 	create_type<TableIterator>("Iterator", raw_object_class, Class::Index::TableIterator);
 	create_type<StringIterator>("Iterator", raw_object_class, Class::Index::StringIterator);
+	create_type<FileIterator>("Iterator", raw_object_class, Class::Index::FileIterator);
+	create_type<RegexIterator>("Iterator", raw_object_class, Class::Index::RegexIterator);
 
 	// Sanity checks
 	assert(object_class.object()->get_class() != nullptr);
@@ -796,6 +798,12 @@ Variant Runtime::interpret(Closure &closure)
 				}
 				else if (check_type<Table>(v)) {
 					push(make_handle<TableIterator>(std::move(v), with_val, ref_val));
+				}
+				else if (check_type<File>(v)) {
+					push(make_handle<FileIterator>(std::move(v), with_val, ref_val));
+				}
+				else if (check_type<Regex>(v)) {
+					push(make_handle<RegexIterator>(std::move(v), with_val, ref_val));
 				}
 				else if (check_type<String>(v)) {
 					push(make_handle<StringIterator>(std::move(v), with_val, ref_val));
