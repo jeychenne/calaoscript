@@ -6,53 +6,52 @@
  * this file except in compliance with the License. You may obtain a copy of the License at                           *
  * http://www.mozilla.org/MPL/.                                                                                       *
  *                                                                                                                    *
- * Created: 22/05/2020                                                                                                *
+ * Created: 04/06/2020                                                                                                *
  *                                                                                                                    *
- * Purpose: see header.                                                                                               *
+ * Purpose: a module provides a namespace for Calao code.                                                             *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#include <calao/class.hpp>
+#ifndef CALAO_MODULE_HPP
+#define CALAO_MODULE_HPP
+
+#include <calao/variant.hpp>
+#include <calao/dictionary.hpp>
 
 namespace calao {
 
-
-Class::Class(String name, Class *parent, const std::type_info *info, Index index) :
-	_name(std::move(name)), _info(info), _bases(parent ? parent->_bases : std::vector<Class*>()), index(index)
+class Module final
 {
-	_depth = _bases.size();
-	_bases.push_back(this);
-}
+public:
 
-bool Class::inherits(const Class *base) const
-{
-	return _bases[base->depth()] == base && base->depth() <= this->depth();
-}
+	using Storage = Dictionary<Variant>;
+	using iterator = Storage::iterator;
+	using value_type = Storage::value_type;
 
-int Class::get_distance(const Class *base) const
-{
-	return _bases[base->depth()] == base ? int(this->depth() - base->depth()) : -1;
-}
+	explicit Module(const String &name) : _name(name) { }
 
-Handle<Function> Class::get_constructor()
-{
-	if (!ctor) {
-		throw error("[Type errror] Class % is not constructible", name());
-	}
 
-	return ctor;
-}
+	String name() const { return _name; }
 
-void Class::add_initializer(NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref)
-{
-	static String init("init");
-	if (ctor) {
-		ctor->add_closure(make_handle<Closure>(std::make_shared<NativeRoutine>(init, std::move(cb), sig, ref)), false);
-	}
-	else {
-		set_initializer(make_handle<Function>(init, std::move(cb), sig, ref));
-	}
-}
+	Variant &operator[](const String &key) { return members[key]; }
 
+	iterator find(const String &key) { return members.find(key); }
+
+	iterator begin() { return members.begin(); }
+
+	iterator end() { return members.end(); }
+
+	void insert(value_type v) { members.insert(std::move(v)); }
+
+private:
+
+	friend class Runtime;
+
+	String _name;
+
+	Storage members;
+};
 
 } // namespace calao
+
+#endif // CALAO_MODULE_HPP

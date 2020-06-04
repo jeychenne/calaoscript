@@ -21,7 +21,7 @@
 #include <optional>
 #include <vector>
 #include <calao/typed_object.hpp>
-#include <calao/variant.hpp>
+#include <calao/internal/variant.hpp>
 #include <calao/internal/code.hpp>
 #include <calao/utils/span.hpp>
 
@@ -29,6 +29,7 @@ namespace calao {
 
 class Runtime;
 class Function;
+class Class;
 
 // Flags used to distinguish references and values in function signatures.
 static constexpr size_t PARAM_BITSET_SIZE = 64;
@@ -116,6 +117,18 @@ public:
 		int scope, depth;
 	};
 
+	// Represents a non-local variable referenced by an inner function.
+	struct Upvalue
+	{
+		// Index of the variable in the surrounding function.
+		Instruction index;
+
+		// If true, the captured upvalue is a local variable in the surrounding function; otherwise it is itself an upvalue
+		// that references a local or another upvalue in its surrounding function. All non-local upvalues eventually resolve to
+		// a local one.
+		bool is_local;
+	};
+
 	Routine(const String &name, int argc);
 
 	Routine(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
@@ -135,6 +148,8 @@ public:
 	Instruction add_local(const String &name, int scope, int depth);
 
 	std::optional<Instruction> find_local(const String &name, int scope_depth) const;
+
+	std::optional<Instruction> find_upvalue(const String &name, int scope_depth) const;
 
 	double get_float(intptr_t i) const { return float_pool[i]; }
 

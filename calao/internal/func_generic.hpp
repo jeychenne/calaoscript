@@ -17,6 +17,7 @@
 
 #include <calao/runtime.hpp>
 #include <calao/file.hpp>
+#include <calao/regex.hpp>
 
 namespace calao {
 
@@ -40,6 +41,9 @@ static Variant get_length(Runtime &, std::span<Variant> args)
 	}
 	else if (check_type<File>(v)) {
 		return raw_cast<File>(v).size();
+	}
+	else if (check_type<Regex>(v)) {
+		return raw_cast<Regex>(v).count();
 	}
 
 	throw error("[Type error] Cannot get length of % value", v.class_name());

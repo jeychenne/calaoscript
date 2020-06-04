@@ -13,6 +13,7 @@
  **********************************************************************************************************************/
 
 #include <cfenv>
+#include <calao/class.hpp>
 #include <calao/internal/compiler.hpp>
 #include <calao/internal/token.hpp>
 
@@ -373,6 +374,10 @@ void Compiler::visit_variable(Variable *node)
 		else {
 			EMIT(Opcode::GetLocal, *index);
 		}
+	}
+	else if ((index = routine->find_upvalue(node->name, scope_depth)))
+	{
+
 	}
 	else
 	{

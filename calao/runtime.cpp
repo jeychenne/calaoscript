@@ -63,7 +63,7 @@ calao::Runtime::~Runtime()
 	}
 	stack.clear();
 
-	for (auto &pair : globals) {
+	for (auto &pair : *globals) {
 		pair.second.finalize();
 	}
 	// Finalize classes manually: this is necessary because we must finalize Class last.
@@ -112,10 +112,10 @@ void Runtime::create_builtins()
 	auto list_class = create_type<List>("List", raw_object_class, Class::Index::List);
 	auto table_class = create_type<Table>("Table", raw_object_class, Class::Index::Table);
 	auto file_class = create_type<File>("File", raw_object_class, Class::Index::File);
+	auto module_class = create_type<Module>("Module", raw_object_class, Class::Index::Module);
 	// Function and Closure have the same name because the difference is an implementation detail.
 	create_type<Function>("Function", raw_object_class, Class::Index::Function);
 	auto func_class = create_type<Closure>("Function", raw_object_class, Class::Index::Closure);
-//	create_type<Module>("Module", object_class);
 
 	// Iterators are currently not exposed to users.
 	create_type<Iterator>("Iterator", raw_object_class, Class::Index::Iterator);
@@ -127,6 +127,8 @@ void Runtime::create_builtins()
 	assert(object_class.object()->get_class() != nullptr);
 	assert(class_class.object()->get_class() != nullptr);
 	assert((Class::get<Class>()) != nullptr);
+
+	globals = make_handle<Module>(this, "global");
 
 #define GLOB(T, h) add_global(Class::get_name<T>(), std::move(h));
 	GLOB(Object, object_class);
@@ -140,6 +142,7 @@ void Runtime::create_builtins()
 	GLOB(Table, table_class);
 	GLOB(File, file_class);
 	GLOB(Closure, func_class);
+	GLOB(Module, module_class);
 #undef GLOB
 }
 
@@ -452,14 +455,13 @@ Variant Runtime::interpret(Closure &closure)
 				int narg = flags & 255;
 
 				auto &v = peek(-narg - 1);
-				// Precall already check that we have a callable object.
-				assert(check_type<Function>(v));
-				auto func = v.resolve().handle<Function>();
+				// Precall already checked that we have a function object.
+				auto &func = raw_cast<Function>(v);
 				std::span<Variant> args(top - narg, narg);
 
 				try 
 				{
-					auto c = func->find_closure(args);
+					auto c = func.find_closure(args);
 					if (!c)
 					{
 						Array<String> types;
@@ -467,12 +469,12 @@ Variant Runtime::interpret(Closure &closure)
 							types.append(arg.class_name());
 						}
 						String candidates;
-						for (auto &c : func->closures) {
+						for (auto &c : func.closures) {
 							candidates.append(c->routine->get_definition());
 							candidates.append('\n');
 						}
 						RUNTIME_ERROR("Cannot resolve call to function '%' with the following argument types: (%).\nCandidates are:\n%",
-								func->name(), String::join(types, ", "), candidates);
+								func.name(), String::join(types, ", "), candidates);
 					}
 
 					if (c->routine->is_native())
@@ -536,11 +538,11 @@ Variant Runtime::interpret(Closure &closure)
 			{
 				trace_op();
 				auto name = routine.get_string(*ip++);
-				if (globals.find(name) != globals.end())
+				if (globals->find(name) != globals->end())
 				{
 					RUNTIME_ERROR("Global variable \"%\" is already defined", name);
 				}
-				globals.insert({name, std::move(peek())});
+				globals->insert({name, std::move(peek())});
 				pop();
 				break;
 			}
@@ -572,8 +574,8 @@ Variant Runtime::interpret(Closure &closure)
 			{
 				trace_op();
 				auto name = routine.get_string(*ip++);
-				auto it = globals.find(name);
-				if (it == globals.end()) {
+				auto it = globals->find(name);
+				if (it == globals->end()) {
 					RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
 				}
 				push(it->second.resolve());
@@ -584,8 +586,8 @@ Variant Runtime::interpret(Closure &closure)
 				trace_op();
 				auto name = routine.get_string(*ip++);
 				bool by_ref = current_frame->ref_flags[*ip++];
-				auto it = globals.find(name);
-				if (it == globals.end()) {
+				auto it = globals->find(name);
+				if (it == globals->end()) {
 					RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
 				}
 				if (by_ref)
@@ -603,8 +605,8 @@ Variant Runtime::interpret(Closure &closure)
 			{
 				trace_op();
 				auto name = routine.get_string(*ip++);
-				auto it = globals.find(name);
-				if (it == globals.end()) {
+				auto it = globals->find(name);
+				if (it == globals->end()) {
 					RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
 				}
 				it->second.unshare();
@@ -664,8 +666,8 @@ Variant Runtime::interpret(Closure &closure)
 			{
 				trace_op();
 				auto name = routine.get_string(*ip++);
-				auto it = globals.find(name);
-				if (it == globals.end()) {
+				auto it = globals->find(name);
+				if (it == globals->end()) {
 					RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
 				}
 				push(it->second.unshare());
@@ -892,11 +894,28 @@ Variant Runtime::interpret(Closure &closure)
 			{
 				trace_op();
 				auto &v = peek();
-				if (!check_type<Function>(v)) {
-					RUNTIME_ERROR("Expected a Function object, got a %", v.class_name());
+				Handle<Function> func;
+				if (check_type<Function>(v))
+				{
+					func = v.resolve().handle<Function>();
 				}
-				auto &func = cast<Function>(v);
-				current_frame->ref_flags = func.ref_flags;
+				else if (check_type<Class>(v))
+				{
+					// Replace the class with its constructor.
+					auto cls = v.handle<Class>();
+					pop();
+					try {
+						func = cls->get_constructor();
+						push(func);
+					}
+					CATCH_ERROR
+				}
+				else
+				{
+					RUNTIME_ERROR("Expected a Function or a Class, got a %", v.class_name());
+				}
+
+				current_frame->ref_flags = func->ref_flags;
 				break;
 			}
 			case Opcode::Print:
@@ -990,12 +1009,12 @@ Variant Runtime::interpret(Closure &closure)
 			{
 				trace_op();
 				auto name = routine.get_string(*ip++);
-				auto it = globals.find(name);
+				auto it = globals->find(name);
 				auto &v = peek();
-				if (it == globals.end())
+				if (it == globals->end())
 				{
 					if (check_type<Function>(v)) {
-						globals.insert({name, std::move(v)});
+						globals->insert({name, std::move(v)});
 					}
 					else {
 						RUNTIME_ERROR("[Symbol error] Undefined variable \"%\"", name);
@@ -1574,7 +1593,7 @@ Variant Runtime::pop_call_frame()
 
 void Runtime::add_global(String name, Variant value)
 {
-	globals.insert({ std::move(name), std::move(value) });
+	globals->insert({ std::move(name), std::move(value) });
 }
 
 Variant Runtime::interpret(Closure &closure, std::span<Variant> args)
@@ -1588,7 +1607,7 @@ Variant Runtime::interpret(Closure &closure, std::span<Variant> args)
 
 void Runtime::add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref)
 {
-	globals[name] = make_handle<Function>(name, std::move(cb), sig, ref);
+	(*globals)[name] = make_handle<Function>(name, std::move(cb), sig, ref);
 }
 
 void Runtime::get_index(bool by_ref)
@@ -1633,6 +1652,11 @@ bool Runtime::needs_reference() const
 void Runtime::clear()
 {
 	needs_ref = false;
+}
+
+Variant &Runtime::operator[](const String &key)
+{
+	return (*globals)[key];
 }
 
 } // namespace calao

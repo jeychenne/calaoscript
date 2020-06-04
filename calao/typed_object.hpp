@@ -17,8 +17,8 @@
 #define CALAO_TYPED_OBJECT_HPP
 
 #include <calao/object.hpp>
-#include <calao/class.hpp>
 #include <calao/traits.hpp>
+#include <calao/internal/class_descriptor.hpp>
 
 namespace calao {
 
@@ -45,13 +45,13 @@ public:
 	// Constructor for non collectable objects
 	template<typename ...Params>
 	explicit TObject(Params &&... params) :
-			base_type(Class::get<T>()), m_value(std::forward<Params>(params)...)
+			base_type(detail::ClassDescriptor<T>::get()), m_value(std::forward<Params>(params)...)
 	{ }
 
 	// Constructor for collectable objects
 	template<typename ...Params>
 	explicit TObject(Runtime *rt, Params &&... params) :
-			base_type(Class::get<T>(), rt), m_value(std::forward<Params>(params)...)
+			base_type(detail::ClassDescriptor<T>::get(), rt), m_value(std::forward<Params>(params)...)
 	{ }
 
 	~TObject() = default;
@@ -210,7 +210,7 @@ Handle<T> make_handle(Args... args)
 template<class T>
 Handle<Class> get_class()
 {
-	return Handle<Class>(reinterpret_cast<TObject<Class>*>(Class::get<T>()->object()));
+	return Handle<Class>(reinterpret_cast<TObject<Class>*>(detail::ClassDescriptor<T>::get()->object()));
 }
 
 } // namespace calao

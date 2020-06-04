@@ -141,6 +141,12 @@ std::optional<Instruction> Routine::find_local(const String &name, int scope_dep
 	return std::optional<Instruction>();
 }
 
+std::optional<Instruction> Routine::find_upvalue(const String &name, int scope_depth) const
+{
+
+	return std::optional<Instruction>();
+}
+
 int Routine::local_count() const
 {
 	return int(locals.size());

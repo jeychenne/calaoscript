@@ -17,6 +17,7 @@
 #include <calao/internal/func_string.hpp>
 #include <calao/internal/func_list.hpp>
 #include <calao/internal/func_table.hpp>
+#include <calao/internal/func_regex.hpp>
 
 #define CLS(T) get_class<T>()
 #define REF(bits) ParamBitset(bits)
@@ -112,6 +113,9 @@ void Runtime::set_global_namespace()
 	add_global("tell", file_tell, { CLS(File) });
 	add_global("seek", file_seek, { CLS(File), CLS(intptr_t) });
 	add_global("eof", file_eof, { CLS(File) });
+	auto file_class = Class::get<File>();
+	auto &v = (*globals)["open"];
+	file_class->set_initializer(v.handle<Function>());
 
 	// Table
 	add_global("contains", table_contains, { CLS(Table), CLS(Object) });
@@ -122,6 +126,18 @@ void Runtime::set_global_namespace()
 	add_global("remove", table_remove, { CLS(Table), CLS(Object) }, REF("01"));
 	add_global("get", table_get1, { CLS(Table), CLS(Object) });
 	add_global("get", table_get2, { CLS(Table), CLS(Object), CLS(Object) });
+
+	// Regex
+	auto regex_class = Class::get<Regex>();
+	regex_class->add_initializer(regex_new1, {CLS(String)});
+	regex_class->add_initializer(regex_new2, {CLS(String), CLS(String)});
+	add_global("match", regex_match1, { CLS(Regex), CLS(String) });
+	add_global("match", regex_match2, { CLS(Regex), CLS(String), CLS(intptr_t) });
+	add_global("has_match", regex_has_match, { CLS(Regex) });
+	add_global("count", regex_count, { CLS(Regex) });
+	add_global("group", regex_group, { CLS(Regex), CLS(intptr_t) });
+	add_global("get_start", regex_get_start, {CLS(Regex), CLS(intptr_t)});
+	add_global("get_end", regex_get_end, {CLS(Regex), CLS(intptr_t)});
 }
 
 } // namespace calao

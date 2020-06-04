@@ -19,34 +19,15 @@
 #include <typeinfo>
 #include <vector>
 #include <calao/string.hpp>
+#include <calao/typed_object.hpp>
+#include <calao/function.hpp>
+#include <calao/internal/variant.hpp>
 
 namespace calao {
 
 // Classes are objects too.
 class Class final
 {
-	// A template to keep track of classes known at compile time. This should not be accessed directly: use
-	// Class::get<T>() instead.
-	template<typename T>
-	struct Descriptor
-	{
-		static Class *get()
-		{
-			// Class is null while we are bootstrapping the class system. The runtime will check that we have a valid pointer for Class.
-			assert(isa || (std::is_same_v<T, Class>));
-			return isa;
-		}
-
-		static void set(Class *cls)
-		{
-			assert(isa == nullptr);
-			isa = cls;
-		}
-
-	private:
-
-		static Class *isa;
-	};
 
 public:
 
@@ -65,6 +46,7 @@ public:
 		File,
 		Function,
 		Closure,
+		Module,
 		Iterator,
 		ListIterator,
 		TableIterator,
@@ -95,7 +77,7 @@ public:
 	static Class *get()
 	{
 		using Type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-		return Descriptor<Type>::get();
+		return detail::ClassDescriptor<Type>::get();
 	}
 
 	template<class T>
@@ -107,6 +89,12 @@ public:
 	bool operator==(const Class &other) const { return this == &other; }
 
 	Object *object() { return _object; }
+
+	Handle<Function> get_constructor();
+
+	void add_initializer(NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref = ParamBitset());
+
+	void set_initializer(Handle<Function> f) { ctor = std::move(f); }
 
 private:
 
@@ -143,23 +131,20 @@ private:
 	// using the class's inheritance depth.
 	std::vector<Class*> _bases;
 
+	// Constructor
+	Handle<Function> ctor;
+
 	// For debugging.
 	Index index;
 };
 
 
-template<class T>
-Class *Class::Descriptor<T>::isa = nullptr;
-
 namespace meta {
 
 static inline
-String to_string(const Class &klass, bool quote, bool)
+String to_string(const Class &klass)
 {
-	auto s = String::format("<class %s>", klass.name().data());
-	if (quote) { s.prepend('"'); s.append('"'); }
-
-	return s;
+	return String::format("<class %s>", klass.name().data());
 }
 
 } // namespace calao::meta

@@ -6,53 +6,51 @@
  * this file except in compliance with the License. You may obtain a copy of the License at                           *
  * http://www.mozilla.org/MPL/.                                                                                       *
  *                                                                                                                    *
- * Created: 22/05/2020                                                                                                *
+ * Created: 04/06/2020                                                                                                *
  *                                                                                                                    *
- * Purpose: see header.                                                                                               *
+ * Purpose: manages classes known at compile time.                                                                    *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#include <calao/class.hpp>
+#ifndef CALAO_CLASS_DESCRIPTOR_HPP
+#define CALAO_CLASS_DESCRIPTOR_HPP
+
+#include <type_traits>
+#include <calao/definitions.hpp>
 
 namespace calao {
-
-
-Class::Class(String name, Class *parent, const std::type_info *info, Index index) :
-	_name(std::move(name)), _info(info), _bases(parent ? parent->_bases : std::vector<Class*>()), index(index)
-{
-	_depth = _bases.size();
-	_bases.push_back(this);
+class Class;
 }
 
-bool Class::inherits(const Class *base) const
-{
-	return _bases[base->depth()] == base && base->depth() <= this->depth();
-}
+namespace calao::detail {
 
-int Class::get_distance(const Class *base) const
-{
-	return _bases[base->depth()] == base ? int(this->depth() - base->depth()) : -1;
-}
 
-Handle<Function> Class::get_constructor()
+// A template to keep track of classes known at compile time. This should not be accessed directly: use
+// Class::get<T>() instead.
+template<typename T>
+struct ClassDescriptor
 {
-	if (!ctor) {
-		throw error("[Type errror] Class % is not constructible", name());
+	static Class *get()
+	{
+		// Class is null while we are bootstrapping the class system. The runtime will check that we have a valid pointer for Class.
+		assert(isa || (std::is_same_v<T, Class>));
+		return isa;
 	}
 
-	return ctor;
-}
-
-void Class::add_initializer(NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref)
-{
-	static String init("init");
-	if (ctor) {
-		ctor->add_closure(make_handle<Closure>(std::make_shared<NativeRoutine>(init, std::move(cb), sig, ref)), false);
+	static void set(Class *cls)
+	{
+		assert(isa == nullptr);
+		isa = cls;
 	}
-	else {
-		set_initializer(make_handle<Function>(init, std::move(cb), sig, ref));
-	}
-}
 
+private:
 
-} // namespace calao
+	static Class *isa;
+};
+
+template<class T>
+Class *ClassDescriptor<T>::isa = nullptr;
+
+} // namespace calao::detail
+
+#endif // CALAO_CLASS_DESCRIPTOR_HPP

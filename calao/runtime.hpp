@@ -24,12 +24,11 @@
 #include <calao/typed_object.hpp>
 #include <calao/internal/recycler.hpp>
 #include <calao/internal/iterator.hpp>
-#include <calao/variant.hpp>
 #include <calao/class.hpp>
 #include <calao/list.hpp>
 #include <calao/table.hpp>
 #include <calao/function.hpp>
-#include <calao/dictionary.hpp>
+#include <calao/module.hpp>
 #include <calao/internal/parser.hpp>
 #include <calao/internal/code.hpp>
 #include <calao/internal/compiler.hpp>
@@ -118,7 +117,7 @@ public:
 		klass->set_object(classes.back().object());
 
 		// Register statically known type so that we can call Class::get<T>() to retrieve a type's class.
-		Class::Descriptor<T>::set(klass.get());
+		detail::ClassDescriptor<T>::set(klass.get());
 
 		// Object is an abstract type
 		if constexpr (traits::is_boxed<T>::value && !std::is_same<T, Object>::value)
@@ -206,6 +205,8 @@ public:
 	void add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref = ParamBitset());
 
 	bool needs_reference() const;
+
+	Variant &operator[](const String &key);
 
 private:
 
@@ -301,7 +302,7 @@ private:
 	std::unordered_set<String> strings;
 
 	// Global variables.
-	Dictionary<Variant> globals;
+	Handle<Module> globals;
 
 	// Stack of call frames.
 	std::vector<std::unique_ptr<CallFrame>> frames;
