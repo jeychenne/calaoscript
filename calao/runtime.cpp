@@ -24,7 +24,7 @@
 #define CATCH_ERROR catch (std::runtime_error &e) { RUNTIME_ERROR(e.what()); }
 #define RUNTIME_ERROR(...) throw RuntimeError(get_current_line(), __VA_ARGS__)
 
-#if 0
+#if 1
 #	define trace_op() std::cerr << std::setw(6) << std::left << (ip-1-code->data()) << "\t" << std::setw(15) << Code::get_opcode_name(*(ip-1)) << "stack size = " << intptr_t(top - stack.data()) << std::endl;
 #else
 #	define trace_op()
@@ -57,6 +57,10 @@ Runtime::Runtime() :
 
 calao::Runtime::~Runtime()
 {
+	// Make sure we don't double free variants that have been destructed but are not null.
+	for (auto var = top; var < stack.end(); var++) {
+		new (var) Variant;
+	}
 	stack.clear();
 
 	for (auto &pair : globals) {
@@ -404,12 +408,13 @@ void Runtime::check_float_error()
 	}
 }
 
-Variant Runtime::interpret(const Routine &routine)
+Variant Runtime::interpret(Closure &closure)
 {
 	if (current_frame) {
 		current_frame->previous_routine = current_routine;
-
 	}
+	assert(!closure.routine->is_native());
+	Routine &routine = *(reinterpret_cast<Routine*>(closure.routine.get()));
 	current_routine = &routine;
 	code = &routine.code;
 	ip = routine.code.data();
@@ -441,35 +446,39 @@ Variant Runtime::interpret(const Routine &routine)
 			case Opcode::Call:
 			{
 				trace_op();
-				int narg = *ip++;
+				Instruction flags = *ip++;
+				// TODO: handle return by reference
+				needs_ref = flags & (1<<9);
+				int narg = flags & 255;
+
 				auto &v = peek(-narg - 1);
 				// Precall already check that we have a callable object.
 				assert(check_type<Function>(v));
-				auto func = v.handle<Function>();
+				auto func = v.resolve().handle<Function>();
 				std::span<Variant> args(top - narg, narg);
 
 				try 
 				{
-					auto r = func->find_routine(args);
-					if (!r)
+					auto c = func->find_closure(args);
+					if (!c)
 					{
 						Array<String> types;
 						for (auto &arg : args) {
 							types.append(arg.class_name());
 						}
 						String candidates;
-						for (auto &r : func->routines) {
-							candidates.append(r->get_definition());
+						for (auto &c : func->closures) {
+							candidates.append(c->routine->get_definition());
 							candidates.append('\n');
 						}
 						RUNTIME_ERROR("Cannot resolve call to function '%' with the following argument types: (%).\nCandidates are:\n%",
 								func->name(), String::join(types, ", "), candidates);
 					}
 
-					if (r->is_native())
+					if (c->routine->is_native())
 					{
 						try {
-							auto result = (*r)(*this, args);
+							auto result = (*c)(*this, args);
 							pop(narg + 1);
 							push(std::move(result));
 						}
@@ -478,10 +487,11 @@ Variant Runtime::interpret(const Routine &routine)
 					else
 					{
 						current_frame->ip = ip;
-						push((*r)(*this, args));
+						push((*c)(*this, args));
 					}
 				}
 				CATCH_ERROR
+				needs_ref = false;
 				break;
 			}
 			case Opcode::ClearLocal:
@@ -1106,6 +1116,13 @@ void Runtime::disassemble(const Routine &routine, const String &name)
 		printf("\n");
 		disassemble(*r, r->name());
 	}
+
+}
+
+void Runtime::disassemble(const Closure &closure, const String &name)
+{
+	auto &routine = *(reinterpret_cast<Routine*>(closure.routine.get()));
+	disassemble(routine, name);
 }
 
 size_t Runtime::print_simple_instruction(const char *name)
@@ -1479,11 +1496,12 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 
 void Runtime::do_file(const String &path)
 {
+	this->clear();
 	auto ast = parser.parse_file(path);
-	auto routine = compiler.compile(std::move(ast));
-	disassemble(*routine, "main");
+	auto closure = compiler.compile(std::move(ast));
+	disassemble(*closure, "main");
 	printf("--------------------------------------------------------\n");
-	auto v = interpret(*routine);
+	auto v = interpret(*closure);
 //	auto &map = cast<Table>(v).map();
 //	std::cout << "name: " << map["name"] << std::endl;
 //	std::cout << "age: " << map["age"] << std::endl;
@@ -1558,13 +1576,13 @@ void Runtime::add_global(String name, Variant value)
 	globals.insert({ std::move(name), std::move(value) });
 }
 
-Variant Runtime::interpret(const Routine &routine, std::span<Variant> args)
+Variant Runtime::interpret(Closure &closure, std::span<Variant> args)
 {
 	// The arguments are on top of the stack. We adjust the top of the stack accordingly.
 	top -= args.size();
 
 	// Now we can just interpret the routine. The first opcode wil be NewFrame.
-	return interpret(routine);
+	return interpret(closure);
 }
 
 void Runtime::add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref)
@@ -1604,6 +1622,16 @@ void Runtime::get_index(bool by_ref)
 	{
 		RUNTIME_ERROR("[Index error] Cannot index value of type %", v.class_name());
 	}
+}
+
+bool Runtime::needs_reference() const
+{
+	return needs_ref;
+}
+
+void Runtime::clear()
+{
+	needs_ref = false;
 }
 
 } // namespace calao

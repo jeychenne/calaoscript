@@ -74,7 +74,7 @@ NativeRoutine::NativeRoutine(const String &name, NativeCallback cb, std::initial
 
 }
 
-Variant NativeRoutine::call(Runtime &rt, std::span<Variant> args)
+Variant NativeRoutine::operator()(Runtime &rt, std::span<Variant> args)
 {
 	return callback(rt, args);
 }
@@ -151,24 +151,19 @@ Instruction Routine::add_routine(std::shared_ptr<Routine> r)
 	return add_constant(routine_pool, std::move(r));
 }
 
-Variant Routine::call(Runtime &rt, std::span<Variant> args)
-{
-	return rt.interpret(*this, args);
-}
-
 //----------------------------------------------------------------------------------------------------------------------
 
-Function::Function(String name, std::shared_ptr<Callable> r) :
+Function::Function(String name, Handle <Closure> c) :
 	Function(std::move(name))
 {
-	add_routine(std::move(r), true);
+	add_closure(std::move(c), true);
 }
 
-void Function::add_routine(std::shared_ptr<Callable> r, bool create)
+void Function::add_closure(Handle<Closure> c, bool create)
 {
-	// For user-defined functions, we don't have
-	if (std::find(routines.begin(), routines.end(), r) == routines.end())
+	if (std::find(closures.begin(), closures.end(), c) == closures.end())
 	{
+		auto r = c->routine.get();
 		// Check for *reference consistency*; that is, ensure that positional argument n is consistently passed by value
 		// or by reference for all routines in this function.
 		int argc = (std::min)(max_argc, r->arg_count());
@@ -180,10 +175,10 @@ void Function::add_routine(std::shared_ptr<Callable> r, bool create)
 						name(), i+1, ref_flags[i] ? "reference" : "value");
 			}
 		}
-		for (auto &cand : routines)
+		for (auto &cand : closures)
 		{
 			// FIXME: this doesn't work when a function with the same signature is redefined.
-			if (!create && r->signature == cand->signature) {
+			if (!create && r->signature == cand->routine->signature) {
 				throw error("[Type error] Function % is already defined in this scope", r->get_definition());
 			}
 		}
@@ -195,21 +190,22 @@ void Function::add_routine(std::shared_ptr<Callable> r, bool create)
 			this->ref_flags = rflags;
 			max_argc = r->arg_count();
 		}
-		routines.push_back(std::move(r));
+		closures.push_back(std::move(c));
 	}
 }
 
-std::shared_ptr<Callable> Function::find_routine(std::span<Variant> args)
+Handle<Closure> Function::find_closure(std::span<Variant> args)
 {
 	// We use the simplest implementation possible. It finds the routine with the cheapest cost, where cost is defined
 	// as the sum of the distances between each argument's type and the expected parameter type.
 	int best_cost = (std::numeric_limits<int>::max)() - 1; // We use INT_MAX for signatures that don't match
-	std::shared_ptr<Callable> candidate;
+	Handle<Closure> candidate;
 	bool conflict = false;
-	assert(!routines.empty());
+	assert(!closures.empty());
 
-	for (auto &r : routines)
+	for (auto &c : closures)
 	{
+		auto r = c->routine.get();
 		if (!r->check_arg_count(args.size())) continue;
 		int cost = r->get_cost(args);
 
@@ -217,7 +213,7 @@ std::shared_ptr<Callable> Function::find_routine(std::span<Variant> args)
 		{
 			conflict = (cost == best_cost);
 			best_cost = cost;
-			candidate = r;
+			candidate = c;
 		}
 	}
 
@@ -230,8 +226,9 @@ std::shared_ptr<Callable> Function::find_routine(std::span<Variant> args)
 
 		Array<String> signatures;
 
-		for (auto &r : routines)
+		for (auto &c : closures)
 		{
+			auto r = c->routine.get();
 			if (r->get_cost(args) == best_cost) {
 				signatures.append(r->get_definition());
 			}
@@ -246,8 +243,29 @@ std::shared_ptr<Callable> Function::find_routine(std::span<Variant> args)
 Function::Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags) :
 	Function(name)
 {
-	add_routine(std::make_shared<NativeRoutine>(name, std::move(cb), sig, ref_flags), true);
+	auto r = std::make_shared<NativeRoutine>(name, std::move(cb), sig, ref_flags);
+
+	add_closure(make_handle<Closure>(std::move(r)), true);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+Variant Closure::operator()(Runtime &rt, std::span<Variant> args)
+{
+	if (routine->is_native()) {
+		return call_native(rt, args);
+	}
+	else {
+		return call_user(rt, args);
+	}
+}
+
+Variant Closure::call_native(Runtime &rt, std::span<Variant> args)
+{
+	return (*reinterpret_cast<NativeRoutine*>(routine.get()))(rt, args);
+}
+
+Variant Closure::call_user(Runtime &rt, std::span<Variant> args)
+{
+	return rt.interpret(*this, args);
+}
 } // namespace calao

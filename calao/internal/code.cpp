@@ -22,6 +22,7 @@ const char *opcode_names[] = {
 	"Assert",
 	"Add",
 	"Call",
+	"ClearLocal",
 	"Compare",
 	"Concat",
 	"DecrementLocal",

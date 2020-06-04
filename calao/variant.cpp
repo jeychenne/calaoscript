@@ -77,7 +77,7 @@ Variant::~Variant()
 
 void Variant::retain()
 {
-	if (check_type<String>(*this))
+	if (this->is_string())
 	{
 		raw_cast<String>(*this).impl->retain();
 	}
@@ -93,7 +93,7 @@ void Variant::retain()
 
 void Variant::release()
 {
-	if (check_type<String>(*this))
+	if (this->is_string())
 	{
 		raw_cast<String>(*this).~String();
 	}
@@ -435,8 +435,8 @@ Variant &Variant::operator=(Variant other)
 
 		if (&f1 != &f2)
 		{
-			for (auto &r : f2.routines) {
-				f1.add_routine(r, false);
+			for (auto &r : f2.closures) {
+				f1.add_closure(r, false);
 			}
 		}
 	}

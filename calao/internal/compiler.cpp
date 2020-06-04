@@ -24,7 +24,7 @@ namespace calao {
 
 using Lexeme = Token::Lexeme;
 
-std::shared_ptr<Routine> Compiler::compile(AutoAst ast)
+Handle<Closure> Compiler::compile(AutoAst ast)
 {
 	initialize();
 	// dummy value to fill the slot occupied by the function. This slot is popped on return.
@@ -38,7 +38,7 @@ std::shared_ptr<Routine> Compiler::compile(AutoAst ast)
 	code->backpatch_instruction(offset, (Instruction)routine->local_count());
 	finalize();
 
-	return std::move(this->routine);
+	return make_handle<Closure>(std::move(this->routine));
 }
 
 void Compiler::initialize()
@@ -342,8 +342,13 @@ void Compiler::visit_call(CallExpression *node)
 	}
 	this->visit_arg = arg_flag;
 
+	// We can only pass 64 arguments to a function, so we use one byte of the instruction for the arguments
+	// and one byte for reference flag.
+	Instruction flag = node->return_reference ? (1 << 9) : 0;
+	auto narg = Instruction(node->args.size());
+
 	// Finally, make the call.
-	EMIT(Opcode::Call, Instruction(node->args.size()));
+	EMIT(Opcode::Call, narg|flag);
 }
 
 void Compiler::visit_variable(Variable *node)
@@ -755,7 +760,7 @@ void Compiler::visit_routine(RoutineDefinition *node)
 	close_scope(previous_scope);
 
 	auto index = outer_routine->add_routine(routine);
-	func->add_routine(std::move(routine), true);
+	func->add_closure(make_handle<Closure>(std::move(routine)), true);
 	set_routine(std::move(outer_routine));
 
 	// Compile type information in the outer routine.
@@ -827,10 +832,19 @@ void Compiler::visit_return_statement(ReturnStatement *node)
 
 void Compiler::visit_reference_expression(ReferenceExpression *node)
 {
-	auto flag = visiting_reference;
-	visiting_reference = true;
-	node->expr->visit(*this);
-	visiting_reference = flag;
+	auto call = dynamic_cast<CallExpression*>(node->expr.get());
+	if (call)
+	{
+		call->return_reference = true;
+		call->visit(*this);
+	}
+	else
+	{
+		auto flag = visiting_reference;
+		visiting_reference = true;
+		node->expr->visit(*this);
+		visiting_reference = flag;
+	}
 }
 
 void Compiler::visit_list(ListLiteral *node)

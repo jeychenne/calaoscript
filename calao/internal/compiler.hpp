@@ -29,7 +29,7 @@ public:
 
 	Compiler() = default;
 
-	std::shared_ptr<Routine> compile(AutoAst ast);
+	Handle<Closure> compile(AutoAst ast);
 
 	void visit_constant(ConstantLiteral *node) override;
 	void visit_integer(IntegerLiteral *node) override;

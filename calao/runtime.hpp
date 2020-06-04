@@ -186,10 +186,12 @@ public:
 
 	Variant & peek(int n = -1);
 
-	Variant interpret(const Routine &routine);
+	Variant interpret(Closure &closure);
 
 	// Call a user-defined function in Opcode::Call.
-	Variant interpret(const Routine &routine, std::span<Variant> args);
+	Variant interpret(Closure &closure, std::span<Variant> args);
+
+	void disassemble(const Closure &closure, const String &name);
 
 	void disassemble(const Routine &routine, const String &name);
 
@@ -200,6 +202,8 @@ public:
 	void add_global(String name, Variant value);
 
 	void add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref = ParamBitset());
+
+	bool needs_reference() const;
 
 private:
 
@@ -222,6 +226,8 @@ private:
 	};
 
 	friend class Collectable;
+
+	void clear();
 
 	void add_candidate(Collectable *obj);
 
@@ -299,6 +305,9 @@ private:
 	std::vector<std::unique_ptr<CallFrame>> frames;
 
 	CallFrame *current_frame = nullptr;
+
+	// Flag to let functions know whether a reference is requested.
+	bool needs_ref = false;
 
 	// Global initialization.
 	static bool initialized;

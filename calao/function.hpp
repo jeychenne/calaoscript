@@ -66,8 +66,6 @@ public:
 
 	String name() const { return _name; }
 
-	Variant operator()(Runtime &rt, std::span<Variant> args) { return call(rt, args); }
-
 	int get_cost(std::span<Variant> args) const;
 
 	String get_definition() const;
@@ -75,8 +73,6 @@ public:
 protected:
 
 	friend class Function;
-
-	virtual Variant call(Runtime &rt, std::span<Variant> args) = 0;
 
 	// Type of positional arguments.
 	std::vector<Handle<Class>> signature;
@@ -103,7 +99,7 @@ struct NativeRoutine final : public Callable
 
 	NativeCallback callback;
 
-	Variant call(Runtime &rt, std::span<Variant> args) override;
+	Variant operator()(Runtime &rt, std::span<Variant> args);
 };
 
 
@@ -161,8 +157,6 @@ private:
 
 	// Bytecode.
 	Code code;
-
-	Variant call(Runtime &rt, std::span<Variant> args) override;
 
 	void clear_signature() { signature.clear(); }
 
@@ -224,13 +218,25 @@ private:
 
 //----------------------------------------------------------------------------------------------------------------------
 
-// Instantiation of a Routine that capture over its environment.
+// Instantiation of a Callable that captures over its environment.
 class Closure final
 {
 public:
 
+	explicit Closure(std::shared_ptr<Callable> r) : routine(std::move(r)) { }
+
+	Variant operator()(Runtime &rt, std::span<Variant> args);
+
 private:
 
+	friend class Runtime;
+	friend class Function;
+
+	Variant call_native(Runtime &rt, std::span<Variant> args);
+
+	Variant call_user(Runtime &rt, std::span<Variant> args);
+
+	std::shared_ptr<Callable> routine;
 };
 
 
@@ -251,15 +257,15 @@ public:
 
 	Function(Function &&) noexcept = default;
 
-	Function(String name, std::shared_ptr<Callable> r);
+	Function(String name, Handle <Closure> c);
 
 	Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags = 0);
 
 	String name() const { return _name; }
 
-	void add_routine(std::shared_ptr<Callable> r, bool create);
+	void add_closure(Handle<Closure> r, bool create);
 
-	std::shared_ptr<Callable> find_routine(std::span<Variant> args);
+	Handle<Closure> find_closure(std::span<Variant> args);
 
 	ParamBitset reference_flags() const { return ref_flags; }
 
@@ -272,7 +278,7 @@ private:
 	String _name;
 
 	// Each function signature is represented by a different routine, which may be native or user-defined.
-	std::vector<std::shared_ptr<Callable>> routines;
+	std::vector<Handle<Closure>> closures;
 
 	ParamBitset ref_flags;
 

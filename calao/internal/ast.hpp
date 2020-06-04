@@ -323,6 +323,7 @@ struct CallExpression final : public Ast
 
 	AutoAst expr;
 	AstList args;
+	bool return_reference = false; // flag for the compiler
 };
 
 struct ReturnStatement final : public Ast

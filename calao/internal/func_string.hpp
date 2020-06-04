@@ -215,7 +215,7 @@ static Variant string_trim(Runtime &, std::span<Variant> args)
 static Variant string_ltrim(Runtime &, std::span<Variant> args)
 {
 	auto &s1 = raw_cast<String>(args[0]);
-	s1.trim();
+	s1.ltrim();
 
 	return Variant();
 }
@@ -223,7 +223,7 @@ static Variant string_ltrim(Runtime &, std::span<Variant> args)
 static Variant string_rtrim(Runtime &, std::span<Variant> args)
 {
 	auto &s1 = raw_cast<String>(args[0]);
-	s1.trim();
+	s1.rtrim();
 
 	return Variant();
 }
