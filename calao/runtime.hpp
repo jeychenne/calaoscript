@@ -195,7 +195,9 @@ public:
 
 	void disassemble(const Routine &routine, const String &name);
 
-	void do_file(const String &path);
+	Variant do_file(const String &path);
+
+	Handle<Closure> compile_file(const String &path);
 
 	String intern_string(const String &s);
 

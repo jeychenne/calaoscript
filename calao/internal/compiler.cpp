@@ -608,7 +608,7 @@ void Compiler::visit_foreach_statement(ForeachStatement *node)
 	// Create the loop variables.
 	auto ident = dynamic_cast<Variable*>(node->key.get());
 	auto key_index = add_local(ident->name);
-	Instruction val_index;
+	Instruction val_index = (std::numeric_limits<Instruction>::max)();
 	bool ref_val = false;
 	AutoAst val_expr;
 	if (node->value)

@@ -18,63 +18,64 @@
 
 using namespace calao;
 
-int main()
+int main(int argc, char *argv[])
 {
-	Runtime rt;
-
 	try
 	{
-		rt.do_file("/home/julien/Temp/hello.calao");
+		Runtime rt;
+
+		if (argc > 2)
+		{
+			String option(argv[1]), path(argv[2]);
+
+			if (option == "-l") // list
+			{
+				auto closure = rt.compile_file(path);
+				rt.disassemble(*closure, "main");
+			}
+			else if (option == "-r") // run
+			{
+				rt.do_file(path);
+			}
+			else if (option == "-a") // all
+			{
+				auto closure = rt.compile_file(path);
+				rt.disassemble(*closure, "main");
+				puts("-------------------------------------------------------------------\n");
+				rt.interpret(*closure);
+//				auto &map = cast<Table>(v).map();
+//				std::cout << "name: " << map["name"] << std::endl;
+//				std::cout << "age: " << map["age"] << std::endl;
+			}
+			else
+			{
+				throw error("Unrecognized option '%'\n", option);
+			}
+
+		}
+		else if (argc > 1)
+		{
+			String path(argv[1]);
+			rt.do_file(path);
+		}
+		else
+		{
+			std::cout << "Usage: program [option] file" << std::endl;
+			std::cout << "Options: " << std::endl;
+			std::cout << " -l\t(list)\tlist bytecode (disassemble) file" << std::endl;
+			std::cout << " -r\t(run)\texecute file" << std::endl;
+			std::cout << " -a\t(all)\tdisassemble and execute file" << std::endl;
+		}
+
 	}
 	catch (RuntimeError &e) {
 		std::cerr << "Line " << e.line_no() << ": " << e.what() << std::endl;
+		return 1;
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
+		return 1;
 	}
-
-//	Code code;
-//	auto i = code.add_float_constant(3.14);
-//	code.emit(1, Opcode::PushFloat, i);
-//	code.add_string_constant("hello");
-//	i = code.add_string_constant("world");
-//	code.emit(124, Opcode::PushString, i);
-//	code.emit(124, Opcode::PushBoolean, 1);
-//	code.emit(125, Opcode::PushSmallInt, 413);
-//	code.emit(125, Opcode::Negate);
-//	i = code.add_integer_constant(8);
-//	code.emit(125, Opcode::PushInteger, i);
-//	code.emit(125, Opcode::Add);
-//	code.emit(126, Opcode::PushSmallInt, 0);
-//	code.emit(126, Opcode::Divide);
-//	code.emit(130, Opcode::Return);
-//
-//	try
-//	{
-//		rt.disassemble(code, "test");
-//		rt.interpret(code);
-//		auto &v = rt.peek();
-//		std::cout << cast<intptr_t>(v) << std::endl;
-//	}
-//	catch (std::exception &e) {
-//		std::cerr << e.what() << std::endl;
-//	}
-
-//	Variant v("hello, world!");
-//	intptr_t i = 141;
-//	Variant n(i);
-//	Variant pi(3.14);
-//	Handle<List> lst = rt.create<List>(8);
-//	std::cout << "cap: " << lst->capacity() << std::endl;
-//	Handle<File> f = rt.create<File>("/home/julien/TODO_11");
-//	std::cout << f->read_line() << std::endl;
-//
-//	try {
-//		std::cout << cast<String>(pi) << std::endl;
-//	}
-//	catch (std::exception &e) {
-//		std::cerr << e.what() << std::endl;
-//	}
 
 	return 0;
 }

@@ -24,7 +24,7 @@
 #define CATCH_ERROR catch (std::runtime_error &e) { RUNTIME_ERROR(e.what()); }
 #define RUNTIME_ERROR(...) throw RuntimeError(get_current_line(), __VA_ARGS__)
 
-#if 1
+#if 0
 #	define trace_op() std::cerr << std::setw(6) << std::left << (ip-1-code->data()) << "\t" << std::setw(15) << Code::get_opcode_name(*(ip-1)) << "stack size = " << intptr_t(top - stack.data()) << std::endl;
 #else
 #	define trace_op()
@@ -1494,17 +1494,18 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 	return 1;
 }
 
-void Runtime::do_file(const String &path)
+Handle<Closure> Runtime::compile_file(const String &path)
 {
 	this->clear();
 	auto ast = parser.parse_file(path);
-	auto closure = compiler.compile(std::move(ast));
-	disassemble(*closure, "main");
-	printf("--------------------------------------------------------\n");
-	auto v = interpret(*closure);
-//	auto &map = cast<Table>(v).map();
-//	std::cout << "name: " << map["name"] << std::endl;
-//	std::cout << "age: " << map["age"] << std::endl;
+
+	return compiler.compile(std::move(ast));
+}
+
+Variant Runtime::do_file(const String &path)
+{
+	auto closure = compile_file(path);
+	return interpret(*closure);
 }
 
 int Runtime::get_current_line() const
