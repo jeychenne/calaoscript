@@ -788,25 +788,23 @@ Variant Runtime::interpret(Closure &closure)
 			case Opcode::NewIterator:
 			{
 				trace_op();
-				int flags = *ip++;
-				bool with_val = flags & iterator_value_mask;
-				bool ref_val = flags & iterator_ref_mask;
+				bool ref_val = bool(*ip++);
 				auto v = std::move(peek());
 				pop();
 				if (check_type<List>(v)) {
-					push(make_handle<ListIterator>(std::move(v), with_val, ref_val));
+					push(make_handle<ListIterator>(std::move(v), ref_val));
 				}
 				else if (check_type<Table>(v)) {
-					push(make_handle<TableIterator>(std::move(v), with_val, ref_val));
+					push(make_handle<TableIterator>(std::move(v), ref_val));
 				}
 				else if (check_type<File>(v)) {
-					push(make_handle<FileIterator>(std::move(v), with_val, ref_val));
+					push(make_handle<FileIterator>(std::move(v), ref_val));
 				}
 				else if (check_type<Regex>(v)) {
-					push(make_handle<RegexIterator>(std::move(v), with_val, ref_val));
+					push(make_handle<RegexIterator>(std::move(v), ref_val));
 				}
 				else if (check_type<String>(v)) {
-					push(make_handle<StringIterator>(std::move(v), with_val, ref_val));
+					push(make_handle<StringIterator>(std::move(v), ref_val));
 				}
 				else {
 					RUNTIME_ERROR("Type % is not iterable", v.class_name());
@@ -929,18 +927,26 @@ Variant Runtime::interpret(Closure &closure)
 			case Opcode::Print:
 			{
 				trace_op();
-				auto s = peek().to_string();
-				utils::printf(s);
-				pop();
+				int narg = *ip++;
+				for (int i = narg; i > 0; i--)
+				{
+					auto s = peek(-i).to_string();
+					utils::printf(s);
+				}
+				pop(narg);
 				break;
 			}
 			case Opcode::PrintLine:
 			{
 				trace_op();
-				auto s = peek().to_string();
-				utils::printf(s);
+				int narg = *ip++;
+				for (int i = narg; i > 0; i--)
+				{
+					auto s = peek(-i).to_string();
+					utils::printf(s);
+				}
 				printf("\n");
-				pop();
+				pop(narg);
 				break;
 			}
 			case Opcode::PushBoolean:
@@ -1413,11 +1419,16 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		}
 		case Opcode::Print:
 		{
-			return print_simple_instruction("PRINT");
+			int narg = routine.code[offset+1];
+			printf("PRINT         %-5d\n", narg);
+			return 2;
 		}
 		case Opcode::PrintLine:
 		{
-			return print_simple_instruction("PRINT_LINE");
+			int narg = routine.code[offset+1];
+			printf("PRINT_LINE    %-5d\n", narg);
+			return 2;
+
 		}
 		case Opcode::PushBoolean:
 		{

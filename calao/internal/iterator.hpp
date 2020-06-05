@@ -26,7 +26,7 @@ class Iterator
 {
 public:
 
-	Iterator(Variant v, bool with_val, bool ref_val) : object(std::move(v)), with_val(with_val), ref_val(ref_val) { }
+	Iterator(Variant v, bool ref_val) : object(std::move(v)), ref_val(ref_val) { }
 
 	virtual ~Iterator() = default;
 
@@ -39,7 +39,6 @@ public:
 protected:
 
 	Variant object;
-	bool with_val;
 	bool ref_val;
 };
 
@@ -49,7 +48,7 @@ class ListIterator : public Iterator
 {
 public:
 
-	ListIterator(Variant v, bool with_val, bool ref_val);
+	ListIterator(Variant v, bool ref_val);
 
 	Variant get_key() override;
 
@@ -69,7 +68,7 @@ class TableIterator : public Iterator
 {
 public:
 
-	TableIterator(Variant v, bool with_val, bool ref_val);
+	TableIterator(Variant v, bool ref_val);
 
 	Variant get_key() override;
 
@@ -89,7 +88,7 @@ class StringIterator : public Iterator
 {
 public:
 
-	StringIterator(Variant v, bool with_val, bool ref_val);
+	StringIterator(Variant v, bool ref_val);
 
 	Variant get_key() override;
 
@@ -110,7 +109,7 @@ class RegexIterator : public Iterator
 {
 public:
 
-	RegexIterator(Variant v, bool with_val, bool ref_val);
+	RegexIterator(Variant v, bool ref_val);
 
 	Variant get_key() override;
 
@@ -131,7 +130,7 @@ class FileIterator : public Iterator
 {
 public:
 
-	FileIterator(Variant v, bool with_val, bool ref_val);
+	FileIterator(Variant v, bool ref_val);
 
 	Variant get_key() override;
 

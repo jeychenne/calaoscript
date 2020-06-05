@@ -51,9 +51,7 @@ static constexpr bool is_arch64 = (pointer_size == 8);
 static constexpr double largest_integer = 9007199254740992;
 static constexpr double smallest_integer = -9007199254740992;
 
-static constexpr unsigned iterator_value_mask = 1;
-static constexpr unsigned iterator_ref_mask = 2;
-
+// Forward declarations.
 class Object;
 class Collectable;
 

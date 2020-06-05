@@ -210,11 +210,11 @@ struct Declaration final : public Ast
 
 struct PrintStatement final : public Ast
 {
-	PrintStatement(int line, AutoAst e, bool new_line) : Ast(line), expr(std::move(e)), new_line(new_line) { }
+	PrintStatement(int line, AstList lst, bool new_line) : Ast(line), list(std::move(lst)), new_line(new_line) { }
 
 	void visit(AstVisitor &v) override;
 
-	AutoAst expr;
+	AstList list;
 	bool new_line;
 };
 

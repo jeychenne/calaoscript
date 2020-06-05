@@ -320,9 +320,11 @@ void Compiler::visit_declaration(Declaration *node)
 
 void Compiler::visit_print_statement(PrintStatement *node)
 {
-	node->expr->visit(*this);
+	for (auto &e : node->list) {
+		e->visit(*this);
+	}
 	Opcode op = node->new_line ? Opcode::PrintLine : Opcode::Print;
-	EMIT(op);
+	EMIT(op, Instruction(node->list.size()));
 }
 
 void Compiler::visit_call(CallExpression *node)
@@ -610,34 +612,35 @@ void Compiler::visit_foreach_statement(ForeachStatement *node)
 	int previous_continue_count = continue_count;
 	break_count = continue_count = 0;
 
-	// Create the loop variables.
-	auto ident = dynamic_cast<Variable*>(node->key.get());
-	auto key_index = add_local(ident->name);
-	Instruction val_index = (std::numeric_limits<Instruction>::max)();
-	bool ref_val = false;
-	AutoAst val_expr;
-	if (node->value)
+	// Create the loop variables. The key is optional, the value is always there.
+	auto key_index = (std::numeric_limits<Instruction>::max)();
+	if (node->key)
 	{
-		ReferenceExpression *re;
-		if ((re = dynamic_cast<ReferenceExpression*>(node->value.get())))
-		{
-			ref_val = true;
-			val_expr = std::move(re->expr);
-		}
-		else
-		{
-			val_expr = std::move(node->value);
-		}
-		auto val_ident = dynamic_cast<Variable*>(val_expr.get());
-		val_index = add_local(val_ident->name);
+		auto ident = dynamic_cast<Variable*>(node->key.get());
+		key_index = add_local(ident->name);
 	}
+	Instruction val_index;
+	bool ref_val = false;
+	bool has_key = bool(node->key);
+	ReferenceExpression *re;
+	AutoAst val_expr;
+	if ((re = dynamic_cast<ReferenceExpression*>(node->value.get())))
+	{
+		ref_val = true;
+		val_expr = std::move(re->expr);
+	}
+	else
+	{
+		val_expr = std::move(node->value);
+	}
+	auto val_ident = dynamic_cast<Variable*>(val_expr.get());
+	val_index = add_local(val_ident->name);
+
 	auto iter_index = add_local(iter_name);
 
 	// Create the iterator.
 	node->collection->visit(*this);
-	unsigned flags = ref_val ? iterator_ref_mask : 0;
-	if (val_expr) flags |= iterator_value_mask;
-	EMIT(Opcode::NewIterator, Instruction(flags));
+	EMIT(Opcode::NewIterator, Instruction(ref_val));
 	EMIT(Opcode::DefineLocal, iter_index);
 
 	// The loop starts here.
@@ -646,17 +649,17 @@ void Compiler::visit_foreach_statement(ForeachStatement *node)
 	EMIT(Opcode::TestIterator);
 	auto jump_end = code->emit_jump(node->line_no, Opcode::JumpFalse);
 	// We need to clear the key and value in case they contain a reference.
-	EMIT(Opcode::ClearLocal, key_index);
-	if (val_expr) EMIT(Opcode::ClearLocal, val_index);
-	EMIT(Opcode::GetLocal, iter_index);
-	EMIT(Opcode::NextKey);
-	EMIT(Opcode::SetLocal, key_index);
-	if (val_expr)
+	if (has_key) EMIT(Opcode::ClearLocal, key_index);
+	EMIT(Opcode::ClearLocal, val_index);
+	if (has_key)
 	{
 		EMIT(Opcode::GetLocal, iter_index);
-		EMIT(Opcode::NextValue);
-		EMIT(Opcode::SetLocal, val_index);
+		EMIT(Opcode::NextKey);
+		EMIT(Opcode::SetLocal, key_index);
 	}
+	EMIT(Opcode::GetLocal, iter_index);
+	EMIT(Opcode::NextValue);
+	EMIT(Opcode::SetLocal, val_index);
 
 	// Visit body.
 	node->block->visit(*this);

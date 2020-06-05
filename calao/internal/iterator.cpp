@@ -26,20 +26,18 @@ Variant Iterator::get_value()
 
 //---------------------------------------------------------------------------------------------------------------------
 
-ListIterator::ListIterator(Variant v, bool with_val, bool ref_val) : Iterator(std::move(v), with_val, ref_val), pos(1)
+ListIterator::ListIterator(Variant v, bool ref_val) : Iterator(std::move(v), ref_val), pos(1)
 {
 	lst = &raw_cast<List>(object.resolve()).items();
 }
 
 Variant ListIterator::get_key()
 {
-	return with_val ? pos : pos++;
+	return pos;
 }
 
 Variant ListIterator::get_value()
 {
-	// We always increment pos without checking with_val because if with_val is false, this function will never be called.
-	assert(with_val);
 	auto &value = (*lst)[pos++];
 	if (ref_val) value.make_alias();
 
@@ -54,20 +52,19 @@ bool ListIterator::at_end() const
 
 //---------------------------------------------------------------------------------------------------------------------
 
-TableIterator::TableIterator(Variant v, bool with_val, bool ref_val) :
-	Iterator(v, with_val, ref_val), it(raw_cast<Table>(v.resolve()).map().begin())
+TableIterator::TableIterator(Variant v, bool ref_val) :
+	Iterator(v, ref_val), it(raw_cast<Table>(v.resolve()).map().begin())
 {
 	map = &raw_cast<Table>(object.resolve()).map();
 }
 
 Variant TableIterator::get_key()
 {
-	return with_val ? it->first : (it++)->first;
+	return it->first;
 }
 
 Variant TableIterator::get_value()
 {
-	assert(with_val);
 	auto &value = (it++)->second;
 	if (ref_val) value.make_alias();
 
@@ -82,19 +79,18 @@ bool TableIterator::at_end() const
 
 //---------------------------------------------------------------------------------------------------------------------
 
-StringIterator::StringIterator(Variant v, bool with_val, bool ref_val) : Iterator(std::move(v), with_val, ref_val)
+StringIterator::StringIterator(Variant v, bool ref_val) : Iterator(std::move(v), ref_val)
 {
 	str = &raw_cast<String>(object.resolve());
 }
 
 Variant StringIterator::get_key()
 {
-	return with_val ? pos : pos++;
+	return pos;
 }
 
 Variant StringIterator::get_value()
 {
-	assert(with_val);
 	if (ref_val) {
 		throw error("[Reference error] Cannot take a reference to a character in a string.\nHint: take the second loop variable by value, not by reference");
 	}
@@ -109,19 +105,18 @@ bool StringIterator::at_end() const
 
 //---------------------------------------------------------------------------------------------------------------------
 
-RegexIterator::RegexIterator(Variant v, bool with_val, bool ref_val) : Iterator(std::move(v), with_val, ref_val)
+RegexIterator::RegexIterator(Variant v, bool ref_val) : Iterator(std::move(v), ref_val)
 {
 	re = &raw_cast<Regex>(object.resolve());
 }
 
 Variant RegexIterator::get_key()
 {
-	return with_val ? pos : pos++;
+	return pos;
 }
 
 Variant RegexIterator::get_value()
 {
-	assert(with_val);
 	if (ref_val) {
 		throw error("[Reference error] Cannot take a reference to a group in a regular expression.\nHint: take the second loop variable by value, not by reference");
 	}
@@ -136,7 +131,7 @@ bool RegexIterator::at_end() const
 
 //---------------------------------------------------------------------------------------------------------------------
 
-FileIterator::FileIterator(Variant v, bool with_val, bool ref_val) : Iterator(std::move(v), with_val, ref_val)
+FileIterator::FileIterator(Variant v, bool ref_val) : Iterator(std::move(v), ref_val)
 {
 	file = &raw_cast<File>(object.resolve());
 
@@ -147,12 +142,11 @@ FileIterator::FileIterator(Variant v, bool with_val, bool ref_val) : Iterator(st
 
 Variant FileIterator::get_key()
 {
-	return with_val ? pos : pos++;
+	return pos++;
 }
 
 Variant FileIterator::get_value()
 {
-	assert(with_val);
 	if (ref_val) {
 		throw error("[Reference error] Cannot take a reference to a line in a file.\nHint: take the second loop variable by value, not by reference");
 	}

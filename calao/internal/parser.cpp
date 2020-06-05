@@ -228,10 +228,20 @@ AutoAst Parser::parse_if_block()
 AutoAst Parser::parse_print_statement()
 {
 	trace_ast();
-	auto e = parse_expression();
-	bool add_newline = !accept(Lexeme::Comma);
+	AstList lst;
+	bool add_newline = true;
+	lst.push_back(parse_expression());
+	while (accept(Lexeme::Comma))
+	{
+		if (accept(Lexeme::Eol))
+		{
+			add_newline = false;
+			break;
+		}
+		lst.push_back(parse_expression());
+	}
 
-	return make<PrintStatement>(std::move(e), add_newline);
+	return make<PrintStatement>(std::move(lst), add_newline);
 }
 
 AutoAst Parser::parse_expression_statement()
@@ -666,6 +676,10 @@ AutoAst Parser::parse_foreach_statement()
 		else {
 			val = parse_identifier(hint);
 		}
+	}
+	else
+	{
+		std::swap(key, val);
 	}
 	expect(Lexeme::In, hint);
 	auto coll = parse_expression();
