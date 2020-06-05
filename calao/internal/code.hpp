@@ -66,6 +66,7 @@ enum class Opcode : Instruction
 	NewFrame,
 	NewIterator,
 	NewList,
+	NewSet,
 	NewTable,
 	NextKey,
 	NextValue,

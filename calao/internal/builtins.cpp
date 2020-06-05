@@ -18,6 +18,7 @@
 #include <calao/internal/func_list.hpp>
 #include <calao/internal/func_table.hpp>
 #include <calao/internal/func_regex.hpp>
+#include <calao/internal/func_set.hpp>
 
 #define CLS(T) get_class<T>()
 #define REF(bits) ParamBitset(bits)
@@ -138,6 +139,13 @@ void Runtime::set_global_namespace()
 	add_global("group", regex_group, { CLS(Regex), CLS(intptr_t) });
 	add_global("get_start", regex_get_start, {CLS(Regex), CLS(intptr_t)});
 	add_global("get_end", regex_get_end, {CLS(Regex), CLS(intptr_t)});
+
+	// Set
+	add_global("contains", set_contains, { CLS(Set), CLS(Object) });
+	add_global("insert", set_insert, { CLS(Set), CLS(Object) }, REF("01"));
+	add_global("remove", set_remove, { CLS(Set), CLS(Object) }, REF("01"));
+	add_global("is_empty", set_is_empty, { CLS(Set) });
+	add_global("clear", set_clear, { CLS(Set) }, REF("1"));
 }
 
 } // namespace calao

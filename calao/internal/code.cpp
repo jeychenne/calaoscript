@@ -56,6 +56,7 @@ const char *opcode_names[] = {
 	"NewFrame",
 	"NewIterator",
 	"NewList",
+	"NewSet",
 	"NewTable",
 	"NextKey",
 	"NextValue",

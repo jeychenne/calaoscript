@@ -6,99 +6,72 @@
  * this file except in compliance with the License. You may obtain a copy of the License at                           *
  * http://www.mozilla.org/MPL/.                                                                                       *
  *                                                                                                                    *
- * Created: 20/02/2019                                                                                                *
+ * Created: 05/06/2019                                                                                                *
  *                                                                                                                    *
- * Purpose: Table type (dynamic hash table).                                                                          *
+ * Purpose: Set type (ordered set).                                                                                   *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#ifndef CALAO_TABLE_HPP
-#define CALAO_TABLE_HPP
+#ifndef CALAO_SET_HPP
+#define CALAO_SET_HPP
 
-#include <calao/hashmap.hpp>
+#include <set>
 #include <calao/variant.hpp>
 
 namespace calao {
 
-
-class Table final
+class Set final
 {
 public:
 
-	using Storage = Hashmap<Variant, Variant>;
+	using Storage = std::set<Variant>;
 	using iterator = Storage::iterator;
-	using const_iterator = Storage::const_iterator;
 
-	Table() = default;
+	Set() = default;
 
-	Table(Storage dat) : _map(std::move(dat)) { }
+	Set(Storage items) : _items(std::move(items)) { }
 
-	Table(Table &&) = default;
+	Set(const Set &other);
 
-	Table(const Table &other);
+	Set(Set &&other) = default;
 
-	Storage &data() { return _map; }
+	iterator begin() { return _items.begin(); }
 
-	intptr_t size() const { return intptr_t(_map.size()); }
+	iterator end() { return _items.end(); }
 
-	Variant &get(const Variant &key);
+	Storage &items() { return _items; }
 
 	String to_string() const;
 
-	String to_json() const;
-
 	void traverse(const GCCallback &callback);
 
-	Array<Variant> keys() const
-	{
-		Array<Variant> result;
-		result.reserve(_map.size());
+	bool contains(const Variant &v) const { return _items.find(v) != _items.end(); }
 
-		for (auto &it : _map) {
-			result.append(it.first);
-		}
-
-		return result;
-	}
-
-	Array<Variant> values() const
-	{
-		Array<Variant> result;
-		result.reserve(_map.size());
-
-		for (auto &it : _map) {
-			result.append(it.second);
-		}
-
-		return result;
-	}
-
-	Storage &map() { return _map; }
-
-	const Storage &map() const { return _map; }
+	intptr_t size() const { return intptr_t(_items.size()); }
 
 private:
 
-	Storage _map;
+	Storage _items;
 	mutable bool seen = false;
 };
+
 
 
 //---------------------------------------------------------------------------------------------------------------------
 
 namespace meta {
 
-static inline void traverse(Table &tab, const GCCallback &callback)
+static inline void traverse(Set &set, const GCCallback &callback)
 {
-	tab.traverse(callback);
+	set.traverse(callback);
 }
 
 
-static inline String to_string(const Table &tab)
+static inline String to_string(const Set &set)
 {
-	return tab.to_string();
+	return set.to_string();
 }
 } // namespace calao::meta
 } // namespace calao
 
-#endif // CALAO_TABLE_HPP
+#endif // CALAO_SET_HPP

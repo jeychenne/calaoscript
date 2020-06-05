@@ -27,6 +27,7 @@
 #include <calao/class.hpp>
 #include <calao/list.hpp>
 #include <calao/table.hpp>
+#include <calao/set.hpp>
 #include <calao/function.hpp>
 #include <calao/module.hpp>
 #include <calao/internal/parser.hpp>

@@ -117,6 +117,7 @@ void Runtime::create_builtins()
 	// Function and Closure have the same name because the difference is an implementation detail.
 	create_type<Function>("Function", raw_object_class, Class::Index::Function);
 	auto func_class = create_type<Closure>("Function", raw_object_class, Class::Index::Closure);
+	auto set_class = create_type<Set>("Set", raw_object_class, Class::Index::Set);
 
 	// Iterators are currently not exposed to users.
 	create_type<Iterator>("Iterator", raw_object_class, Class::Index::Iterator);
@@ -146,6 +147,7 @@ void Runtime::create_builtins()
 	GLOB(File, file_class);
 	GLOB(Closure, func_class);
 	GLOB(Module, module_class);
+	GLOB(Set, set_class);
 #undef GLOB
 }
 
@@ -842,6 +844,18 @@ Variant Runtime::interpret(Closure &closure)
 				push(make_handle<Table>(this, std::move(tab)));
 				break;
 			}
+			case Opcode::NewSet:
+			{
+				trace_op();
+				int narg = *ip++;
+				Set::Storage set;
+				for (int i = narg; i > 0; i--) {
+					set.insert(std::move(peek(-i)));
+				}
+				pop(narg);
+				push(make_handle<Set>(this, std::move(set)));
+				break;
+			}
 			case Opcode::NextKey:
 			{
 				trace_op();
@@ -1400,6 +1414,12 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("NEW_TABLE      %-5d\n", len);
 			return 2;
 		}
+		case Opcode::NewSet:
+		{
+			int nlocal = routine.code[offset+1];
+			printf("NEW_SET        %-5d\n", nlocal);
+			return 2;
+		}
 		case Opcode::NextKey:
 		{
 			return print_simple_instruction("NEXT_KEY");
@@ -1437,7 +1457,7 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		case Opcode::PrintLine:
 		{
 			int narg = routine.code[offset+1];
-			printf("PRINT_LINE    %-5d\n", narg);
+			printf("PRINT_LINE     %-5d\n", narg);
 			return 2;
 
 		}

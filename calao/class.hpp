@@ -43,6 +43,7 @@ public:
 		Regex,
 		List,
 		Table,
+		Set,
 		File,
 		Function,
 		Closure,

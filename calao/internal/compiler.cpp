@@ -916,6 +916,14 @@ void Compiler::visit_throw_statement(ThrowStatement *node)
 	EMIT(Opcode::Throw);
 }
 
+void Compiler::visit_set(SetLiteral *node)
+{
+	for (auto &e : node->values) {
+		e->visit(*this);
+	}
+	EMIT(Opcode::NewSet, Instruction(node->values.size()));
+}
+
 } // namespace calao
 
 #undef VISIT

@@ -829,20 +829,35 @@ AutoAst Parser::parse_table_literal()
 	}
 	AstList keys, values;
 	keys.push_back(parse_expression());
-	expect(Lexeme::Colon, hint);
-	values.push_back(parse_expression());
 
-	while (accept(Lexeme::Comma))
+	if (accept(Lexeme::Colon))
 	{
-		skip_empty_lines();
-		keys.push_back(parse_expression());
-		expect(Lexeme::Colon, hint);
 		values.push_back(parse_expression());
-	}
-	skip_empty_lines();
-	expect(Lexeme::RCurl, hint);
 
-	return std::make_unique<TableLiteral>(line, std::move(keys), std::move(values));
+		while (accept(Lexeme::Comma))
+		{
+			skip_empty_lines();
+			keys.push_back(parse_expression());
+			expect(Lexeme::Colon, hint);
+			values.push_back(parse_expression());
+		}
+		skip_empty_lines();
+		expect(Lexeme::RCurl, hint);
+
+		return std::make_unique<TableLiteral>(line, std::move(keys), std::move(values));
+	}
+	else
+	{
+		while (accept(Lexeme::Comma))
+		{
+			skip_empty_lines();
+			keys.push_back(parse_expression());
+		}
+		skip_empty_lines();
+		expect(Lexeme::RCurl, "in set literal");
+
+		return std::make_unique<SetLiteral>(line, std::move(keys));
+	}
 }
 
 void Parser::parse_option()

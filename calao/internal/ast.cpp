@@ -162,5 +162,10 @@ void RepeatStatement::visit(AstVisitor &v)
 {
 	VISIT(repeat_statement);
 }
+
+void SetLiteral::visit(AstVisitor &v)
+{
+	VISIT(set);
+}
 } // namespace calao
 #undef VISIT

@@ -37,6 +37,7 @@ public:
 	void visit_string(StringLiteral *node) override;
 	void visit_list(ListLiteral *node) override;
 	void visit_table(TableLiteral *node) override;
+	void visit_set(SetLiteral *node) override;
 	void visit_unary(UnaryExpression *node) override;
 	void visit_binary(BinaryExpression *node) override;
 	void visit_statements(StatementList *node) override;
