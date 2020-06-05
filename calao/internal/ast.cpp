@@ -157,5 +157,10 @@ void ThrowStatement::visit(AstVisitor &v)
 {
 	VISIT(throw_statement);
 }
+
+void RepeatStatement::visit(AstVisitor &v)
+{
+	VISIT(repeat_statement);
+}
 } // namespace calao
 #undef VISIT

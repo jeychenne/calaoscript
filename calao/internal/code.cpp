@@ -128,11 +128,16 @@ void Code::emit_return()
 
 void Code::backpatch(int at)
 {
+	backpatch(at, get_current_offset());
+}
+
+void Code::backpatch(int at, int value)
+{
 	// If this fails, adjust the following code, as well as read_integer() and emit_jump().
 	static_assert(IntSerializer::IntSize == 2);
-	IntSerializer s = { .value = get_current_offset() };
+	IntSerializer s = { .value = value };
 	code[at] = s.ins[0];
- 	code[at + 1] = s.ins[1];
+	code[at + 1] = s.ins[1];
 }
 
 int Code::read_integer(const Instruction *&ip)
@@ -169,6 +174,5 @@ const char *Code::get_opcode_name(Instruction op)
 {
 	return opcode_names[op];
 }
-
 
 } // namespace calao

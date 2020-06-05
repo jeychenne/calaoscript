@@ -116,7 +116,7 @@ private:
 
 	AutoAst parse_call_expression();
 
-	AutoAst parse_new_expression();
+	AutoAst parse_ref_expression();
 
 	AutoAst parse_primary_expression();
 
@@ -137,6 +137,8 @@ private:
 	AutoAst parse_if_block();
 
 	AutoAst parse_while_statement();
+
+	AutoAst parse_repeat_statement();
 
 	AutoAst parse_for_statement();
 

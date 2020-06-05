@@ -171,6 +171,10 @@ AutoAst Parser::parse_statement()
 	{
 		return parse_return_statement();
 	}
+	else if (accept(Lexeme::Repeat))
+	{
+		return parse_repeat_statement();
+	}
 	else if (accept(Lexeme::Break))
 	{
 		return make<LoopExitStatement>(Lexeme::Break);
@@ -431,7 +435,7 @@ AutoAst Parser::parse_exponential_expression()
 AutoAst Parser::parse_call_expression()
 {
 	trace_ast();
-	auto e = parse_new_expression();
+	auto e = parse_ref_expression();
 
 	LOOP:
 	if (accept(Lexeme::Dot))
@@ -455,10 +459,9 @@ AutoAst Parser::parse_call_expression()
 	return e;
 }
 
-AutoAst Parser::parse_new_expression()
+AutoAst Parser::parse_ref_expression()
 {
 	trace_ast();
-	// TODO: new and function
 	if (accept(Lexeme::Ref)) {
 		return make<ReferenceExpression>(parse_expression());
 	}
@@ -570,6 +573,7 @@ AstList Parser::parse_parameters()
 
 AutoAst Parser::parse_parameter()
 {
+	trace_ast();
 	bool by_ref = accept(Lexeme::Ref);
 	auto var = parse_identifier("in parameter list");
 	AutoAst type;
@@ -582,6 +586,7 @@ AutoAst Parser::parse_parameter()
 
 AutoAst Parser::parse_assertion()
 {
+	trace_ast();
 	auto e = parse_expression();
 	AutoAst msg;
 
@@ -595,6 +600,7 @@ AutoAst Parser::parse_assertion()
 
 AutoAst Parser::parse_concat_expression(AutoAst e)
 {
+	trace_ast();
 	AstList lst;
 	lst.push_back(std::move(e));
 	lst.push_back(parse_multiplicative_expression());
@@ -608,6 +614,7 @@ AutoAst Parser::parse_concat_expression(AutoAst e)
 
 AutoAst Parser::parse_if_statement()
 {
+	trace_ast();
 	AstList ifs;
 	AutoAst else_block;
 	auto line = get_line();
@@ -632,6 +639,7 @@ AutoAst Parser::parse_if_statement()
 
 AutoAst Parser::parse_while_statement()
 {
+	trace_ast();
 	auto line = get_line();
 	auto e = parse_expression();
 	expect(Lexeme::Do, "in while statement");
@@ -640,8 +648,28 @@ AutoAst Parser::parse_while_statement()
 	return std::make_unique<WhileStatement>(line, std::move(e), std::move(block));
 }
 
+
+AutoAst Parser::parse_repeat_statement()
+{
+	trace_ast();
+	auto line = get_line();
+	AstList block;
+	skip_empty_lines();
+	while (!accept(Lexeme::Until))
+	{
+		block.push_back(parse_statement());
+		while (token.is_separator()) accept();
+	}
+	// The compiler we create the scope so that the until condition is in the same scope as the block.
+	auto body = std::make_unique<StatementList>(line, std::move(block), false);
+	auto cond = parse_expression();
+
+	return std::make_unique<RepeatStatement>(line, std::move(cond), std::move(body));
+}
+
 AutoAst Parser::parse_for_statement()
 {
+	trace_ast();
 	constexpr const char *hint = "in for loop";
 	auto line = get_line();
 	AutoAst e1, e2, e3;
@@ -678,6 +706,7 @@ AutoAst Parser::parse_for_statement()
 
 AutoAst Parser::parse_foreach_statement()
 {
+	trace_ast();
 	constexpr const char *hint = "in foreach loop";
 	auto line = get_line();
 	auto key = parse_identifier(hint);
@@ -742,6 +771,7 @@ AutoAst Parser::parse_function_declaration(bool local)
 
 AutoAst Parser::parse_return_statement()
 {
+	trace_ast();
 	AutoAst e;
 
 	if (!token.is_separator())
@@ -754,7 +784,8 @@ AutoAst Parser::parse_return_statement()
 
 AutoAst Parser::parse_member_expression()
 {
-	auto e = parse_new_expression();
+	trace_ast();
+	auto e = parse_ref_expression();
 
 	while (accept(Lexeme::Dot))
 	{
@@ -766,6 +797,7 @@ AutoAst Parser::parse_member_expression()
 
 AutoAst Parser::parse_list_literal()
 {
+	trace_ast();
 	auto line = get_line();
 	skip_empty_lines();
 	if (accept(Lexeme::RSquare)) {
@@ -788,6 +820,7 @@ AutoAst Parser::parse_list_literal()
 
 AutoAst Parser::parse_table_literal()
 {
+	trace_ast();
 	constexpr const char *hint = "in table literal";
 	auto line = get_line();
 	skip_empty_lines();
@@ -814,6 +847,7 @@ AutoAst Parser::parse_table_literal()
 
 void Parser::parse_option()
 {
+	trace_ast();
 	if (!token.is(Lexeme::StringLiteral) || token.spelling != "debug")
 	{
 		auto msg = utils::format("Invalid option: expected \"debug\", got %", token.spelling);
@@ -841,6 +875,7 @@ void Parser::parse_option()
 
 AutoAst Parser::parse_debug_statement()
 {
+	trace_ast();
 	auto line = get_line();
 	AutoAst body = accept(Lexeme::Eol) ? parse_statements(true) : parse_statement();
 
@@ -849,6 +884,7 @@ AutoAst Parser::parse_debug_statement()
 
 AutoAst Parser::parse_throw_statement()
 {
+	trace_ast();
 	return make<ThrowStatement>(parse_expression());
 }
 

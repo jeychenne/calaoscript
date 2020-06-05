@@ -537,11 +537,33 @@ void Compiler::visit_while_statement(WhileStatement *node)
 	int loop_start = code->get_current_offset();
 	node->cond->visit(*this);
 	int exit_jump = code->emit_jump(node->line_no, Opcode::JumpFalse);
-	node->block->visit(*this);
+	node->body->visit(*this);
 	backpatch_continues(previous_continue_count);
 	code->emit_jump(node->line_no, Opcode::Jump, loop_start);
 	code->backpatch(exit_jump);
 	backpatch_breaks(previous_break_count);
+}
+
+void Compiler::visit_repeat_statement(RepeatStatement *node)
+{
+	auto scope = open_scope();
+	int previous_break_count = break_count;
+	int previous_continue_count = continue_count;
+	break_count = continue_count = 0;
+	int loop_start = code->get_current_offset();
+	node->body->visit(*this);
+	node->cond->visit(*this);
+	code->emit_jump(node->line_no, Opcode::JumpFalse, loop_start);
+
+	backpatch_breaks(previous_break_count);
+	for (int i = 0; i < continue_count; i++)
+	{
+		int addr = continue_jumps.back();
+		continue_jumps.pop_back();
+		code->backpatch(addr, loop_start);
+	}
+	continue_count = previous_continue_count;
+	close_scope(scope);
 }
 
 void Compiler::visit_for_statement(ForStatement *node)

@@ -54,6 +54,7 @@ public:
 	void visit_if_condition(IfCondition *node) override;
 	void visit_if_statement(IfStatement *node) override;
 	void visit_while_statement(WhileStatement *node) override;
+	void visit_repeat_statement(RepeatStatement *node) override;
 	void visit_for_statement(ForStatement *node) override;
 	void visit_foreach_statement(ForeachStatement *node) override;
 	void visit_loop_exit(LoopExitStatement *node) override;

@@ -62,11 +62,12 @@ calao::Runtime::~Runtime()
 		new (var) Variant;
 	}
 	stack.clear();
+	globals.drop()->release();
 
-	for (auto &pair : *globals) {
-		pair.second.finalize();
-	}
 	// Finalize classes manually: this is necessary because we must finalize Class last.
+	for (auto &cls : classes) {
+		cls->finalize();
+	}
 	for (size_t i = classes.size(); i-- > 2; )
 	{
 		auto ptr = classes[i].drop();

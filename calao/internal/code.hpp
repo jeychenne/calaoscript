@@ -148,6 +148,8 @@ public:
 
 	void backpatch(int at);
 
+	void backpatch(int at, int value);
+
 	int emit_jump(intptr_t line_no, Opcode jmp);
 
 	int emit_jump(intptr_t line_no, Opcode jmp, int addr);

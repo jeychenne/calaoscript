@@ -59,6 +59,7 @@ struct Token final
 		Pass,
 		Print,
 		Ref,
+		Repeat,
 		Return,
 		Step,
 		Super,

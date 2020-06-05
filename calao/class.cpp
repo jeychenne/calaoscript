@@ -54,5 +54,10 @@ void Class::add_initializer(NativeCallback cb, std::initializer_list<Handle<Clas
 	}
 }
 
+void Class::finalize()
+{
+	auto f = ctor.drop();
+	if (f) f->release();
+}
 
 } // namespace calao

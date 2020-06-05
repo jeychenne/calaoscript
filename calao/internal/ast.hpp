@@ -270,11 +270,20 @@ struct IfStatement final : public Ast
 
 struct WhileStatement final : public Ast
 {
-	WhileStatement(int line, AutoAst e, AutoAst block) : Ast(line), cond(std::move(e)), block(std::move(block)) { }
+	WhileStatement(int line, AutoAst e, AutoAst block) : Ast(line), cond(std::move(e)), body(std::move(block)) { }
 
 	void visit(AstVisitor &v) override;
 
-	AutoAst cond, block;
+	AutoAst cond, body;
+};
+
+struct RepeatStatement final : public Ast
+{
+	RepeatStatement(int line, AutoAst e, AutoAst block) : Ast(line), cond(std::move(e)), body(std::move(block)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst cond, body;
 };
 
 struct ForStatement final : public Ast
@@ -384,6 +393,7 @@ public:
 	virtual void visit_if_condition(IfCondition *node) = 0;
 	virtual void visit_if_statement(IfStatement *node) = 0;
 	virtual void visit_while_statement(WhileStatement *node) = 0;
+	virtual void visit_repeat_statement(RepeatStatement *node) = 0;
 	virtual void visit_for_statement(ForStatement *node) = 0;
 	virtual void visit_foreach_statement(ForeachStatement *node) = 0;
 	virtual void visit_loop_exit(LoopExitStatement *node) = 0;

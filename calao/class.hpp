@@ -114,6 +114,9 @@ private:
 
 	void set_object(Object *o) { _object = o; }
 
+	// We need to manually finalize members that refer to a class before classes are finalized by the runtime's destructor.
+	void finalize();
+
 	// Name given to the class when it was created
 	String _name;
 

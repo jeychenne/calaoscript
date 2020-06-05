@@ -54,6 +54,7 @@ static Array<String> token_names = {
         "pass",
         "print",
         "ref",
+        "repeat",
         "return",
         "step",
         "super",
