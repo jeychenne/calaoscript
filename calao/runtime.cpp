@@ -38,7 +38,7 @@ bool Runtime::initialized = false;
 
 
 Runtime::Runtime() :
-		stack(STACK_SIZE, Variant()), parser(this)
+		stack(STACK_SIZE, Variant()), parser(this), compiler(this)
 {
 	srand(time(nullptr));
 
@@ -1123,6 +1123,16 @@ Variant Runtime::interpret(Closure &closure)
 				push(!it.at_end());
 				break;
 			}
+			case Opcode::Throw:
+			{
+				String msg;
+				try {
+					msg = peek().to_string();
+					pop();
+				}
+				CATCH_ERROR
+				RUNTIME_ERROR("[Runtime error] %", msg);
+			}
 			default:
 				throw error("[Internal error] Invalid opcode: %", (int)op);
 		}
@@ -1525,6 +1535,10 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		{
 			return print_simple_instruction("TEST_ITER");
 		}
+		case Opcode::Throw:
+		{
+			return print_simple_instruction("THROW");
+		}
 		default:
 			printf("Unknown opcode %d", static_cast<int>(op));
 	}
@@ -1677,6 +1691,17 @@ Variant &Runtime::operator[](const String &key)
 {
 	return (*globals)[key];
 }
+
+bool Runtime::debug_mode() const
+{
+	return debugging;
+}
+
+void Runtime::set_debug_mode(bool value)
+{
+	debugging = value;
+}
+
 
 } // namespace calao
 

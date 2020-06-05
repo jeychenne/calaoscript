@@ -92,7 +92,8 @@ enum class Opcode : Instruction
 	SetLocal,
 	SetSignature,
 	Subtract,
-	TestIterator
+	TestIterator,
+	Throw
 };
 
 

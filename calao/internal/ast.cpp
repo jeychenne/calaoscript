@@ -147,5 +147,15 @@ void ForeachStatement::visit(AstVisitor &v)
 {
 	VISIT(foreach_statement);
 }
+
+void DebugStatement::visit(AstVisitor &v)
+{
+	VISIT(debug_statement);
+}
+
+void ThrowStatement::visit(AstVisitor &v)
+{
+	VISIT(throw_statement);
+}
 } // namespace calao
 #undef VISIT

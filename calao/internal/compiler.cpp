@@ -14,6 +14,7 @@
 
 #include <cfenv>
 #include <calao/class.hpp>
+#include <calao/runtime.hpp>
 #include <calao/internal/compiler.hpp>
 #include <calao/internal/token.hpp>
 
@@ -24,6 +25,12 @@
 namespace calao {
 
 using Lexeme = Token::Lexeme;
+
+
+Compiler::Compiler(Runtime *rt) : runtime(rt)
+{
+
+}
 
 Handle<Closure> Compiler::compile(AutoAst ast)
 {
@@ -874,6 +881,18 @@ void Compiler::visit_table(TableLiteral *node)
 	EMIT(Opcode::NewTable, Instruction(size));
 }
 
+void Compiler::visit_debug_statement(DebugStatement *node)
+{
+	if (runtime->debug_mode()) {
+		node->block->visit(*this);
+	}
+}
+
+void Compiler::visit_throw_statement(ThrowStatement *node)
+{
+	node->expr->visit(*this);
+	EMIT(Opcode::Throw);
+}
 
 } // namespace calao
 

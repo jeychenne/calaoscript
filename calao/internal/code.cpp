@@ -82,7 +82,8 @@ const char *opcode_names[] = {
 	"SetLocal",
 	"SetSignature",
 	"Subtract",
-	"TestIterator"
+	"TestIterator",
+	"Throw"
 };
 
 void Code::add_line(intptr_t line_no)

@@ -27,7 +27,7 @@ class Compiler final : public AstVisitor
 {
 public:
 
-	Compiler() = default;
+	explicit Compiler(Runtime *rt);
 
 	Handle<Closure> compile(AutoAst ast);
 
@@ -42,6 +42,8 @@ public:
 	void visit_statements(StatementList *node) override;
 	void visit_declaration(Declaration *node) override;
 	void visit_print_statement(PrintStatement *node) override;
+	void visit_debug_statement(DebugStatement *node) override;
+	void visit_throw_statement(ThrowStatement *node) override;
 	void visit_call(CallExpression *node) override;
 	void visit_parameter(RoutineParameter *node) override;
 	void visit_routine(RoutineDefinition *node) override;
@@ -84,6 +86,9 @@ private:
 	void set_routine(std::shared_ptr<Routine> r);
 
 	bool parsing_argument() const { return visit_arg >= 0; }
+
+	// Pointer to the current runtime.
+	Runtime *runtime;
 
 	// Code of the routine being compiled.
 	Code *code = nullptr;

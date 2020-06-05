@@ -82,6 +82,8 @@ private:
 
 	AutoAst parse();
 
+	void parse_option();
+
 	AutoAst parse_statement();
 
 	AutoAst parse_statements(bool open_scope);
@@ -149,6 +151,11 @@ private:
 	AutoAst parse_list_literal();
 
 	AutoAst parse_table_literal();
+
+	AutoAst parse_debug_statement();
+
+	AutoAst parse_throw_statement();
+
 
 
 	// Instance of the scanner (reads one token at a time).

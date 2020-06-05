@@ -208,6 +208,10 @@ public:
 
 	Variant &operator[](const String &key);
 
+	bool debug_mode() const;
+
+	void set_debug_mode(bool value);
+
 private:
 
 	struct CallFrame
@@ -307,7 +311,11 @@ private:
 	// Stack of call frames.
 	std::vector<std::unique_ptr<CallFrame>> frames;
 
+	// Current call frame.
 	CallFrame *current_frame = nullptr;
+
+	// Runtime options.
+	bool debugging = true;
 
 	// Flag to let functions know whether a reference is requested.
 	bool needs_ref = false;

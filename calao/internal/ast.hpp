@@ -218,6 +218,24 @@ struct PrintStatement final : public Ast
 	bool new_line;
 };
 
+struct DebugStatement final : public Ast
+{
+	DebugStatement(int line, AutoAst block) : Ast(line), block(std::move(block)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst block;
+};
+
+struct ThrowStatement final : public Ast
+{
+	ThrowStatement(int line, AutoAst e) : Ast(line), expr(std::move(e)) { }
+
+	void visit(AstVisitor &v) override;
+
+	AutoAst expr;
+};
+
 struct AssertStatement final : public Ast
 {
 	AssertStatement(int line, AutoAst e, AutoAst msg) : Ast(line), expr(std::move(e)), msg(std::move(msg)) { }
@@ -354,6 +372,8 @@ public:
 	virtual void visit_statements(StatementList *node) = 0;
 	virtual void visit_declaration(Declaration *node) = 0;
 	virtual void visit_print_statement(PrintStatement *node) = 0;
+	virtual void visit_debug_statement(DebugStatement *node) = 0;
+	virtual void visit_throw_statement(ThrowStatement *node) = 0;
 	virtual void visit_call(CallExpression *node) = 0;
 	virtual void visit_parameter(RoutineParameter *node) = 0;
 	virtual void visit_routine(RoutineDefinition *node) = 0;

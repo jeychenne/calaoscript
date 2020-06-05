@@ -108,6 +108,13 @@ AutoAst Parser::parse()
 	AstList block;
 	while (token.is_separator()) accept();
 
+	// Consume options (if any).
+	while (accept(Lexeme::Option))
+	{
+		parse_option();
+	}
+
+	// Parse statements.
 	while (!check(Lexeme::Eot))
 	{
 		block.push_back(parse_statement());
@@ -179,6 +186,14 @@ AutoAst Parser::parse_statement()
 	else if (accept(Lexeme::Do))
 	{
 		return parse_statements(true);
+	}
+	else if (accept(Lexeme::Debug))
+	{
+		return parse_debug_statement();
+	}
+	else if (accept(Lexeme::Throw))
+	{
+		return parse_throw_statement();
 	}
 	else if (accept(Lexeme::Pass))
 	{
@@ -795,6 +810,46 @@ AutoAst Parser::parse_table_literal()
 	expect(Lexeme::RCurl, hint);
 
 	return std::make_unique<TableLiteral>(line, std::move(keys), std::move(values));
+}
+
+void Parser::parse_option()
+{
+	if (!token.is(Lexeme::StringLiteral) || token.spelling != "debug")
+	{
+		auto msg = utils::format("Invalid option: expected \"debug\", got %", token.spelling);
+		report_error(msg);
+	}
+	auto option = token.spelling;
+	accept();
+	bool value = true;
+	if (accept(Lexeme::OpAssign))
+	{
+		if (accept(Lexeme::True)) {
+			// pass
+		}
+		else if (accept(Lexeme::False)) {
+			value = false;
+		}
+		else {
+			report_error("Option value should be \"true\" (default) or \"false\"");
+		}
+	}
+	skip_empty_lines();
+
+	runtime->set_debug_mode(value);
+}
+
+AutoAst Parser::parse_debug_statement()
+{
+	auto line = get_line();
+	AutoAst body = accept(Lexeme::Eol) ? parse_statements(true) : parse_statement();
+
+	return std::make_unique<DebugStatement>(line, std::move(body));
+}
+
+AutoAst Parser::parse_throw_statement()
+{
+	return make<ThrowStatement>(parse_expression());
 }
 
 } // namespace calao
