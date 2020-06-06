@@ -49,6 +49,8 @@ Runtime::Runtime() :
 		initialized = true;
 	}
 
+	get_item_string = intern_string("get_item");
+	set_item_string = intern_string("set_item");
 	create_builtins();
 	set_global_namespace();
 	this->top = this->stack.begin();
@@ -467,19 +469,8 @@ Variant Runtime::interpret(Closure &closure)
 				try 
 				{
 					auto c = func.find_closure(args);
-					if (!c)
-					{
-						Array<String> types;
-						for (auto &arg : args) {
-							types.append(arg.class_name());
-						}
-						String candidates;
-						for (auto &c : func.closures) {
-							candidates.append(c->routine->get_definition());
-							candidates.append('\n');
-						}
-						RUNTIME_ERROR("Cannot resolve call to function '%' with the following argument types: (%).\nCandidates are:\n%",
-								func.name(), String::join(types, ", "), candidates);
+					if (!c) {
+						report_call_error(func, args);
 					}
 
 					if (c->routine->is_native())
@@ -1063,34 +1054,21 @@ Variant Runtime::interpret(Closure &closure)
 			{
 				trace_op();
 				auto &v = peek(-3).resolve();
-				if (check_type<List>(v))
-				{
-					auto &index = peek(-2);
-					if (!check_type<intptr_t>(index)) {
-						RUNTIME_ERROR("[Index error] Expected an integer in list index, got a %", index.class_name());
-					}
-					auto i = raw_cast<intptr_t>(index);
-					auto &lst = raw_cast<List>(v);
-					try {
-						lst.at(i) = std::move(peek(-1));
-					}
-					CATCH_ERROR
-					pop(3);
+				auto cls = v.get_class();
+				std::span<Variant> args(&v, 3);
+				auto method = cls->get_method(set_item_string);
+				if (!method) {
+					RUNTIME_ERROR("[Type error] % type has no \"set_item\" method");
 				}
-				else if (check_type<Table>(v))
-				{
-					auto &key = peek(-2);
-					auto &map = raw_cast<Table>(v).map();
-					try {
-						map[key] = std::move(peek(-1));
-					}
-					CATCH_ERROR
-					pop(3);
+				auto c = method->find_closure(args);
+				if (!c) {
+					report_call_error(*method, args);
 				}
-				else
-				{
-					RUNTIME_ERROR("[Index error] Expected a list in indexed expression, got a %", v.class_name());
+				try {
+					(*c)(*this, args);
 				}
+				CATCH_ERROR
+				pop(3);
 				break;
 			}
 			case Opcode::SetLocal:
@@ -1666,36 +1644,26 @@ void Runtime::add_global(const String &name, NativeCallback cb, std::initializer
 
 void Runtime::get_index(bool by_ref)
 {
-	auto v = std::move(peek(-2));
-	if (check_type<List>(v))
-	{
-		auto &lst = raw_cast<List>(v);
-		if (!check_type<intptr_t>(peek())) {
-			RUNTIME_ERROR("[Index error] List index must be an Integer, not a %", peek().class_name());
-		}
-		auto i = raw_cast<intptr_t>(peek());
-		pop(2);
-		try {
-			auto &val = by_ref ? lst.at(i).make_alias() : lst.at(i).resolve();
-			push(val);
-		}
-		CATCH_ERROR
+	needs_ref = by_ref;
+	auto &v = peek(-2);
+	Variant result;
+	std::span<Variant> args(&v, 2);
+	auto cls = v.get_class();
+	auto method = cls->get_method(get_item_string);
+	if (!method) {
+		RUNTIME_ERROR("[Type error] % type is not indexable");
 	}
-	else if (check_type<Table>(v))
-	{
-		auto &tab = raw_cast<Table>(v);
-		Variant key = std::move(peek());
-		pop(2);
-		try {
-			auto &val = by_ref ? tab.get(key).make_alias() : tab.get(key).resolve();
-			push(val);
-		}
-		CATCH_ERROR
+	auto closure = method->find_closure(args);
+	if (!closure) {
+		report_call_error(*method, args);
 	}
-	else
-	{
-		RUNTIME_ERROR("[Index error] Cannot index value of type %", v.class_name());
+	try {
+		result = (*closure)(*this, args);
 	}
+	CATCH_ERROR
+	pop(2);
+	push(std::move(result));
+	needs_ref = false;
 }
 
 bool Runtime::needs_reference() const
@@ -1721,6 +1689,22 @@ bool Runtime::debug_mode() const
 void Runtime::set_debug_mode(bool value)
 {
 	debugging = value;
+}
+
+void Runtime::report_call_error(const Function &func, std::span<Variant> args)
+{
+	Array<String> types;
+
+	for (auto &arg : args) {
+		types.append(arg.class_name());
+	}
+	String candidates;
+	for (auto &c : func.closures) {
+		candidates.append(c->routine->get_definition());
+		candidates.append('\n');
+	}
+	RUNTIME_ERROR("Cannot resolve call to function '%' with the following argument types: (%).\nCandidates are:\n%",
+				  func.name(), String::join(types, ", "), candidates);
 }
 
 

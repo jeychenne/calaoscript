@@ -99,6 +99,9 @@ void Runtime::set_global_namespace()
 	add_global("shuffle", list_shuffle, { CLS(List) }, REF("1"));
 	add_global("sample", list_sample, { CLS(List), CLS(intptr_t) });
 	add_global("insert", list_insert, { CLS(List), CLS(intptr_t), CLS(Object) }, REF("001"));
+	auto list_class = Class::get<List>();
+	list_class->add_method("get_item", list_get_item, {CLS(List), CLS(intptr_t)});
+	list_class->add_method("set_item", list_set_item, { CLS(List), CLS(intptr_t), CLS(Object) }, REF("001"));
 
 	// File
 	add_global("open", file_open1, { CLS(String) });
@@ -127,6 +130,9 @@ void Runtime::set_global_namespace()
 	add_global("remove", table_remove, { CLS(Table), CLS(Object) }, REF("01"));
 	add_global("get", table_get1, { CLS(Table), CLS(Object) });
 	add_global("get", table_get2, { CLS(Table), CLS(Object), CLS(Object) });
+	auto table_class = Class::get<Table>();
+	table_class->add_method("get_item", table_get_item, { CLS(Table), CLS(Object) });
+	table_class->add_method("set_item", table_set_item, { CLS(Table), CLS(Object), CLS(Object) }, REF("001"));
 
 	// Regex
 	auto regex_class = Class::get<Regex>();
@@ -146,6 +152,8 @@ void Runtime::set_global_namespace()
 	add_global("remove", set_remove, { CLS(Set), CLS(Object) }, REF("01"));
 	add_global("is_empty", set_is_empty, { CLS(Set) });
 	add_global("clear", set_clear, { CLS(Set) }, REF("1"));
+	auto set_class = Class::get<Set>();
+	set_class->add_initializer(set_init, {});
 }
 
 } // namespace calao

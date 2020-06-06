@@ -21,6 +21,29 @@
 
 namespace calao {
 
+static Variant list_get_item(Runtime &rt, std::span<Variant> args)
+{
+	auto &lst = raw_cast<List>(args[0]).items();
+	if (args.size() > 2) {
+		throw error("[Index error] List does not support multidimensional indexing");
+	}
+	if (!check_type<intptr_t>(args[1])) {
+		throw error("[Index error] List index must be an Integer, not a %", args[1].class_name());
+	}
+	auto i = raw_cast<intptr_t>(args[1]);
+
+	return rt.needs_reference() ? lst.at(i).make_alias() : lst.at(i).resolve();
+}
+
+static Variant list_set_item(Runtime &, std::span<Variant> args)
+{
+	auto &lst = raw_cast<List>(args[0]).items();
+	intptr_t i = raw_cast<intptr_t>(args[1]);
+	lst.at(i) = std::move(args[2].resolve());
+
+	return Variant();
+}
+
 static Variant list_contains(Runtime &, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();

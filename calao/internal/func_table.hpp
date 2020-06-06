@@ -20,6 +20,21 @@
 
 namespace calao {
 
+
+static Variant table_get_item(Runtime &, std::span<Variant> args)
+{
+	auto &tab = raw_cast<Table>(args[0]);
+	return tab.get(args[1]);
+}
+
+static Variant table_set_item(Runtime &, std::span<Variant> args)
+{
+	auto &map = raw_cast<Table>(args[0]).map();
+	map[args[1].resolve()] = std::move(args[2].resolve());
+
+	return Variant();
+}
+
 static Variant table_contains(Runtime &, std::span<Variant> args)
 {
 	auto &map = raw_cast<Table>(args[0]).map();

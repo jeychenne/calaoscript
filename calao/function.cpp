@@ -82,13 +82,13 @@ Variant NativeRoutine::operator()(Runtime &rt, std::span<Variant> args)
 
 //----------------------------------------------------------------------------------------------------------------------
 
-Routine::Routine(const String &name, int argc) : Callable(name, argc)
+Routine::Routine(Routine *parent, const String &name, int argc) : Callable(name, argc), parent(parent)
 {
 
 }
 
-Routine::Routine(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
-		Callable(name, std::move(sig), ref_flags)
+Routine::Routine(Routine *parent, const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
+		Callable(name, std::move(sig), ref_flags), parent(parent)
 {
 
 }
@@ -141,8 +141,20 @@ std::optional<Instruction> Routine::find_local(const String &name, int scope_dep
 	return std::optional<Instruction>();
 }
 
-std::optional<Instruction> Routine::find_upvalue(const String &name, int scope_depth) const
+std::optional<Instruction> Routine::resolve_upvalue(const String &name, int scope_depth)
 {
+	if (parent)
+	{
+		auto index = parent->find_local(name, scope_depth);
+		if (index) {
+			return add_upvalue(*index, true);
+		}
+
+		index = parent->resolve_upvalue(name, scope_depth);
+		if (index) {
+			return add_upvalue(*index, false);
+		}
+	}
 
 	return std::optional<Instruction>();
 }
@@ -155,6 +167,20 @@ int Routine::local_count() const
 Instruction Routine::add_routine(std::shared_ptr<Routine> r)
 {
 	return add_constant(routine_pool, std::move(r));
+}
+
+Instruction Routine::add_upvalue(Instruction index, bool local)
+{
+	if (unlikely(upvalues.size()) > (std::numeric_limits<Instruction>::max)()) {
+		throw error("[Compiler error] Maximum number of upvalues exceeded in the current function");
+	}
+	auto it = std::find(upvalues.begin(), upvalues.end(), UpvalueSlot{index, local});
+	if (it != upvalues.end()) {
+		return std::distance(upvalues.begin(), it);
+	}
+	upvalues.push_back({index, local});
+
+	return Instruction(upvalues.size() - 1);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

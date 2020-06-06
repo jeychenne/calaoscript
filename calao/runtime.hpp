@@ -273,6 +273,8 @@ private:
 
 	void get_index(bool by_ref);
 
+	void report_call_error(const Function &func, std::span<Variant> args);
+
 	// Garbage collector.
 	Recycler gc;
 
@@ -314,6 +316,8 @@ private:
 
 	// Current call frame.
 	CallFrame *current_frame = nullptr;
+
+	String get_item_string, set_item_string;
 
 	// Runtime options.
 	bool debugging = true;

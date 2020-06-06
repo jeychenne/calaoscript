@@ -118,7 +118,7 @@ public:
 	};
 
 	// Represents a non-local variable referenced by an inner function.
-	struct Upvalue
+	struct UpvalueSlot
 	{
 		// Index of the variable in the surrounding function.
 		Instruction index;
@@ -127,11 +127,13 @@ public:
 		// that references a local or another upvalue in its surrounding function. All non-local upvalues eventually resolve to
 		// a local one.
 		bool is_local;
+
+		bool operator==(const UpvalueSlot &other) noexcept { return this->index == other.index && this->is_local == other.is_local; }
 	};
 
-	Routine(const String &name, int argc);
+	Routine(Routine *parent, const String &name, int argc);
 
-	Routine(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
+	Routine(Routine *parent, const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
 
 	bool is_native() const override { return false; }
 
@@ -149,7 +151,7 @@ public:
 
 	std::optional<Instruction> find_local(const String &name, int scope_depth) const;
 
-	std::optional<Instruction> find_upvalue(const String &name, int scope_depth) const;
+	std::optional<Instruction> resolve_upvalue(const String &name, int scope_depth);
 
 	double get_float(intptr_t i) const { return float_pool[i]; }
 
@@ -174,6 +176,8 @@ private:
 	Code code;
 
 	void clear_signature() { signature.clear(); }
+
+	Instruction add_upvalue(Instruction index, bool local);
 
 	template<class T>
 	Instruction add_constant(std::vector<T> &vec, T value)
@@ -229,6 +233,11 @@ private:
 
 	// Local variables.
 	std::vector<Local> locals;
+
+	std::vector<UpvalueSlot> upvalues;
+
+	// Enclosing routine (this is used to find upvalues).
+	Routine *parent = nullptr;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

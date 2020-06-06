@@ -21,6 +21,7 @@
 #include <calao/string.hpp>
 #include <calao/typed_object.hpp>
 #include <calao/function.hpp>
+#include <calao/dictionary.hpp>
 #include <calao/internal/variant.hpp>
 
 namespace calao {
@@ -95,9 +96,15 @@ public:
 
 	Handle<Function> get_constructor();
 
+	Handle<Function> get_method(const String &name);
+
 	void add_initializer(NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref = ParamBitset());
 
-	void add_initializer(Handle<Function> f) { ctor = std::move(f); }
+	void add_initializer(Handle<Function> f);
+
+	void add_method(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref = ParamBitset());
+
+	void add_method(const String &name, Handle<Function> f);
 
 private:
 
@@ -137,11 +144,12 @@ private:
 	// using the class's inheritance depth.
 	std::vector<Class*> _bases;
 
-	// Constructor
-	Handle<Function> ctor;
+	Dictionary<Variant> members;
 
 	// For debugging.
 	Index index;
+
+	static String init_string;
 };
 
 

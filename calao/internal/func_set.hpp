@@ -20,6 +20,11 @@
 
 namespace calao {
 
+static Variant set_init(Runtime &rt, std::span<Variant>)
+{
+	return make_handle<Set>(&rt);
+}
+
 static Variant set_contains(Runtime &, std::span<Variant> args)
 {
 	auto &set = raw_cast<Set>(args[0]);

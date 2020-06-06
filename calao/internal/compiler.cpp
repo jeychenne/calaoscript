@@ -53,7 +53,7 @@ void Compiler::initialize()
 {
 	scope_id = 0;
 	current_scope = 0;
-	set_routine(std::make_shared<Routine>(String(), 0));
+	set_routine(std::make_shared<Routine>(routine.get(), String(), 0));
 }
 
 void Compiler::finalize()
@@ -384,7 +384,7 @@ void Compiler::visit_variable(Variable *node)
 			EMIT(Opcode::GetLocal, *index);
 		}
 	}
-	else if ((index = routine->find_upvalue(node->name, scope_depth)))
+	else if ((index = routine->resolve_upvalue(node->name, scope_depth)))
 	{
 
 	}
@@ -775,7 +775,7 @@ void Compiler::visit_routine(RoutineDefinition *node)
 	// Compile inner routine.
 	auto previous_scope = open_scope();
 	auto outer_routine = routine;
-	set_routine(std::make_shared<Routine>(name, int(node->params.size())));
+	set_routine(std::make_shared<Routine>(routine.get(), name, int(node->params.size())));
 	EMIT(Opcode::NewFrame, 0);
 	int frame_offset = code->get_current_offset() - 1;
 
