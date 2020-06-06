@@ -19,6 +19,7 @@
 #include <calao/internal/func_table.hpp>
 #include <calao/internal/func_regex.hpp>
 #include <calao/internal/func_set.hpp>
+#include <calao/internal/func_math.hpp>
 
 #define CLS(T) get_class<T>()
 #define REF(bits) ParamBitset(bits)
@@ -34,6 +35,30 @@ void Runtime::set_global_namespace()
 	add_global("bool", to_boolean, { CLS(Object) });
 	add_global("int", to_integer, { CLS(Object) });
 	add_global("float", to_float, { CLS(Object) });
+
+	// Math functions
+	add_global("abs", math_abs, { CLS(Number) });
+	add_global("acos", math_acos, { CLS(Number) });
+	add_global("asin", math_asin, { CLS(Number) });
+	add_global("atan", math_atan, { CLS(Number) });
+	add_global("atan", math_atan2, { CLS(Number), CLS(Number) });
+	add_global("ceil", math_ceil, { CLS(Number) });
+	add_global("cos", math_cos, { CLS(Number) });
+	add_global("exp", math_exp, { CLS(Number) });
+	add_global("floor", math_floor, { CLS(Number) });
+	add_global("log", math_log, { CLS(Number) });
+	add_global("log10", math_log10, { CLS(Number) });
+	add_global("log2", math_log2, { CLS(Number) });
+	add_global("max", math_max, { CLS(Number), CLS(Number) });
+	add_global("max", math_max2, { CLS(intptr_t), CLS(intptr_t) });
+	add_global("min", math_min, { CLS(Number), CLS(Number) });
+	add_global("min", math_min2, { CLS(intptr_t), CLS(intptr_t) });
+	add_global("random", math_random, { });
+	add_global("round", math_round, { CLS(Number) });
+	add_global("round", math_roundn, { CLS(Number), CLS(Number) });
+	add_global("sin", math_sin, { CLS(Number) });
+	add_global("sqrt", math_sqrt, { CLS(Number) });
+	add_global("tan", math_tan, { CLS(Number) });
 
 	// String
 	add_global("contains", string_contains, { CLS(String), CLS(String) });

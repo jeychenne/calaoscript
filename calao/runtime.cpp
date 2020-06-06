@@ -1058,7 +1058,7 @@ Variant Runtime::interpret(Closure &closure)
 				std::span<Variant> args(&v, 3);
 				auto method = cls->get_method(set_item_string);
 				if (!method) {
-					RUNTIME_ERROR("[Type error] % type has no \"set_item\" method");
+					RUNTIME_ERROR("[Type error] % type is not index-assignable");
 				}
 				auto c = method->find_closure(args);
 				if (!c) {
