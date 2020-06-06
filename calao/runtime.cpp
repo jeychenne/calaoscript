@@ -113,6 +113,7 @@ void Runtime::create_builtins()
 	auto string_class = create_type<String>("String", raw_object_class, Class::Index::String);
 	auto regex_class = create_type<Regex>("Regex", raw_object_class, Class::Index::Regex);
 	auto list_class = create_type<List>("List", raw_object_class, Class::Index::List);
+	auto array_class = create_type<Array<double>>("Array", raw_object_class, Class::Index::Array);
 	auto table_class = create_type<Table>("Table", raw_object_class, Class::Index::Table);
 	auto file_class = create_type<File>("File", raw_object_class, Class::Index::File);
 	auto module_class = create_type<Module>("Module", raw_object_class, Class::Index::Module);
@@ -145,6 +146,7 @@ void Runtime::create_builtins()
 	GLOB(String, string_class);
 	GLOB(Regex, regex_class);
 	GLOB(List, list_class);
+	GLOB(Array<double>, array_class);
 	GLOB(Table, table_class);
 	GLOB(File, file_class);
 	GLOB(Closure, func_class);
@@ -612,23 +614,24 @@ Variant Runtime::interpret(Closure &closure)
 			case Opcode::GetIndex:
 			{
 				trace_op();
-				get_index(false);
+				get_index(*ip++, false);
 				break;
 			}
 			case Opcode::GetIndexArg:
 			{
 				trace_op();
+				int count = *ip++;
 				bool by_ref = current_frame->ref_flags[*ip++];
 				if (by_ref) {
 					RUNTIME_ERROR("Passing indexed expression as an argument by reference is not yet supported");
 				}
-				get_index(by_ref);
+				get_index(count, by_ref);
 				break;
 			}
 			case Opcode::GetIndexRef:
 			{
 				trace_op();
-				get_index(true);
+				get_index(*ip++, true);
 				break;
 			}
 			case Opcode::GetLocal:
@@ -770,7 +773,21 @@ Variant Runtime::interpret(Closure &closure)
 			case Opcode::NewArray:
 			{
 				trace_op();
-				RUNTIME_ERROR("Array not implemented yet");
+				int nrow = *ip++;
+				int ncol = *ip++;
+				int narg = nrow * ncol;
+				int k = narg;
+				Array<double> array(nrow, ncol, 0.0);
+				for (int i = 1; i <= nrow; i++)
+				{
+					for (int j = 1; j <= ncol; j++)
+					{
+						array(i,j) = peek(-k).to_float();
+						k--;
+					}
+				}
+				pop(narg);
+				push(make_handle<Array<double>>(std::move(array)));
 				break;
 			}
 			case Opcode::NewFrame:
@@ -1053,9 +1070,10 @@ Variant Runtime::interpret(Closure &closure)
 			case Opcode::SetIndex:
 			{
 				trace_op();
-				auto &v = peek(-3).resolve();
+				int count = *ip++ + 2; // add indexed expression and value
+				auto &v = peek(-count).resolve();
 				auto cls = v.get_class();
-				std::span<Variant> args(&v, 3);
+				std::span<Variant> args(&v, count);
 				auto method = cls->get_method(set_item_string);
 				if (!method) {
 					RUNTIME_ERROR("[Type error] % type is not index-assignable");
@@ -1068,7 +1086,7 @@ Variant Runtime::interpret(Closure &closure)
 					(*c)(*this, args);
 				}
 				CATCH_ERROR
-				pop(3);
+				pop(count);
 				break;
 			}
 			case Opcode::SetLocal:
@@ -1259,17 +1277,22 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		}
 		case Opcode::GetIndex:
 		{
-			return print_simple_instruction("GET_INDEX");
+			int count = routine.code[offset + 1];
+			printf("GET_INDEX      %-5d\n", count);
+			return 2;
 		}
 		case Opcode::GetIndexArg:
 		{
-			int index = routine.code[offset + 1];
-			printf("GET_INDEX_ARG %-5d\n", index);
-			return 2;
+			int count = routine.code[offset + 1];
+			int index = routine.code[offset + 2];
+			printf("GET_INDEX_ARG %-5d %-5d\n", count, index);
+			return 3;
 		}
 		case Opcode::GetIndexRef:
 		{
-			return print_simple_instruction("GET_INDEX_REF");
+			int count = routine.code[offset + 1];
+			printf("GET_INDEX_REF  %-5d\n", count);
+			return 2;
 		}
 		case Opcode::GetLocal:
 		{
@@ -1364,9 +1387,10 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		}
 		case Opcode::NewArray:
 		{
-			int nlocal = routine.code[offset+1];
-			printf("NEW_ARRAY      %-5d\n", nlocal);
-			return 2;
+			int nrow = routine.code[offset+1];
+			int ncol = routine.code[offset+2];
+			printf("NEW_ARRAY      %-5d %-5d\n", nrow, ncol);
+			return 3;
 		}
 		case Opcode::NewFrame:
 		{
@@ -1509,7 +1533,9 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		}
 		case Opcode::SetIndex:
 		{
-			return print_simple_instruction("SET_INDEX");
+			int count = routine.code[offset + 1];
+			printf("SET_INDEX      %-5d\n", count);
+			return 2;
 		}
 		case Opcode::SetLocal:
 		{
@@ -1642,12 +1668,13 @@ void Runtime::add_global(const String &name, NativeCallback cb, std::initializer
 	(*globals)[name] = make_handle<Function>(name, std::move(cb), sig, ref);
 }
 
-void Runtime::get_index(bool by_ref)
+void Runtime::get_index(int count, bool by_ref)
 {
 	needs_ref = by_ref;
-	auto &v = peek(-2);
+	count++; // add indexed expression
+	auto &v = peek(-count);
 	Variant result;
-	std::span<Variant> args(&v, 2);
+	std::span<Variant> args(&v, count);
 	auto cls = v.get_class();
 	auto method = cls->get_method(get_item_string);
 	if (!method) {
@@ -1661,7 +1688,7 @@ void Runtime::get_index(bool by_ref)
 		result = (*closure)(*this, args);
 	}
 	CATCH_ERROR
-	pop(2);
+	pop(count);
 	push(std::move(result));
 	needs_ref = false;
 }

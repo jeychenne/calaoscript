@@ -47,6 +47,18 @@ static Variant math_abs(Runtime &, std::span<Variant> args)
 
 }
 
+template<double(*f)(double)>
+Variant math_array_func(Runtime &, std::span<Variant> args)
+{
+	auto &array = raw_cast<Array<double>>(args[0]);
+	Array<double> result(array.nrow(), array.ncol(), 0.0);
+	for (intptr_t i = 1; i <= array.size(); i++) {
+		result[i] = f(array[i]);
+	}
+
+	return make_handle<Array<double>>(std::move(result));
+}
+
 static Variant math_acos(Runtime &, std::span<Variant> args)
 {
 	auto n = args[0].resolve().get_number();

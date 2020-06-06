@@ -125,6 +125,17 @@ struct ListLiteral final : public Literal
 	AstList items;
 };
 
+struct ArrayLiteral final : public Literal
+{
+	ArrayLiteral(int line, AstList items, intptr_t nrow, intptr_t ncol) : Literal(line),
+		items(std::move(items)), nrow(nrow), ncol(ncol) { }
+
+	void visit(AstVisitor &v) override;
+
+	AstList items;
+	intptr_t nrow, ncol;
+};
+
 // Table
 struct TableLiteral final : public Literal
 {
@@ -360,6 +371,18 @@ struct CallExpression final : public Ast
 	bool return_reference = false; // flag for the compiler
 };
 
+struct IndexedExpression final : public Ast
+{
+	IndexedExpression(int line, AutoAst e, AstList i) : Ast(line), expr(std::move(e)), indexes(std::move(i)) { }
+
+	void visit(AstVisitor &v) override;
+
+	size_t size() const { return indexes.size(); }
+
+	AutoAst expr;
+	AstList indexes;
+};
+
 struct ReturnStatement final : public Ast
 {
 	ReturnStatement(int line, AutoAst e) : Ast(line), expr(std::move(e)) { }
@@ -382,6 +405,7 @@ public:
 	virtual void visit_float(FloatLiteral *node) = 0;
 	virtual void visit_string(StringLiteral *node) = 0;
 	virtual void visit_list(ListLiteral *node) = 0;
+	virtual void visit_array(ArrayLiteral *node) = 0;
 	virtual void visit_table(TableLiteral *node) = 0;
 	virtual void visit_set(SetLiteral *node) = 0;
 	virtual void visit_unary(UnaryExpression *node) = 0;
@@ -407,6 +431,7 @@ public:
 	virtual void visit_loop_exit(LoopExitStatement *node) = 0;
 	virtual void visit_return_statement(ReturnStatement *node) = 0;
 	virtual void visit_reference_expression(ReferenceExpression *node) = 0;
+	virtual void visit_index(IndexedExpression *node) = 0;
 };
 
 } // namespace calao

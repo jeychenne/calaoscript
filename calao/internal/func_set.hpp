@@ -61,6 +61,36 @@ static Variant set_clear(Runtime &, std::span<Variant> args)
 	return Variant();
 }
 
+static Variant set_intersect(Runtime &rt, std::span<Variant> args)
+{
+	auto &lst1 = raw_cast<Set>(args[0]).items();
+	auto &lst2 = raw_cast<Set>(args[1]).items();
+	Set::Storage result;
+	std::set_intersection(lst1.begin(), lst1.end(), lst2.begin(), lst2.end(), std::inserter(result, result.begin()));
+
+	return make_handle<Set>(&rt, std::move(result));
+}
+
+static Variant set_unite(Runtime &rt, std::span<Variant> args)
+{
+	auto &lst1 = raw_cast<Set>(args[0]).items();
+	auto &lst2 = raw_cast<Set>(args[1]).items();
+	Set::Storage result;
+	std::set_union(lst1.begin(), lst1.end(), lst2.begin(), lst2.end(), std::inserter(result, result.begin()));
+
+	return make_handle<Set>(&rt, std::move(result));
+}
+
+static Variant set_subtract(Runtime &rt, std::span<Variant> args)
+{
+	auto &lst1 = raw_cast<Set>(args[0]).items();
+	auto &lst2 = raw_cast<Set>(args[1]).items();
+	Set::Storage result;
+	std::set_difference(lst1.begin(), lst1.end(), lst2.begin(), lst2.end(), std::inserter(result, result.begin()));
+
+	return make_handle<Set>(&rt, std::move(result));
+}
+
 } // namespace calao
 
 #endif // CALAO_FUNC_SET_HPP

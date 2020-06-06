@@ -445,9 +445,14 @@ AutoAst Parser::parse_call_expression()
 	}
 	else if (accept(Lexeme::LSquare))
 	{
-		auto e2 = parse_expression();
+		AstList lst;
+		lst.push_back(parse_expression());
+		while (accept(Lexeme::Comma))
+		{
+			lst.push_back(parse_expression());
+		}
 		expect(Lexeme::RSquare, "in index");
-		e = make<BinaryExpression>(Lexeme::LSquare, std::move(e), std::move(e2));
+		e = make<IndexedExpression>(std::move(e), std::move(lst));
 		goto LOOP;
 	}
 	else if (accept(Lexeme::LParen))
@@ -511,11 +516,11 @@ AutoAst Parser::parse_primary_expression()
 	{
 		return parse_list_literal();
 	}
-//	else if (accept(Lexeme::OpAt))
-//	{
-//		expect(Lexeme::LSquare, "in array literal");
-//		return parse_array_literal();
-//	}
+	else if (accept(Lexeme::OpAt))
+	{
+		expect(Lexeme::LSquare, "in array literal");
+		return parse_array_literal();
+	}
 	else if (accept(Lexeme::LCurl))
 	{
 		return parse_table_literal();
@@ -816,6 +821,47 @@ AutoAst Parser::parse_list_literal()
 	expect(Lexeme::RSquare, "at the end of list or array literal");
 
 	return std::make_unique<ListLiteral>(line, std::move(items));
+}
+
+AutoAst Parser::parse_array_literal()
+{
+	intptr_t prev_ncol = -1;
+	intptr_t ncol = 1;
+	intptr_t nrow = 1;
+
+	auto line = get_line();
+	skip_empty_lines();
+	if (accept(Lexeme::RSquare)) {
+		return make<ArrayLiteral>(AstList(), 0, 0);
+	}
+	AstList items;
+	items.push_back(parse_expression());
+	skip_empty_lines();
+
+	while (token.is(Lexeme::Comma) || token.is(Lexeme::Semicolon))
+	{
+		if (token.is(Lexeme::Semicolon))
+		{
+			if (ncol != prev_ncol && prev_ncol != -1)
+			{
+				report_error("[Syntax error] inconsistent number of rows in array declaration");
+			}
+			else
+			{
+				nrow++;
+				prev_ncol = ncol;
+				ncol = 0;
+			}
+		}
+		accept();
+		skip_empty_lines();
+		items.push_back(parse_expression());
+		ncol++;
+		skip_empty_lines();
+	}
+	expect(Lexeme::RSquare, "in array literal");
+
+	return std::make_unique<ArrayLiteral>(line, std::move(items), nrow, ncol);
 }
 
 AutoAst Parser::parse_table_literal()

@@ -40,14 +40,17 @@ static Variant get_length(Runtime &, std::span<Variant> args)
 	else if (check_type<Table>(v)) {
 		return raw_cast<Table>(v).size();
 	}
-	else if (check_type<File>(v)) {
-		return raw_cast<File>(v).size();
+	else if (check_type<Array<double>>(v)) {
+		return raw_cast<Array<double>>(v).size();
+	}
+	else if (check_type<Set>(v)) {
+		return raw_cast<Set>(v).size();
 	}
 	else if (check_type<Regex>(v)) {
 		return raw_cast<Regex>(v).count();
 	}
-	else if (check_type<Set>(v)) {
-		return raw_cast<Set>(v).size();
+	else if (check_type<File>(v)) {
+		return raw_cast<File>(v).size();
 	}
 
 	throw error("[Type error] Cannot get length of % value", v.class_name());

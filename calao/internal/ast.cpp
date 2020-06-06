@@ -138,6 +138,11 @@ void ListLiteral::visit(AstVisitor &v)
 	VISIT(list);
 }
 
+void ArrayLiteral::visit(AstVisitor &v)
+{
+	VISIT(array);
+}
+
 void TableLiteral::visit(AstVisitor &v)
 {
 	VISIT(table);
@@ -166,6 +171,11 @@ void RepeatStatement::visit(AstVisitor &v)
 void SetLiteral::visit(AstVisitor &v)
 {
 	VISIT(set);
+}
+
+void IndexedExpression::visit(AstVisitor &v)
+{
+	VISIT(index);
 }
 } // namespace calao
 #undef VISIT

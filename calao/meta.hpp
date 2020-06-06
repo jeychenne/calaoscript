@@ -44,7 +44,30 @@ inline String to_string(double value)
 	return String::convert(value);
 }
 
+inline String to_string(const Array<double> &array)
+{
+	String s("@[");
+	if (array.ndim() > 1) s.append('\n');
+	for (intptr_t i = 1; i <= array.nrow(); i++)
+	{
+		if (array.ndim() > 1) s.append('\t');
+		for (intptr_t j = 1; j <= array.ncol(); j++)
+		{
+			s.append(String::format("%f, ", array(i,j)));
+		}
+		if (array.ndim() > 1) s.append('\n');
+	}
+	if (array.ndim() > 1) {
+		s.remove_last(", \n");
+	}
+	else {
+		s.remove_last(", ");
+	}
+	if (array.ndim() > 1) s.append("\n ");
+	s.append("]");
 
+	return s;
+}
 //----------------------------------------------------------------------------------------------------------------------
 
 namespace detail {

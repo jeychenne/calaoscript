@@ -425,6 +425,11 @@ Token Scanner::read_token()
             return Token(Token::Lexeme::OpGreaterThan, m_spelling, m_line_no);
         }
     }
+	case U'@':
+	{
+		accept();
+		return Token(Token::Lexeme::OpAt, m_spelling, m_line_no);
+	}
 
     default:
         break;

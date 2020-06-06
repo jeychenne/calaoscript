@@ -43,6 +43,7 @@ public:
 		String,
 		Regex,
 		List,
+		Array,
 		Table,
 		Set,
 		File,

@@ -34,6 +34,7 @@ class TableIterator;
 class StringIterator;
 class FileIterator;
 class RegexIterator;
+template<class T> class Array;
 
 // Dummy base class for Float and Integer
 class Number {};
@@ -60,6 +61,7 @@ NON_CYCLIC(TableIterator);
 NON_CYCLIC(StringIterator);
 NON_CYCLIC(FileIterator);
 NON_CYCLIC(RegexIterator);
+NON_CYCLIC(Array<double>);
 
 #undef NON_CYCLIC
 

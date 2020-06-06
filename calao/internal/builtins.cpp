@@ -20,6 +20,7 @@
 #include <calao/internal/func_regex.hpp>
 #include <calao/internal/func_set.hpp>
 #include <calao/internal/func_math.hpp>
+#include <calao/internal/func_array.hpp>
 
 #define CLS(T) get_class<T>()
 #define REF(bits) ParamBitset(bits)
@@ -38,27 +39,42 @@ void Runtime::set_global_namespace()
 
 	// Math functions
 	add_global("abs", math_abs, { CLS(Number) });
+	add_global("abs", math_array_func<std::abs>, { CLS(Array<double>) });
 	add_global("acos", math_acos, { CLS(Number) });
+	add_global("acos", math_array_func<std::acos>, { CLS(Array<double>) });
 	add_global("asin", math_asin, { CLS(Number) });
+	add_global("asin", math_array_func<std::asin>, { CLS(Array<double>) });
 	add_global("atan", math_atan, { CLS(Number) });
+	add_global("atan", math_array_func<std::atan>, { CLS(Array<double>) });
 	add_global("atan", math_atan2, { CLS(Number), CLS(Number) });
 	add_global("ceil", math_ceil, { CLS(Number) });
+	add_global("ceil", math_array_func<std::ceil>, { CLS(Array<double>) });
 	add_global("cos", math_cos, { CLS(Number) });
+	add_global("cos", math_array_func<std::cos>, { CLS(Array<double>) });
 	add_global("exp", math_exp, { CLS(Number) });
+	add_global("exp", math_array_func<std::exp>, { CLS(Array<double>) });
 	add_global("floor", math_floor, { CLS(Number) });
+	add_global("floor", math_array_func<std::floor>, { CLS(Array<double>) });
 	add_global("log", math_log, { CLS(Number) });
+	add_global("log", math_array_func<std::log>, { CLS(Array<double>) });
 	add_global("log10", math_log10, { CLS(Number) });
+	add_global("log10", math_array_func<std::log10>, { CLS(Array<double>) });
 	add_global("log2", math_log2, { CLS(Number) });
+	add_global("log2", math_array_func<std::log2>, { CLS(Array<double>) });
 	add_global("max", math_max, { CLS(Number), CLS(Number) });
 	add_global("max", math_max2, { CLS(intptr_t), CLS(intptr_t) });
 	add_global("min", math_min, { CLS(Number), CLS(Number) });
 	add_global("min", math_min2, { CLS(intptr_t), CLS(intptr_t) });
 	add_global("random", math_random, { });
 	add_global("round", math_round, { CLS(Number) });
+	add_global("round", math_array_func<std::round>, { CLS(Array<double>) });
 	add_global("round", math_roundn, { CLS(Number), CLS(Number) });
 	add_global("sin", math_sin, { CLS(Number) });
+	add_global("sin", math_array_func<std::sin>, { CLS(Array<double>) });
 	add_global("sqrt", math_sqrt, { CLS(Number) });
+	add_global("sqrt", math_array_func<std::sqrt>, { CLS(Array<double>) });
 	add_global("tan", math_tan, { CLS(Number) });
+	add_global("tan", math_array_func<std::tan>, { CLS(Array<double>) });
 
 	// String
 	add_global("contains", string_contains, { CLS(String), CLS(String) });
@@ -124,6 +140,9 @@ void Runtime::set_global_namespace()
 	add_global("shuffle", list_shuffle, { CLS(List) }, REF("1"));
 	add_global("sample", list_sample, { CLS(List), CLS(intptr_t) });
 	add_global("insert", list_insert, { CLS(List), CLS(intptr_t), CLS(Object) }, REF("001"));
+	add_global("intersect", list_intersect, { CLS(List), CLS(List) });
+	add_global("unite", list_unite, { CLS(List), CLS(List) });
+	add_global("subtract", list_subtract, { CLS(List), CLS(List) });
 	auto list_class = Class::get<List>();
 	list_class->add_method("get_item", list_get_item, {CLS(List), CLS(intptr_t)});
 	list_class->add_method("set_item", list_set_item, { CLS(List), CLS(intptr_t), CLS(Object) }, REF("001"));
@@ -159,6 +178,24 @@ void Runtime::set_global_namespace()
 	table_class->add_method("get_item", table_get_item, { CLS(Table), CLS(Object) });
 	table_class->add_method("set_item", table_set_item, { CLS(Table), CLS(Object), CLS(Object) }, REF("001"));
 
+	// Array
+	add_global("zeros", array_zeros1, { CLS(intptr_t) });
+	add_global("zeros", array_zeros2, { CLS(intptr_t), CLS(intptr_t) });
+	add_global("ones", array_ones1, { CLS(intptr_t) });
+	add_global("ones", array_ones2, { CLS(intptr_t), CLS(intptr_t) });
+	add_global("ndim", array_ndim, { CLS(Array<double>) });
+	add_global("nrow", array_nrow, { CLS(Array<double>) });
+	add_global("ncol", array_ncol, { CLS(Array<double>) });
+	add_global("min", array_min, { CLS(Array<double>) });
+	add_global("max", array_max, { CLS(Array<double>) });
+	auto array_class = Class::get<Array<double>>();
+	auto &zeros = (*globals)["zeros"];
+	array_class->add_initializer(zeros.handle<Function>());
+	array_class->add_method("get_item", array_get_item1, { CLS(Array<double>), CLS(intptr_t) });
+	array_class->add_method("get_item", array_get_item2, { CLS(Array<double>), CLS(intptr_t), CLS(intptr_t) });
+	array_class->add_method("set_item", array_set_item1, { CLS(Array<double>), CLS(intptr_t), CLS(Number) }, REF("001"));
+	array_class->add_method("set_item", array_set_item2, { CLS(Array<double>), CLS(intptr_t), CLS(intptr_t), CLS(Number) }, REF("0001"));
+
 	// Regex
 	auto regex_class = Class::get<Regex>();
 	regex_class->add_initializer(regex_new1, {CLS(String)});
@@ -177,6 +214,9 @@ void Runtime::set_global_namespace()
 	add_global("remove", set_remove, { CLS(Set), CLS(Object) }, REF("01"));
 	add_global("is_empty", set_is_empty, { CLS(Set) });
 	add_global("clear", set_clear, { CLS(Set) }, REF("1"));
+	add_global("intersect", set_intersect, { CLS(Set), CLS(Set) });
+	add_global("unite", set_unite, { CLS(Set), CLS(Set) });
+	add_global("subtract", set_subtract, { CLS(Set), CLS(Set) });
 	auto set_class = Class::get<Set>();
 	set_class->add_initializer(set_init, {});
 }

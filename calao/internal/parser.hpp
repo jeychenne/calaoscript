@@ -152,6 +152,8 @@ private:
 
 	AutoAst parse_list_literal();
 
+	AutoAst parse_array_literal();
+
 	AutoAst parse_table_literal();
 
 	AutoAst parse_debug_statement();

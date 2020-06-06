@@ -193,28 +193,6 @@ void Compiler::visit_binary(BinaryExpression *node)
 		code->backpatch(jmp);
 		return;
 	}
-	// Handle indexing.
-	if (node->op == Lexeme::LSquare)
-	{
-		visiting_indexed_lhs = true;
-		node->lhs->visit(*this);
-		visiting_indexed_lhs = false;
-		node->rhs->visit(*this);
-
-		if (visiting_assigned_lhs) {
-			return; // SetIndex will be added by the assignment once we visit the RHS.
-		}
-		if (visiting_reference) {
-			EMIT(Opcode::GetIndexRef);
-		}
-		else if (parsing_argument()) {
-			EMIT(Opcode::GetIndexArg, Instruction(visit_arg));
-		}
-		else {
-			EMIT(Opcode::GetIndex);
-		}
-		return;
-	}
 
 	// Handle other operators.
 	node->lhs->visit(*this);
@@ -433,15 +411,15 @@ void Compiler::visit_assignment(Assignment *node)
 		return;
 	}
 
-	BinaryExpression *lhs;
+	IndexedExpression *lhs;
 
-	if ((lhs = dynamic_cast<BinaryExpression*>(node->lhs.get())) && lhs->op == Lexeme::LSquare)
+	if ((lhs = dynamic_cast<IndexedExpression*>(node->lhs.get())))
 	{
 		visiting_assigned_lhs = true;
 		node->lhs->visit(*this);
 		visiting_assigned_lhs = false;
 		node->rhs->visit(*this);
-		EMIT(Opcode::SetIndex);
+		EMIT(Opcode::SetIndex, Instruction(lhs->size()));
 	}
 	else
 	{
@@ -922,6 +900,44 @@ void Compiler::visit_set(SetLiteral *node)
 		e->visit(*this);
 	}
 	EMIT(Opcode::NewSet, Instruction(node->values.size()));
+}
+
+void Compiler::visit_array(ArrayLiteral *node)
+{
+	if (unlikely(node->nrow > (std::numeric_limits<Instruction>::max)() || node->ncol > (std::numeric_limits<Instruction>::max)()))
+	{
+		THROW("Array literal can have at most % rowns and % columns",
+				(std::numeric_limits<Instruction>::max)(), (std::numeric_limits<Instruction>::max)());
+	}
+
+	for (auto &e : node->items) {
+		e->visit(*this);
+	}
+	EMIT(Opcode::NewArray, Instruction(node->nrow), Instruction(node->ncol));
+}
+
+void Compiler::visit_index(IndexedExpression *node)
+{
+	visiting_indexed_lhs = true;
+	node->expr->visit(*this);
+	visiting_indexed_lhs = false;
+	for (auto &i : node->indexes) {
+		i->visit(*this);
+	}
+
+	if (visiting_assigned_lhs) {
+		return; // SetIndex will be added by the assignment once we visit the RHS.
+	}
+	auto count = Instruction(node->size());
+	if (visiting_reference) {
+		EMIT(Opcode::GetIndexRef, count);
+	}
+	else if (parsing_argument()) {
+		EMIT(Opcode::GetIndexArg, count, Instruction(visit_arg));
+	}
+	else {
+		EMIT(Opcode::GetIndex, count);
+	}
 }
 
 } // namespace calao

@@ -36,6 +36,7 @@ public:
 	void visit_float(FloatLiteral *node) override;
 	void visit_string(StringLiteral *node) override;
 	void visit_list(ListLiteral *node) override;
+	void visit_array(ArrayLiteral *node) override;
 	void visit_table(TableLiteral *node) override;
 	void visit_set(SetLiteral *node) override;
 	void visit_unary(UnaryExpression *node) override;
@@ -61,6 +62,7 @@ public:
 	void visit_loop_exit(LoopExitStatement *node) override;
 	void visit_return_statement(ReturnStatement *node) override;
 	void visit_reference_expression(ReferenceExpression *node) override;
+	void visit_index(IndexedExpression *node) override;
 
 private:
 

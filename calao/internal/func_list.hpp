@@ -287,8 +287,35 @@ static Variant list_insert(Runtime &, std::span<Variant> args)
 	return Variant();
 }
 
+static Variant list_intersect(Runtime &rt, std::span<Variant> args)
+{
+	auto &lst1 = raw_cast<List>(args[0]).items();
+	auto &lst2 = raw_cast<List>(args[1]).items();
+	List::Storage result;
+	std::set_intersection(lst1.begin(), lst1.end(), lst2.begin(), lst2.end(), std::back_inserter(result));
 
+	return make_handle<List>(&rt, std::move(result));
+}
 
+static Variant list_unite(Runtime &rt, std::span<Variant> args)
+{
+	auto &lst1 = raw_cast<List>(args[0]).items();
+	auto &lst2 = raw_cast<List>(args[1]).items();
+	List::Storage result;
+	std::set_union(lst1.begin(), lst1.end(), lst2.begin(), lst2.end(), std::back_inserter(result));
+
+	return make_handle<List>(&rt, std::move(result));
+}
+
+static Variant list_subtract(Runtime &rt, std::span<Variant> args)
+{
+	auto &lst1 = raw_cast<List>(args[0]).items();
+	auto &lst2 = raw_cast<List>(args[1]).items();
+	List::Storage result;
+	std::set_difference(lst1.begin(), lst1.end(), lst2.begin(), lst2.end(), std::back_inserter(result));
+
+	return make_handle<List>(&rt, std::move(result));
+}
 } // namespace calao
 
 #endif // CALAO_FUNC_LIST_HPP
