@@ -777,18 +777,31 @@ Variant Runtime::interpret(Closure &closure)
 				int nrow = *ip++;
 				int ncol = *ip++;
 				int narg = nrow * ncol;
-				int k = narg;
-				Array<double> array(nrow, ncol, 0.0);
-				for (int i = 1; i <= nrow; i++)
+				if (nrow == 1)
 				{
-					for (int j = 1; j <= ncol; j++)
+					Array<double> array(ncol, 0.0);
+					for (int i = 1; i <= ncol; i++)
 					{
-						array(i,j) = peek(-k).to_float();
-						k--;
+						array(i) = peek(-ncol + i - 1).to_float();
 					}
+					pop(narg);
+					push(make_handle<Array<double>>(std::move(array)));
 				}
-				pop(narg);
-				push(make_handle<Array<double>>(std::move(array)));
+				else
+				{
+					int k = narg;
+					Array<double> array(nrow, ncol, 0.0);
+					for (int i = 1; i <= nrow; i++)
+					{
+						for (int j = 1; j <= ncol; j++)
+						{
+							array(i,j) = peek(-k).to_float();
+							k--;
+						}
+					}
+					pop(narg);
+					push(make_handle<Array<double>>(std::move(array)));
+				}
 				break;
 			}
 			case Opcode::NewFrame:

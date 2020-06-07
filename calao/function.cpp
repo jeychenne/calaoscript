@@ -222,6 +222,17 @@ void Function::add_closure(Handle<Closure> c, bool create)
 			this->ref_flags = rflags;
 			max_argc = r->arg_count();
 		}
+
+		// Sort routines by number of parameters
+		argc = c->routine->arg_count();
+		for (auto it = closures.begin(); it != closures.end(); it++)
+		{
+			if (argc < (*it)->routine->arg_count())
+			{
+				closures.insert(it, std::move(c));
+				return;
+			}
+		}
 		closures.push_back(std::move(c));
 	}
 }
@@ -238,7 +249,12 @@ Handle<Closure> Function::find_closure(std::span<Variant> args)
 	for (auto &c : closures)
 	{
 		auto r = c->routine.get();
-		if (!r->check_arg_count(args.size())) continue;
+		if (r->arg_count() < args.size()) {
+			continue;
+		}
+		else if (r->arg_count() > args.size()) {
+			break; // routines are sorted by their number of arguments, so we won't find a better match at this point.
+		}
 		int cost = r->get_cost(args);
 
 		if (cost <= best_cost)
