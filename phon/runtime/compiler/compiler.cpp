@@ -15,8 +15,8 @@
 #include <cfenv>
 #include <phon/runtime/class.hpp>
 #include <phon/runtime/runtime.hpp>
-#include <phon/runtime/compiler.hpp>
-#include <phon/runtime/token.hpp>
+#include <phon/runtime/compiler/compiler.hpp>
+#include <phon/runtime/compiler/token.hpp>
 
 #define VISIT() PHON_UNUSED(node); throw error("Cannot compile %", __FUNCTION__);
 #define EMIT(...) code->emit(node->line_no, __VA_ARGS__)

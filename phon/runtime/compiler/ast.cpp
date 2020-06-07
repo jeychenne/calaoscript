@@ -12,7 +12,7 @@
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-#include <phon/runtime/ast.hpp>
+#include <phon/runtime/compiler/ast.hpp>
 
 #define VISIT(NODE) v.visit_##NODE(this);
 

@@ -16,9 +16,8 @@
 #ifndef PHONOMETRICA_SCANNER_HPP
 #define PHONOMETRICA_SCANNER_HPP
 
-#include <deque>
-#include <phon/runtime/token.hpp>
-#include <phon/runtime/source_code.hpp>
+#include <phon/runtime/compiler/token.hpp>
+#include <phon/runtime/compiler/source_code.hpp>
 
 namespace phonometrica {
 
@@ -49,10 +48,6 @@ private:
 
 	// Source code (from a file or string).
     std::shared_ptr<SourceCode> m_source;
-
-    // List of tokens for the current line.
-    // This is used for look-ahead, which is needed by our single-pass compiler.
-    std::deque<Token> tokens;
 
     // Current word (accumulates code points)
     String m_spelling;

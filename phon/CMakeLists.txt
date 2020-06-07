@@ -73,6 +73,7 @@ add_definitions(-DEIGEN_MPL2_ONLY)
 file(GLOB SOURCE_FILES
         *.cpp *.hpp
         runtime/*.cpp runtime/*.hpp
+        runtime/compiler/*.cpp runtime/compiler/*.hpp
         utils/*.cpp utils/*.hpp
         third_party/utf8proc/utf8proc.c
         third_party/utf8proc/utf8proc.h

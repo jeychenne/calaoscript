@@ -17,7 +17,7 @@
 
 #include <memory>
 #include <phon/string.hpp>
-#include <phon/runtime/token.hpp>
+#include <phon/runtime/compiler/token.hpp>
 
 namespace phonometrica {
 

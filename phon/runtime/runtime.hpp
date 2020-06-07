@@ -30,9 +30,9 @@
 #include <phon/runtime/set.hpp>
 #include <phon/runtime/function.hpp>
 #include <phon/runtime/module.hpp>
-#include <phon/runtime/parser.hpp>
+#include <phon/runtime/compiler/parser.hpp>
 #include <phon/runtime/code.hpp>
-#include <phon/runtime/compiler.hpp>
+#include <phon/runtime/compiler/compiler.hpp>
 
 namespace phonometrica {
 

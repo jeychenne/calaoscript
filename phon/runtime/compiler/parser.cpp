@@ -14,7 +14,7 @@
 
 #include <iostream>
 #include <phon/runtime/runtime.hpp>
-#include <phon/runtime/parser.hpp>
+#include <phon/runtime/compiler/parser.hpp>
 
 #if 0
 #define trace_ast() std::cerr << token.line_no << ": " << __FUNCTION__ << std::endl;

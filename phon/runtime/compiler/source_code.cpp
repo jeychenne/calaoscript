@@ -13,7 +13,7 @@
  **********************************************************************************************************************/
 
 #include <phon/file.hpp>
-#include <phon/runtime/source_code.hpp>
+#include <phon/runtime/compiler/source_code.hpp>
 
 namespace phonometrica {
 

@@ -31,8 +31,8 @@
 #ifndef PHONOMETRICA_PARSER_HPP
 #define PHONOMETRICA_PARSER_HPP
 
-#include <phon/runtime/scanner.hpp>
-#include <phon/runtime/ast.hpp>
+#include <phon/runtime/compiler/scanner.hpp>
+#include <phon/runtime/compiler/ast.hpp>
 
 namespace phonometrica {
 

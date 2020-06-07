@@ -19,7 +19,7 @@
 #include <utility>
 #include <vector>
 #include <phon/string.hpp>
-#include <phon/runtime/ast.hpp>
+#include <phon/runtime/compiler/ast.hpp>
 
 namespace phonometrica {
 
