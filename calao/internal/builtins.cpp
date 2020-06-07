@@ -111,6 +111,8 @@ void Runtime::set_global_namespace()
 	add_global("replace_first", string_replace_first, {CLS(String), CLS(String), CLS(String)}, REF("001"));
 	add_global("replace_last", string_replace_last, {CLS(String), CLS(String), CLS(String)}, REF("001"));
 	add_global("replace_at", string_replace_at, {CLS(String), CLS(intptr_t), CLS(intptr_t), CLS(String)}, REF("0001"));
+	auto string_class = Class::get<String>();
+	string_class->add_initializer(string_init, { });
 
 	// List
 	add_global("contains", list_contains, { CLS(List), CLS(Object) });
@@ -145,6 +147,7 @@ void Runtime::set_global_namespace()
 	add_global("unite", list_unite, { CLS(List), CLS(List) });
 	add_global("subtract", list_subtract, { CLS(List), CLS(List) });
 	auto list_class = Class::get<List>();
+	list_class->add_initializer(list_init, { });
 	list_class->add_method("get_item", list_get_item, {CLS(List), CLS(intptr_t)});
 	list_class->add_method("set_item", list_set_item, { CLS(List), CLS(intptr_t), CLS(Object) }, REF("001"));
 
@@ -176,6 +179,7 @@ void Runtime::set_global_namespace()
 	add_global("get", table_get1, { CLS(Table), CLS(Object) });
 	add_global("get", table_get2, { CLS(Table), CLS(Object), CLS(Object) });
 	auto table_class = Class::get<Table>();
+	table_class->add_initializer(table_init, { });
 	table_class->add_method("get_item", table_get_item, { CLS(Table), CLS(Object) });
 	table_class->add_method("set_item", table_set_item, { CLS(Table), CLS(Object), CLS(Object) }, REF("001"));
 
@@ -189,6 +193,7 @@ void Runtime::set_global_namespace()
 	add_global("ncol", array_ncol, { CLS(Array<double>) });
 	add_global("min", array_min, { CLS(Array<double>) });
 	add_global("max", array_max, { CLS(Array<double>) });
+	add_global("clear", array_clear, { CLS(Array<double>) }, REF("1"));
 	auto array_class = Class::get<Array<double>>();
 	auto &zeros = (*globals)["zeros"];
 	array_class->add_initializer(zeros.handle<Function>());

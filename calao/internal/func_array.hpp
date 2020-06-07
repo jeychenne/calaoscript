@@ -153,6 +153,16 @@ static Variant array_max(Runtime &, std::span<Variant> args)
 	return maximum;
 }
 
+static Variant array_clear(Runtime &, std::span<Variant> args)
+{
+	auto &array = raw_cast<Array<double>>(args[0]);
+	for (intptr_t i = 1; i <= array.size(); i++) {
+		array[i] = 0.0;
+	}
+
+	return Variant();
+}
+
 } // namespace calao
 
 #endif // CALAO_FUNC_ARRAY_HPP

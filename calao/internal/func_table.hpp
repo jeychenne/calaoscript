@@ -20,6 +20,10 @@
 
 namespace calao {
 
+static Variant table_init(Runtime &rt, std::span<Variant>)
+{
+	return make_handle<Table>(&rt);
+}
 
 static Variant table_get_item(Runtime &, std::span<Variant> args)
 {

@@ -1116,6 +1116,8 @@ Variant Runtime::interpret(Closure &closure)
 			}
 			case Opcode::SetSignature:
 			{
+
+				//TODO: rework that to add the routine here.
 				trace_op();
 				const int index = *ip++;
 				const int narg = *ip++;

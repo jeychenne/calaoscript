@@ -10,7 +10,7 @@
  *                                                                                                                    *
  * Purpose: hash table (aka associative array) mapping keys to values. This implementation uses open addressing with  *
  * Robin Hood hashing. Furthermore, iterators are guaranteed to point to an element inside the hashmap's array, even  *
- * they have been invalidated. The interface is similar (but not identical) to that of std::unordered_map.            *
+ * if they have been invalidated. The interface is similar (but not identical) to that of std::unordered_map.         *
  * This implementation is partly based on:                                                                            *
  * https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/          *
  * See also the following link for an overview of Robin Hood Hashing:                                                 *

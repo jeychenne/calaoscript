@@ -1025,18 +1025,13 @@ private:
 		m_dim.dx.jumps[i] = value;
 	}
 
-	void alloc_data_ndim(size_type count, value_type default_value = value_type())
+	void alloc_data_ndim(size_type count, const value_type &default_value = value_type())
 	{
 		m_data = utils::allocate<value_type>(count);
 
 		// Scalar types are already 0-initialized by calloc(), so we don't need to do anything for them.
-		if constexpr (!has_scalar_type)
-		{
+		if (!has_scalar_type || default_value != 0) {
 			copy_construct_n(begin(), count, default_value);
-		}
-		else
-		{
-			CALAO_UNUSED(default_value);
 		}
 	}
 

@@ -19,6 +19,11 @@
 
 namespace calao {
 
+static Variant string_init(Runtime &, std::span<Variant>)
+{
+	return String();
+}
+
 static Variant string_contains(Runtime &, std::span<Variant> args)
 {
 	auto &s1 = raw_cast<String>(args[0]);

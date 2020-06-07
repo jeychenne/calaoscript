@@ -21,6 +21,11 @@
 
 namespace calao {
 
+static Variant list_init(Runtime &rt, std::span<Variant>)
+{
+	return make_handle<List>(&rt);
+}
+
 static Variant list_get_item(Runtime &rt, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();
