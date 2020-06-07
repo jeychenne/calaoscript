@@ -16,7 +16,7 @@
 #define PHONOMETRICA_CLASS_DESCRIPTOR_HPP
 
 #include <type_traits>
-#include <phon/definitions.hpp>
+#include <phon/runtime/definitions.hpp>
 
 namespace phonometrica {
 class Class;

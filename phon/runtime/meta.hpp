@@ -16,8 +16,8 @@
 #define PHONOMETRICA_META_HPP
 
 #include <cmath>
-#include <phon/traits.hpp>
-#include <phon/definitions.hpp>
+#include <phon/runtime/traits.hpp>
+#include <phon/runtime/definitions.hpp>
 
 namespace phonometrica {
 namespace meta {

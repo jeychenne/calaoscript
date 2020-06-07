@@ -13,7 +13,7 @@
  **********************************************************************************************************************/
 
 #include <phon/runtime/variant.hpp>
-#include <phon/meta.hpp>
+#include <phon/runtime/meta.hpp>
 #include <phon/runtime/class.hpp>
 #include <phon/runtime/function.hpp>
 #include <phon/runtime/list.hpp>

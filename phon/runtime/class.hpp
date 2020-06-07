@@ -22,7 +22,7 @@
 #include <phon/runtime/typed_object.hpp>
 #include <phon/runtime/function.hpp>
 #include <phon/dictionary.hpp>
-#include <phon/runtime/variant-def.hpp>
+#include <phon/runtime/variant_def.hpp>
 
 namespace phonometrica {
 

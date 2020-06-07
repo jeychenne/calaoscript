@@ -21,7 +21,7 @@
 #include <optional>
 #include <vector>
 #include <phon/runtime/typed_object.hpp>
-#include <phon/runtime/variant-def.hpp>
+#include <phon/runtime/variant_def.hpp>
 #include <phon/runtime/code.hpp>
 #include <phon/utils/span.hpp>
 

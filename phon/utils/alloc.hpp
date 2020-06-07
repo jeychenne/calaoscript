@@ -18,7 +18,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <algorithm>
-#include <phon/traits.hpp>
+#include <phon/runtime/traits.hpp>
 
 namespace phonometrica { namespace utils {
 

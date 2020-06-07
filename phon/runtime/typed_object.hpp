@@ -17,7 +17,7 @@
 #define PHONOMETRICA_TYPED_OBJECT_HPP
 
 #include <phon/runtime/object.hpp>
-#include <phon/traits.hpp>
+#include <phon/runtime/traits.hpp>
 #include <phon/runtime/class_descriptor.hpp>
 
 namespace phonometrica {

@@ -20,7 +20,7 @@
 #include <unordered_set>
 #include <phon/string.hpp>
 #include <phon/runtime/class.hpp>
-#include <phon/meta.hpp>
+#include <phon/runtime/meta.hpp>
 #include <phon/runtime/typed_object.hpp>
 #include <phon/runtime/recycler.hpp>
 #include <phon/runtime/iterator.hpp>
