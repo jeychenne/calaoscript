@@ -106,6 +106,7 @@ void Runtime::create_builtins()
 	class_class.object()->set_class(class_class.get());
 
 	// Create other builtin types.
+	auto null_type = create_type<nullptr_t>("Null", raw_object_class, Class::Index::Null);
 	auto bool_class = create_type<bool>("Boolean", raw_object_class, Class::Index::Boolean);
 	auto num_class = create_type<Number>("Number", raw_object_class, Class::Index::Number);
 	auto int_class = create_type<intptr_t>("Integer", num_class.get(), Class::Index::Integer);
@@ -1071,7 +1072,7 @@ Variant Runtime::interpret(Closure &closure)
 			{
 				trace_op();
 				int count = *ip++ + 2; // add indexed expression and value
-				auto &v = peek(-count).resolve();
+				auto &v = peek(-count);
 				auto cls = v.get_class();
 				std::span<Variant> args(&v, count);
 				auto method = cls->get_method(set_item_string);

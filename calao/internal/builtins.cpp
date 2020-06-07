@@ -132,6 +132,7 @@ void Runtime::set_global_namespace()
 	add_global("pop", list_pop, { CLS(List) }, REF("1"));
 	add_global("shift", list_shift, { CLS(List) }, REF("1"));
 	add_global("sort", list_sort, { CLS(List) }, REF("1"));
+	add_global("is_sorted", list_is_sorted, { CLS(List) });
 	add_global("reverse", list_reverse, { CLS(List) }, REF("1"));
 	add_global("remove", list_remove, { CLS(List), CLS(Object) }, REF("01"));
 	add_global("remove_first", list_remove_first, { CLS(List), CLS(Object) }, REF("01"));

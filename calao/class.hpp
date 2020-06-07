@@ -36,6 +36,7 @@ public:
 	{
 		Object,
 		Class,
+		Null,
 		Boolean,
 		Number,
 		Integer,

@@ -467,7 +467,7 @@ Class *Variant::get_class() const
 		case Datatype::Boolean:
 			return Class::get<bool>();
 		case Datatype::Null:
-			return Class::get<void>();
+			return Class::get<nullptr_t>();
 		case Datatype::Object:
 			return as.object->get_class();
 		case Datatype::Alias:

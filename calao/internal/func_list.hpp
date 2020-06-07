@@ -215,6 +215,12 @@ static Variant list_sort(Runtime &, std::span<Variant> args)
 	return Variant();
 }
 
+static Variant list_is_sorted(Runtime &, std::span<Variant> args)
+{
+	auto &lst = raw_cast<List>(args[0]).items();
+	return std::is_sorted(lst.begin(), lst.end());
+}
+
 static Variant list_reverse(Runtime &, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();
