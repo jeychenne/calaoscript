@@ -9,7 +9,7 @@
  * Created: 02/07/2019                                                                                                *
  *                                                                                                                    *
  * Purpose: dynamic UTF-8 strings with copy-on-write behavior. Indexes start at 1 and can be negative. "Characters"   *
- * are assumed to be "user-perceived characters" in the sense of the Unicode standard, not code points or code units. *
+ * are understood as "user-perceived characters" in the sense of the Unicode standard, not code points or code units. *
  *                                                                                                                    *
  **********************************************************************************************************************/
 
