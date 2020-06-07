@@ -1,9 +1,9 @@
-#######################################################
-##  CMAKE FILE FOR THE STANDALONE CALAO INTERPRETER  ##
-#######################################################
+##############################################################
+##  CMAKE FILE FOR THE STANDALONE PHONOMETRICA INTERPRETER  ##
+##############################################################
 
 cmake_minimum_required(VERSION 3.12)
-project(calao)
+project(phonscript)
 set(CMAKE_CXX_STANDARD 17)
 
 
@@ -23,19 +23,19 @@ endif()
 ##  BUILD APPLICATION  ##
 #########################
 
-add_subdirectory(calao)
+add_subdirectory(phon)
 include_directories(${CMAKE_SOURCE_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-link_directories(${PROJECT_BINARY_DIR}/calao/)
-link_directories(${PROJECT_BINARY_DIR}/calao/third_party/pcre2)
+link_directories(${PROJECT_BINARY_DIR}/phon/)
+link_directories(${PROJECT_BINARY_DIR}/phon/third_party/pcre2)
 
 if(BUILD_INTERPRETER)
     add_executable(${PROJECT_NAME} interpreter.cpp)
-    target_link_libraries(${PROJECT_NAME} calao-runtime)
+    target_link_libraries(${PROJECT_NAME} phon-runtime)
 endif(BUILD_INTERPRETER)
 
 if(BUILD_UNIT_TEST)
     file(GLOB TEST_FILES ./unit_test/*.cpp)
     add_executable(test_calao ${TEST_FILES})
-    target_link_libraries(test_calao calao-runtime)
+    target_link_libraries(test_phon phon-runtime)
 endif(BUILD_UNIT_TEST)

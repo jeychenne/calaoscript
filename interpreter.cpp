@@ -13,10 +13,10 @@
  **********************************************************************************************************************/
 
 #include <iostream>
-#include <calao/runtime.hpp>
-#include <calao/internal/code.hpp>
+#include <phon/runtime/runtime.hpp>
+#include <phon/runtime/code.hpp>
 
-using namespace calao;
+using namespace phonometrica;
 
 int main(int argc, char *argv[])
 {
