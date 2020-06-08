@@ -804,6 +804,28 @@ Variant Runtime::interpret(Closure &closure)
 				}
 				break;
 			}
+			case Opcode::NewClosure:
+			{
+				trace_op();
+				const int index = *ip++;
+				const int narg = *ip++;
+				auto r = routine.get_routine(index);
+				if (!r->sealed())
+				{
+					for (int i = narg; i > 0; i--)
+					{
+						auto &v = peek(-i);
+						if (!check_type<Class>(v)) {
+							RUNTIME_ERROR("Expected a Class object as type of parameter %", (narg + 1 - i));
+						}
+						r->add_parameter_type(v.handle<Class>());
+					}
+					r->seal();
+				}
+				pop(narg);
+				push(make_handle<Function>(r->name(), make_handle<Closure>(r)));
+				break;
+			}
 			case Opcode::NewFrame:
 			{
 				trace_op();
@@ -1006,13 +1028,6 @@ Variant Runtime::interpret(Closure &closure)
 				push(value);
 				break;
 			}
-			case Opcode::PushFunction:
-			{
-				trace_op();
-				auto value = routine.get_function(*ip++);
-				push(std::move(value));
-				break;
-			}
 			case Opcode::PushInteger:
 			{
 				trace_op();
@@ -1112,27 +1127,6 @@ Variant Runtime::interpret(Closure &closure)
 				}
 				CATCH_ERROR
 				pop();
-				break;
-			}
-			case Opcode::SetSignature:
-			{
-
-				//TODO: rework that to add the routine here.
-				trace_op();
-				const int index = *ip++;
-				const int narg = *ip++;
-				auto r = routine.get_routine(index);
-				r->clear_signature();
-
-				for (int i = narg; i > 0; i--)
-				{
-					auto &v = peek(-i);
-					if (!check_type<Class>(v)) {
-						RUNTIME_ERROR("Expected a Class object as type of parameter %", (narg + 1 - i));
-					}
-					r->add_parameter_type(v.handle<Class>());
-				}
-				pop(narg);
 				break;
 			}
 			case Opcode::Subtract:
@@ -1408,6 +1402,14 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("NEW_ARRAY      %-5d %-5d\n", nrow, ncol);
 			return 3;
 		}
+		case Opcode::NewClosure:
+		{
+			int index = routine.code[offset + 1];
+			int narg = routine.code[offset + 2];
+			auto r = routine.get_routine(index);
+			printf("NEW_CLOSURE    %-3d %-5d  ; <%p>\n", index, narg, r.get());
+			return 3;
+		}
 		case Opcode::NewFrame:
 		{
 			int nlocal = routine.code[offset+1];
@@ -1497,13 +1499,6 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("PUSH_FLOAT     %-5d      ; %f\n", index, value);
 			return 2;
 		}
-		case Opcode::PushFunction:
-		{
-			int index = routine.code[offset + 1];
-			auto value = routine.get_function(index);
-			printf("PUSH_FUNCTION  %-5d      ; %s\n", index, value->name().data());
-			return 2;
-		}
 		case Opcode::PushInteger:
 		{
 			int index = routine.code[offset + 1];
@@ -1559,14 +1554,6 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			String value = routine.get_local_name(index);
 			printf("SET_LOCAL      %-5d      ; %s\n", index, value.data());
 			return 2;
-		}
-		case Opcode::SetSignature:
-		{
-			int index = routine.code[offset + 1];
-			int narg = routine.code[offset + 2];
-			auto r = routine.get_routine(index);
-			printf("SET_SIGNATURE  %-3d %-5d  ; <%p>\n", index, narg, r.get());
-			return 3;
 		}
 		case Opcode::Subtract:
 		{

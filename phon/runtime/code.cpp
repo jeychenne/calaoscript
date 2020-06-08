@@ -53,6 +53,7 @@ const char *opcode_names[] = {
 	"Multiply",
 	"Negate",
 	"NewArray",
+	"NewClosure",
 	"NewFrame",
 	"NewIterator",
 	"NewList",
@@ -70,7 +71,6 @@ const char *opcode_names[] = {
 	"PushBoolean",
 	"PushFalse",
 	"PushFloat",
-	"PushFunction",
 	"PushInteger",
 	"PushNan",
 	"PushNull",
@@ -81,7 +81,6 @@ const char *opcode_names[] = {
 	"SetGlobal",
 	"SetIndex",
 	"SetLocal",
-	"SetSignature",
 	"Subtract",
 	"TestIterator",
 	"Throw"

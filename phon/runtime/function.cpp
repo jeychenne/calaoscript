@@ -20,7 +20,7 @@ namespace phonometrica {
 Callable::Callable(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
 	signature(std::move(sig)), ref_flags(ref_flags), _name(name)
 {
-	_argc = int(signature.size());
+
 }
 
 int Callable::get_cost(std::span<Variant> args) const
@@ -82,13 +82,13 @@ Variant NativeRoutine::operator()(Runtime &rt, std::span<Variant> args)
 
 //----------------------------------------------------------------------------------------------------------------------
 
-Routine::Routine(Routine *parent, const String &name, int argc) : Callable(name, argc), parent(parent)
+Routine::Routine(Routine *parent, const String &name) : Callable(name), parent(parent)
 {
 
 }
 
 Routine::Routine(Routine *parent, const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags) :
-		Callable(name, std::move(sig), ref_flags), parent(parent)
+		Callable(name, std::move(sig), ref_flags), parent(parent), is_sealed(true)
 {
 
 }
@@ -108,11 +108,6 @@ Instruction Routine::add_string_constant(String s)
 	return add_constant(string_pool, std::move(s));
 }
 
-Instruction Routine::add_function(Handle<Function> f)
-{
-	return add_constant(function_pool, std::move(f));
-}
-
 Instruction Routine::add_local(const String &name, int scope, int depth)
 {
 	for (auto it = locals.rbegin(); it != locals.rend(); it++)
@@ -121,7 +116,7 @@ Instruction Routine::add_local(const String &name, int scope, int depth)
 			break;
 		}
 		if (it->name == name) {
-			throw error("[Name error] Variable \"%\" is already defined in the current scope", name);
+			throw error("[Name error] Variable \"%\" is already defined in this scope", name);
 		}
 	}
 	locals.push_back({name, scope, depth});
@@ -185,13 +180,13 @@ Instruction Routine::add_upvalue(Instruction index, bool local)
 
 //----------------------------------------------------------------------------------------------------------------------
 
-Function::Function(String name, Handle <Closure> c) :
+Function::Function(String name, Handle<Closure> c) :
 	Function(std::move(name))
 {
-	add_closure(std::move(c), true);
+	add_closure(std::move(c));
 }
 
-void Function::add_closure(Handle<Closure> c, bool create)
+void Function::add_closure(Handle<Closure> c)
 {
 	if (std::find(closures.begin(), closures.end(), c) == closures.end())
 	{
@@ -209,9 +204,8 @@ void Function::add_closure(Handle<Closure> c, bool create)
 		}
 		for (auto &cand : closures)
 		{
-			// FIXME: this doesn't work when a function with the same signature is redefined.
-			if (!create && r->signature == cand->routine->signature) {
-				throw error("[Type error] Function % is already defined in this scope", r->get_definition());
+			if (r->signature == cand->routine->signature) {
+				throw error("[Name error] Function % is already defined", r->get_definition());
 			}
 		}
 
@@ -257,6 +251,9 @@ Handle<Closure> Function::find_closure(std::span<Variant> args)
 		}
 		int cost = r->get_cost(args);
 
+		if (cost == 0) {
+			return c; // there can only be 1 exact match, so we're done.
+		}
 		if (cost <= best_cost)
 		{
 			conflict = (cost == best_cost);
@@ -293,7 +290,7 @@ Function::Function(const String &name, NativeCallback cb, std::initializer_list<
 {
 	auto r = std::make_shared<NativeRoutine>(name, std::move(cb), sig, ref_flags);
 
-	add_closure(make_handle<Closure>(std::move(r)), true);
+	add_closure(make_handle<Closure>(std::move(r)));
 }
 
 //----------------------------------------------------------------------------------------------------------------------

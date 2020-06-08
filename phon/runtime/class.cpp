@@ -66,7 +66,7 @@ void Class::add_method(const String &name, NativeCallback cb, std::initializer_l
 	else
 	{
 		auto ctor = it->second.handle<Function>();
-		ctor->add_closure(make_handle<Closure>(std::make_shared<NativeRoutine>(name, std::move(cb), sig, ref)), false);
+		ctor->add_closure(make_handle<Closure>(std::make_shared<NativeRoutine>(name, std::move(cb), sig, ref)));
 	}
 
 }

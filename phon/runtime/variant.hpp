@@ -8,9 +8,9 @@
  *                                                                                                                    *
  * Created: 12/07/2019                                                                                                *
  *                                                                                                                    *
- * Purpose: A polymorphic container for any value, similar to C++17 std::any. Primitive phon types                   *
+ * Purpose: A polymorphic container for any value, similar to C++17 std::any. Primitive Phonometrica types            *
  * (corresponding to null, bool, Integer, Float, String) are stored unboxed, along with their type. Non-primitive     *
- * types (e.g. Table) are implemented as a managed pointer to a boxed object.                                         *
+ * types (e.g. Table) are implemented as a managed pointer to a boxed object (see Handle<T>).                         *
  *                                                                                                                    *
  **********************************************************************************************************************/
 

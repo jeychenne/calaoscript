@@ -49,7 +49,7 @@ class Callable
 {
 public:
 
-	Callable(const String &name, int argc) : _name(name), _argc(argc) { } // routine without parameters
+	explicit Callable(const String &name) : _name(name) { } // routine without parameters
 
 	Callable(const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
 
@@ -57,7 +57,7 @@ public:
 
 	virtual bool is_native() const = 0;
 
-	int arg_count() const { return _argc; }
+	int arg_count() const { return int(signature.size()); }
 
 	bool check_ref(ParamBitset ref) { return ref_flags == ref; }
 
@@ -81,9 +81,6 @@ protected:
 
 	// For debugging and stack traces.
 	String _name;
-
-	// We store the argument count because user-defined routines only know the number of parameters after their signature is computed.
-	int _argc;
 };
 
 
@@ -129,7 +126,7 @@ public:
 		bool operator==(const UpvalueSlot &other) noexcept { return this->index == other.index && this->is_local == other.is_local; }
 	};
 
-	Routine(Routine *parent, const String &name, int argc);
+	Routine(Routine *parent, const String &name);
 
 	Routine(Routine *parent, const String &name, std::vector<Handle<Class>> sig, ParamBitset ref_flags);
 
@@ -140,8 +137,6 @@ public:
 	Instruction add_float_constant(double n);
 
 	Instruction add_string_constant(String s);
-	
-	Instruction add_function(Handle<Function> f);
 
 	Instruction add_routine(std::shared_ptr<Routine> r);
 
@@ -156,14 +151,14 @@ public:
 	intptr_t get_integer(intptr_t i) const { return integer_pool[i]; }
 
 	String get_string(intptr_t i) const { return string_pool[i]; }
-	
-	Handle<Function> get_function(intptr_t i) const { return function_pool[i]; }
 
 	std::shared_ptr<Routine> get_routine(intptr_t i) const { return routine_pool[i]; }
 
 	String get_local_name(intptr_t i) const { return locals[i].name; }
 
 	int local_count() const;
+
+	bool sealed() const { return is_sealed; }
 
 private:
 
@@ -173,7 +168,7 @@ private:
 	// Bytecode.
 	Code code;
 
-	void clear_signature() { signature.clear(); }
+	void seal() { is_sealed = true; }
 
 	Instruction add_upvalue(Instruction index, bool local);
 
@@ -198,35 +193,6 @@ private:
 	std::vector<double> float_pool;
 	std::vector<intptr_t> integer_pool;
 	std::vector<String> string_pool;
-
-	/*
-	 * The following piece of code is valid:
-	 *
-	 * #------------------------------------------------
-	 * function outer()
-	 *
-	 *     function inner()
-	 *         print "inner without arguments"
-	 *     end
-	 *
-	 *     function inner(arg as String)
-	 *         print "inner with one argument: " & arg
-	 *     end
-	 *
-	 *     return inner
-	 * end
-	 *
-	 * var f = outer()
-	 * f()
-	 * f("test")
-	 * #------------------------------------------------
-	 *
-	 * Inside outer(), we define one "inner" function and two routines (one for each signature). We must be able to
-	 * reference each routine at runtime in order to set their signature, and we must also be able to reference each
-	 * function since functions are first-class values. As a result, each routine redundantly stores a list of routines
-	 * and a list of functions.
-	 */
-	std::vector<Handle<Function>> function_pool;
 	std::vector<std::shared_ptr<Routine>> routine_pool;
 
 	// Local variables.
@@ -236,6 +202,9 @@ private:
 
 	// Enclosing routine (this is used to find upvalues).
 	Routine *parent = nullptr;
+
+	// We define the signature once at runtime and seal the routine.
+	bool is_sealed = false;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -279,13 +248,13 @@ public:
 
 	Function(Function &&) noexcept = default;
 
-	Function(String name, Handle <Closure> c);
+	Function(String name, Handle<Closure> c);
 
 	Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags = 0);
 
 	String name() const { return _name; }
 
-	void add_closure(Handle<Closure> r, bool create);
+	void add_closure(Handle<Closure> c);
 
 	Handle<Closure> find_closure(std::span<Variant> args);
 

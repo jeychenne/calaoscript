@@ -63,6 +63,7 @@ enum class Opcode : Instruction
 	Multiply,
 	Negate,
 	NewArray,
+	NewClosure,
 	NewFrame,
 	NewIterator,
 	NewList,
@@ -80,7 +81,6 @@ enum class Opcode : Instruction
 	PushBoolean,
 	PushFalse,
 	PushFloat,
-	PushFunction,
 	PushInteger,
 	PushNan,
 	PushNull,
@@ -91,7 +91,6 @@ enum class Opcode : Instruction
 	SetGlobal,
 	SetIndex,
 	SetLocal,
-	SetSignature,
 	Subtract,
 	TestIterator,
 	Throw

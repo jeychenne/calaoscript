@@ -77,13 +77,9 @@ private:
 
 	void close_scope(int previous);
 
-	std::pair<int,int> get_scope() const;
-
 	void backpatch_breaks(int previous);
 
 	void backpatch_continues(int previous);
-
-	Handle<Function> create_function_symbol(RoutineDefinition *node, const String &name);
 
 	Instruction add_local(const String &name);
 

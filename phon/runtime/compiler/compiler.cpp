@@ -53,7 +53,7 @@ void Compiler::initialize()
 {
 	scope_id = 0;
 	current_scope = 0;
-	set_routine(std::make_shared<Routine>(routine.get(), String(), 0));
+	set_routine(std::make_shared<Routine>(routine.get(), String()));
 }
 
 void Compiler::finalize()
@@ -200,9 +200,6 @@ void Compiler::visit_binary(BinaryExpression *node)
 
 	switch (node->op)
 	{
-		case Lexeme::OpConcat:
-			EMIT(Opcode::Concat);
-			break;
 		case Lexeme::OpPlus:
 			EMIT(Opcode::Add);
 			break;
@@ -409,7 +406,7 @@ void Compiler::visit_assignment(Assignment *node)
 			switch (op)
 			{
 				case Lexeme::OpConcat:
-					EMIT(Opcode::Concat);
+					EMIT(Opcode::Concat, 2);
 					break;
 				case Lexeme::OpPlus:
 					EMIT(Opcode::Add);
@@ -468,7 +465,7 @@ void Compiler::visit_assignment(Assignment *node)
 			switch (op)
 			{
 				case Lexeme::OpConcat:
-					EMIT(Opcode::Concat);
+					EMIT(Opcode::Concat, 2);
 					break;
 				case Lexeme::OpPlus:
 					EMIT(Opcode::Add);
@@ -499,11 +496,6 @@ void Compiler::visit_assignment(Assignment *node)
 	{
 		THROW("[Syntax error] Expected a variable name or an indexed expression on the left hand side in assignment");
 	}
-}
-
-std::pair<int, int> Compiler::get_scope() const
-{
-	return { current_scope, scope_depth };
 }
 
 void Compiler::visit_assert_statement(AssertStatement *node)
@@ -822,12 +814,12 @@ void Compiler::visit_routine(RoutineDefinition *node)
 	}
 	auto ident = static_cast<Variable*>(node->name.get());
 	auto &name = ident->name;
-	auto func = create_function_symbol(node, name);
+	/////////////////////////auto func = create_function_symbol(node, name);
 
 	// Compile inner routine.
 	auto previous_scope = open_scope();
 	auto outer_routine = routine;
-	set_routine(std::make_shared<Routine>(routine.get(), name, int(node->params.size())));
+	set_routine(std::make_shared<Routine>(routine.get(), name));
 	EMIT(Opcode::NewFrame, 0);
 	int frame_offset = code->get_current_offset() - 1;
 
@@ -848,8 +840,7 @@ void Compiler::visit_routine(RoutineDefinition *node)
 	code->backpatch_instruction(frame_offset, (Instruction)routine->local_count());
 	close_scope(previous_scope);
 
-	auto index = outer_routine->add_routine(routine);
-	func->add_closure(make_handle<Closure>(std::move(routine)), true);
+	auto routine_index = outer_routine->add_routine(routine);
 	set_routine(std::move(outer_routine));
 
 	// Compile type information in the outer routine.
@@ -858,41 +849,21 @@ void Compiler::visit_routine(RoutineDefinition *node)
 		static_cast<RoutineParameter*>(param.get())->add_names = false;
 		param->visit(*this);
 	}
-	EMIT(Opcode::SetSignature, index, Instruction(node->params.size()));
-}
-
-Handle<Function> Compiler::create_function_symbol(RoutineDefinition *node, const String &name)
-{
-	Handle<Function> func;
+	EMIT(Opcode::NewClosure, routine_index, Instruction(node->params.size()));
 
 	if (node->local || scope_depth > 1)
 	{
+		// We might be defining an overload of an already existing routine, so we first try find_local().
 		auto symbol = routine->find_local(name, scope_depth);
-
-		if (symbol)
-		{
-			func = routine->get_function(*symbol);
-		}
-		else
-		{
-			func = make_handle<Function>(name);
-			auto symbol = routine->add_function(func);
-			auto index = add_local(name);
-			EMIT(Opcode::PushFunction, symbol);
-			EMIT(Opcode::DefineLocal, index);
-		}
+		auto index = symbol ? *symbol : add_local(name);
+		EMIT(Opcode::SetLocal, index);
 	}
 	else
 	{
-		func = make_handle<Function>(name);
-		auto symbol = routine->add_function(func);
 		auto index = routine->add_string_constant(name);
-		EMIT(Opcode::PushFunction, symbol);
-		// Don't use DefineGlobal here.
+		// Don't use DefineGlobal, since we might be adding an overload to an existing function.
 		EMIT(Opcode::SetGlobal, index);
 	}
-
-	return func;
 }
 
 Instruction Compiler::add_local(const String &name)

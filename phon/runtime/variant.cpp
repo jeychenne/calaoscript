@@ -436,7 +436,7 @@ Variant &Variant::operator=(Variant other)
 		if (&f1 != &f2)
 		{
 			for (auto &r : f2.closures) {
-				f1.add_closure(r, false);
+				f1.add_closure(r);
 			}
 		}
 	}
