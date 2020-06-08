@@ -452,7 +452,7 @@ void Compiler::visit_assignment(Assignment *node)
 		{
 			EMIT(Opcode::SetLocal, *index);
 		}
-		if ((index = routine->resolve_upvalue(var->name, scope_depth)))
+		else if ((index = routine->resolve_upvalue(var->name, scope_depth)))
 		{
 			EMIT(Opcode::SetUpvalue, *index);
 		}
