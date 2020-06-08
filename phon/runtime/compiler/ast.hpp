@@ -65,11 +65,15 @@ struct AstContext
 
 struct Assignment final : public Ast
 {
-	Assignment(int line, AutoAst lhs, AutoAst rhs) : Ast(line), lhs(std::move(lhs)), rhs(std::move(rhs)) { }
+	Assignment(int line, AutoAst lhs, AutoAst rhs, Lexeme op = Lexeme::OpAssign) :
+		Ast(line), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) { }
 
 	void visit(AstVisitor &v) override;
 
+	Lexeme get_operator() const;
+
 	AutoAst lhs, rhs;
+	Lexeme op;
 };
 
 struct Literal : public Ast

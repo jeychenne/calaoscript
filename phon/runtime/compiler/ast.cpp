@@ -78,6 +78,29 @@ void Assignment::visit(AstVisitor &v)
 	VISIT(assignment);
 }
 
+Ast::Lexeme Assignment::get_operator() const
+{
+	switch (op)
+	{
+		case Lexeme::OpAssignConcat:
+			return Lexeme::OpConcat;
+		case Lexeme::OpAssignMinus:
+			return Lexeme::OpMinus;
+		case Lexeme::OpAssignMod:
+			return Lexeme::OpMod;
+		case Lexeme::OpAssignPlus:
+			return Lexeme::OpPlus;
+		case Lexeme::OpAssignPower:
+			return Lexeme::OpPower;
+		case Lexeme::OpAssignSlash:
+			return Lexeme::OpSlash;
+		case Lexeme::OpAssignStar:
+			return Lexeme::OpStar;
+		default:
+			return Lexeme::OpAssign;
+	}
+}
+
 void AssertStatement::visit(AstVisitor &v)
 {
 	VISIT(assert_statement);

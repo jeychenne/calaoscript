@@ -267,12 +267,18 @@ AutoAst Parser::parse_expression_statement()
 {
 	trace_ast();
 	auto e = parse_expression();
-	if (check(Lexeme::OpAssign))
+	if (accept(Lexeme::OpAssign))
 	{
-		accept();
 		return make<Assignment>(std::move(e), parse_expression());
 	}
+	else if (check(Lexeme::OpAssignPlus) || check(Lexeme::OpAssignMinus) || check(Lexeme::OpAssignStar) || check(Lexeme::OpAssignSlash) ||
+		check(Lexeme::OpAssignConcat) || check(Lexeme::OpAssignPower) || check(Lexeme::OpAssignMod))
+	{
+		auto op = token.id;
+		accept();
 
+		return make<Assignment>(std::move(e), parse_expression(), op);
+	}
 	return e;
 }
 

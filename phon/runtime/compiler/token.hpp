@@ -73,6 +73,13 @@ struct Token final
 		While,
 
 		OpAssign,
+		OpAssignConcat,
+		OpAssignMinus,
+		OpAssignMod,
+		OpAssignPlus,
+		OpAssignPower,
+		OpAssignSlash,
+		OpAssignStar,
 		OpAt,
 		OpCompare,
 		OpConcat,

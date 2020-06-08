@@ -316,36 +316,71 @@ Token Scanner::read_token()
     case U'+':
     {
     	accept();
+    	if (m_char == U'=')
+    	{
+    		accept();
+    		return Token(Token::Lexeme::OpAssignPlus, "+=", m_line_no);
+    	}
     	return Token(Token::Lexeme::OpPlus, "+", m_line_no);
     }
     case U'-':
     {
 	    accept();
+		if (m_char == U'=')
+		{
+			accept();
+			return Token(Token::Lexeme::OpAssignMinus, "-=", m_line_no);
+		}
 	    return Token(Token::Lexeme::OpMinus, "-", m_line_no);
     }
     case U'*':
     {
 	    accept();
+		if (m_char == U'=')
+		{
+			accept();
+			return Token(Token::Lexeme::OpAssignStar, "*=", m_line_no);
+		}
 	    return Token(Token::Lexeme::OpStar, "*", m_line_no);
     }
     case U'/':
     {
 	    accept();
+		if (m_char == U'=')
+		{
+			accept();
+			return Token(Token::Lexeme::OpAssignSlash, "/=", m_line_no);
+		}
 	    return Token(Token::Lexeme::OpSlash, "/", m_line_no);
     }
     case U'^':
 	{
 		accept();
+		if (m_char == U'=')
+		{
+			accept();
+			return Token(Token::Lexeme::OpAssignPower, "^=", m_line_no);
+		}
 		return Token(Token::Lexeme::OpPower, "^", m_line_no);
 	}
    	case U'%':
 	{
 		accept();
+		if (m_char == U'=')
+		{
+			accept();
+			return Token(Token::Lexeme::OpAssignMod, "%=", m_line_no);
+		}
 		return Token(Token::Lexeme::OpMod, "%", m_line_no);
 	}
     case U'&':
     {
 	    accept();
+		if (m_char == U'=')
+		{
+			accept();
+			return Token(Token::Lexeme::OpAssignConcat, "&=", m_line_no);
+		}
 	    return Token(Token::Lexeme::OpConcat, "&", m_line_no);
     }
     case U',':

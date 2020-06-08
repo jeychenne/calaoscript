@@ -392,10 +392,47 @@ void Compiler::visit_variable(Variable *node)
 void Compiler::visit_assignment(Assignment *node)
 {
 	Variable *var;
+	auto op = node->get_operator();
 
+	// For self-assignment, we write an expression such as "x += y" as "x = x + y".
 	if ((var = dynamic_cast<Variable*>(node->lhs.get())))
 	{
-		node->rhs->visit(*this);
+		if (op == Lexeme::OpAssign)
+		{
+			node->rhs->visit(*this);
+		}
+		else
+		{
+			node->lhs->visit(*this);
+			node->rhs->visit(*this);
+
+			switch (op)
+			{
+				case Lexeme::OpConcat:
+					EMIT(Opcode::Concat);
+					break;
+				case Lexeme::OpPlus:
+					EMIT(Opcode::Add);
+					break;
+				case Lexeme::OpMinus:
+					EMIT(Opcode::Subtract);
+					break;
+				case Lexeme::OpStar:
+					EMIT(Opcode::Multiply);
+					break;
+				case Lexeme::OpSlash:
+					EMIT(Opcode::Divide);
+					break;
+				case Lexeme::OpPower:
+					EMIT(Opcode::Power);
+					break;
+				case Lexeme::OpMod:
+					EMIT(Opcode::Modulus);
+					break;
+				default:
+					THROW("[Internal error] Invalid operator in self assignment");
+			}
+		}
 
 		// Try to find a local variable, otherwise try to get a global.
 		auto index = routine->find_local(var->name, scope_depth);
@@ -418,7 +455,44 @@ void Compiler::visit_assignment(Assignment *node)
 		visiting_assigned_lhs = true;
 		node->lhs->visit(*this);
 		visiting_assigned_lhs = false;
-		node->rhs->visit(*this);
+
+		if (op == Lexeme::OpAssign)
+		{
+			node->rhs->visit(*this);
+		}
+		else
+		{
+			node->lhs->visit(*this);
+			node->rhs->visit(*this);
+
+			switch (op)
+			{
+				case Lexeme::OpConcat:
+					EMIT(Opcode::Concat);
+					break;
+				case Lexeme::OpPlus:
+					EMIT(Opcode::Add);
+					break;
+				case Lexeme::OpMinus:
+					EMIT(Opcode::Subtract);
+					break;
+				case Lexeme::OpStar:
+					EMIT(Opcode::Multiply);
+					break;
+				case Lexeme::OpSlash:
+					EMIT(Opcode::Divide);
+					break;
+				case Lexeme::OpPower:
+					EMIT(Opcode::Power);
+					break;
+				case Lexeme::OpMod:
+					EMIT(Opcode::Modulus);
+					break;
+				default:
+					THROW("[Internal error] Invalid operator in self assignment");
+			}
+		}
+
 		EMIT(Opcode::SetIndex, Instruction(lhs->size()));
 	}
 	else
