@@ -27,8 +27,32 @@
 
 namespace phonometrica {
 
+static Variant boolean_init(Runtime &, std::span<Variant>)
+{
+	return false;
+}
+
+static Variant integer_init(Runtime &, std::span<Variant>)
+{
+	return intptr_t(0);
+}
+
+static Variant float_init(Runtime &, std::span<Variant>)
+{
+	return 0.0;
+}
+
+
 void Runtime::set_global_namespace()
 {
+	// Constructors for primitive types
+	auto bool_class = Class::get<bool>();
+	bool_class->add_initializer(boolean_init, { });
+	auto int_class = Class::get<intptr_t>();
+	int_class->add_initializer(integer_init, { });
+	auto float_class = Class::get<double>();
+	float_class->add_initializer(float_init, { });
+
 	// Generic functions
 	add_global("type", get_type, { CLS(Object) });
 	add_global("len", get_length, { CLS(Object) });

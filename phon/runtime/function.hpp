@@ -69,6 +69,8 @@ public:
 
 	String get_definition() const;
 
+	virtual int upvalue_count() const { return 0; }
+
 protected:
 
 	friend class Function;
@@ -113,7 +115,7 @@ public:
 	};
 
 	// Represents a non-local variable referenced by an inner function.
-	struct UpvalueSlot
+	struct Upvalue
 	{
 		// Index of the variable in the surrounding function.
 		Instruction index;
@@ -123,7 +125,7 @@ public:
 		// a local one.
 		bool is_local;
 
-		bool operator==(const UpvalueSlot &other) noexcept { return this->index == other.index && this->is_local == other.is_local; }
+		bool operator==(const Upvalue &other) noexcept { return this->index == other.index && this->is_local == other.is_local; }
 	};
 
 	Routine(Routine *parent, const String &name);
@@ -159,6 +161,8 @@ public:
 	int local_count() const;
 
 	bool sealed() const { return is_sealed; }
+
+	int upvalue_count() const override { return int(upvalues.size()); }
 
 private:
 
@@ -198,7 +202,7 @@ private:
 	// Local variables.
 	std::vector<Local> locals;
 
-	std::vector<UpvalueSlot> upvalues;
+	std::vector<Upvalue> upvalues;
 
 	// Enclosing routine (this is used to find upvalues).
 	Routine *parent = nullptr;
@@ -228,6 +232,8 @@ private:
 	Variant call_user(Runtime &rt, std::span<Variant> args);
 
 	std::shared_ptr<Callable> routine;
+
+	std::vector<Variant> upvalues;
 };
 
 

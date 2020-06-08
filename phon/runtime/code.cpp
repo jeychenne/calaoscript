@@ -39,6 +39,7 @@ const char *opcode_names[] = {
 	"GetLocalRef",
 	"GetUniqueGlobal",
 	"GetUniqueLocal",
+	"GetUniqueUpvalue",
 	"Divide",
 	"Equal",
 	"Greater",
@@ -81,6 +82,7 @@ const char *opcode_names[] = {
 	"SetGlobal",
 	"SetIndex",
 	"SetLocal",
+	"SetUpvalue",
 	"Subtract",
 	"TestIterator",
 	"Throw"

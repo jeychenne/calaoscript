@@ -679,6 +679,39 @@ Variant Runtime::interpret(Closure &closure)
 				push(current_frame->locals[*ip++].unshare());
 				break;
 			}
+			case Opcode::GetUniqueUpvalue:
+			{
+				trace_op();
+				push(closure.upvalues[*ip++].unshare());
+				break;
+			}
+			case Opcode::GetUpvalue:
+			{
+				trace_op();
+				auto &v = closure.upvalues[*ip++];
+				push(v.resolve());
+				break;
+			}
+			case Opcode::GetUpvalueArg:
+			{
+				trace_op();
+				auto &v = closure.upvalues[*ip++];
+				bool by_ref = current_frame->ref_flags[*ip++];
+				if (by_ref) {
+					push(v.make_alias());
+				}
+				else {
+					push(v.resolve());
+				}
+				break;
+			}
+			case Opcode::GetUpvalueRef:
+			{
+				trace_op();
+				Variant &v = closure.upvalues[*ip++];
+				push(v.make_alias());
+				break;
+			}
 			case Opcode::Greater:
 			{
 				trace_op();
@@ -823,7 +856,21 @@ Variant Runtime::interpret(Closure &closure)
 					r->seal();
 				}
 				pop(narg);
-				push(make_handle<Function>(r->name(), make_handle<Closure>(r)));
+				auto rout = r.get();
+				auto c = make_handle<Closure>(std::move(r));
+				for (int i = 0; i < rout->upvalue_count(); i++)
+				{
+					auto upvalue = rout->upvalues[i];
+					Variant *var;
+					if (upvalue.is_local) {
+						var = &current_frame->locals[upvalue.index];
+					}
+					else {
+						var = &closure.upvalues[upvalue.index];
+					}
+					c->upvalues.emplace_back(var->make_alias());
+				}
+				push(make_handle<Function>(rout->name(), std::move(c)));
 				break;
 			}
 			case Opcode::NewFrame:
@@ -1129,6 +1176,17 @@ Variant Runtime::interpret(Closure &closure)
 				pop();
 				break;
 			}
+			case Opcode::SetUpvalue:
+			{
+				trace_op();
+				Variant &v = closure.upvalues[*ip++];
+				try {
+					v = std::move(peek());
+				}
+				CATCH_ERROR
+				pop();
+				break;
+			}
 			case Opcode::Subtract:
 			{
 				trace_op();
@@ -1337,9 +1395,35 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		{
 			int index = routine.code[offset + 1];
 			String value = routine.get_local_name(index);
-			printf("GET_UNIQUE_LOCAL  %-5d   ; %s\n", index, value.data());
+			printf("GET_UNIQUE_LOCAL %-5d    ; %s\n", index, value.data());
 			return 2;
 		}
+		case Opcode::GetUniqueUpvalue:
+		{
+			int index = routine.code[offset + 1];
+			printf("GET_UNIQUE_UPVALUE %-5d\n", index);
+			return 2;
+		}
+		case Opcode::GetUpvalue:
+		{
+			int index = routine.code[offset + 1];
+			printf("GET_UPVALUE    %-5d\n", index);
+			return 2;
+		}
+		case Opcode::GetUpvalueArg:
+		{
+			int index = routine.code[offset + 1];
+			int narg = routine.code[offset + 2];
+			printf("GET_UPVALUE_ARG %-5d %-5d\n", index, narg);
+			return 3;
+		}
+		case Opcode::GetUpvalueRef:
+		{
+			int index = routine.code[offset + 1];
+			printf("GET_UPVALUE_REF %-5d\n", index);
+			return 2;
+		}
+
 		case Opcode::Greater:
 		{
 			return print_simple_instruction("GREATER");

@@ -361,7 +361,22 @@ void Compiler::visit_variable(Variable *node)
 	}
 	else if ((index = routine->resolve_upvalue(node->name, scope_depth)))
 	{
-
+		if (parsing_argument())
+		{
+			EMIT(Opcode::GetUpvalueArg, *index);
+		}
+		else if (visiting_reference || visiting_assigned_lhs)
+		{
+			if (visiting_indexed_lhs || visiting_assigned_lhs) {
+				EMIT(Opcode::GetUniqueUpvalue, *index);
+			}
+			else {
+				EMIT(Opcode::GetUpvalueRef, *index);
+			}
+		}
+		else {
+			EMIT(Opcode::GetUpvalue, *index);
+		}
 	}
 	else
 	{
@@ -436,6 +451,10 @@ void Compiler::visit_assignment(Assignment *node)
 		if (index)
 		{
 			EMIT(Opcode::SetLocal, *index);
+		}
+		if ((index = routine->resolve_upvalue(var->name, scope_depth)))
+		{
+			EMIT(Opcode::SetUpvalue, *index);
 		}
 		else
 		{

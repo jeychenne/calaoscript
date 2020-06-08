@@ -103,7 +103,12 @@ void Variant::release()
 	}
 	else if (this->is_alias())
 	{
+		auto count = as.alias->ref_count - 1;
 		as.alias->release();
+		if (count == 1)
+		{
+			*this = std::move(as.alias->variant);
+		}
 	}
 }
 

@@ -169,7 +169,7 @@ Instruction Routine::add_upvalue(Instruction index, bool local)
 	if (unlikely(upvalues.size()) > (std::numeric_limits<Instruction>::max)()) {
 		throw error("[Compiler error] Maximum number of upvalues exceeded in the current function");
 	}
-	auto it = std::find(upvalues.begin(), upvalues.end(), UpvalueSlot{index, local});
+	auto it = std::find(upvalues.begin(), upvalues.end(), Upvalue{index, local});
 	if (it != upvalues.end()) {
 		return std::distance(upvalues.begin(), it);
 	}
