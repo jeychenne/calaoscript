@@ -24,6 +24,17 @@ static Variant string_init(Runtime &, std::span<Variant>)
 	return String();
 }
 
+static Variant string_get_field(Runtime &rt, std::span<Variant> args)
+{
+	auto &s = raw_cast<String>(args[0]);
+	auto &key = raw_cast<String>(args[1]);
+	if (key == rt.length_string) {
+		return s.grapheme_count();
+	}
+
+	throw error("[Index error] String type has no member named \"%\"", key);
+}
+
 static Variant string_contains(Runtime &, std::span<Variant> args)
 {
 	auto &s1 = raw_cast<String>(args[0]);

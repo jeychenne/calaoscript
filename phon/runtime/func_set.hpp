@@ -25,6 +25,18 @@ static Variant set_init(Runtime &rt, std::span<Variant>)
 	return make_handle<Set>(&rt);
 }
 
+static Variant set_get_field(Runtime &rt, std::span<Variant> args)
+{
+	auto &set = raw_cast<Set>(args[0]).items();
+	auto &key = raw_cast<String>(args[1]);
+
+	if (key == rt.length_string) {
+		return set.size();
+	}
+
+	throw error("[Index error] Set type has no member named \"%\"", key);
+}
+
 static Variant set_contains(Runtime &, std::span<Variant> args)
 {
 	auto &set = raw_cast<Set>(args[0]);

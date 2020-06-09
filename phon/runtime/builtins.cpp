@@ -21,8 +21,8 @@
 #include <phon/runtime/func_set.hpp>
 #include <phon/runtime/func_math.hpp>
 #include <phon/runtime/func_array.hpp>
-#include "runtime.hpp"
-
+#include <phon/runtime/func_module.hpp>
+#include <phon/runtime/runtime.hpp>
 
 #define CLS(T) get_class<T>()
 #define REF(bits) ParamBitset(bits)
@@ -62,6 +62,11 @@ void Runtime::set_global_namespace()
 	add_global("bool", to_boolean, { CLS(Object) });
 	add_global("int", to_integer, { CLS(Object) });
 	add_global("float", to_float, { CLS(Object) });
+
+	// Module type.
+	auto module_class = Class::get<Module>();
+	module_class->add_method(get_field_string, module_get_attr, {CLS(Module), CLS(String)});
+	module_class->add_method(set_field_string, module_set_attr, {CLS(Module), CLS(String), CLS(Object)}, REF("001"));
 
 	// Math functions
 	add_global("abs", math_abs, { CLS(Number) });
@@ -139,6 +144,7 @@ void Runtime::set_global_namespace()
 	add_global("replace_at", string_replace_at, {CLS(String), CLS(intptr_t), CLS(intptr_t), CLS(String)}, REF("0001"));
 	auto string_class = Class::get<String>();
 	string_class->add_initializer(string_init, { });
+	string_class->add_method(get_field_string, string_get_field, {CLS(String), CLS(String)});
 
 	// List
 	add_global("contains", list_contains, { CLS(List), CLS(Object) });
@@ -172,8 +178,9 @@ void Runtime::set_global_namespace()
 	add_global("subtract", list_subtract, { CLS(List), CLS(List) });
 	auto list_class = Class::get<List>();
 	list_class->add_initializer(list_init, { });
-	list_class->add_method("get_item", list_get_item, {CLS(List), CLS(intptr_t)});
-	list_class->add_method("set_item", list_set_item, { CLS(List), CLS(intptr_t), CLS(Object) }, REF("001"));
+	list_class->add_method(get_item_string, list_get_item, {CLS(List), CLS(intptr_t)});
+	list_class->add_method(set_item_string, list_set_item, { CLS(List), CLS(intptr_t), CLS(Object) }, REF("001"));
+	list_class->add_method(get_field_string, list_get_field, { CLS(List), CLS(String) });
 
 	// File
 	add_global("open", file_open1, { CLS(String) });
@@ -192,20 +199,20 @@ void Runtime::set_global_namespace()
 	auto file_class = Class::get<File>();
 	auto &v = (*globals)["open"];
 	file_class->add_initializer(v.handle<Function>());
+	file_class->add_method(get_field_string, file_get_field, {CLS(File), CLS(String)});
 
 	// Table
 	add_global("contains", table_contains, { CLS(Table), CLS(Object) });
 	add_global("is_empty", table_is_empty, { CLS(Table) });
 	add_global("clear", table_clear, { CLS(Table) }, REF("1"));
-	add_global("get_keys", table_get_keys, { CLS(Table) });
-	add_global("get_values", table_get_values, { CLS(Table) });
 	add_global("remove", table_remove, { CLS(Table), CLS(Object) }, REF("01"));
 	add_global("get", table_get1, { CLS(Table), CLS(Object) });
 	add_global("get", table_get2, { CLS(Table), CLS(Object), CLS(Object) });
 	auto table_class = Class::get<Table>();
 	table_class->add_initializer(table_init, { });
-	table_class->add_method("get_item", table_get_item, { CLS(Table), CLS(Object) });
-	table_class->add_method("set_item", table_set_item, { CLS(Table), CLS(Object), CLS(Object) }, REF("001"));
+	table_class->add_method(get_item_string, table_get_item, { CLS(Table), CLS(Object) });
+	table_class->add_method(set_item_string, table_set_item, { CLS(Table), CLS(Object), CLS(Object) }, REF("001"));
+	table_class->add_method(get_field_string, table_get_field, { CLS(Table), CLS(String) });
 
 	// Array
 	add_global("zeros", array_zeros1, { CLS(intptr_t) });
@@ -221,15 +228,17 @@ void Runtime::set_global_namespace()
 	auto array_class = Class::get<Array<double>>();
 	auto &zeros = (*globals)["zeros"];
 	array_class->add_initializer(zeros.handle<Function>());
-	array_class->add_method("get_item", array_get_item1, { CLS(Array<double>), CLS(intptr_t) });
-	array_class->add_method("get_item", array_get_item2, { CLS(Array<double>), CLS(intptr_t), CLS(intptr_t) });
-	array_class->add_method("set_item", array_set_item1, { CLS(Array<double>), CLS(intptr_t), CLS(Number) }, REF("001"));
-	array_class->add_method("set_item", array_set_item2, { CLS(Array<double>), CLS(intptr_t), CLS(intptr_t), CLS(Number) }, REF("0001"));
+	array_class->add_method(get_item_string, array_get_item1, { CLS(Array<double>), CLS(intptr_t) });
+	array_class->add_method(get_item_string, array_get_item2, { CLS(Array<double>), CLS(intptr_t), CLS(intptr_t) });
+	array_class->add_method(set_item_string, array_set_item1, { CLS(Array<double>), CLS(intptr_t), CLS(Number) }, REF("001"));
+	array_class->add_method(set_item_string, array_set_item2, { CLS(Array<double>), CLS(intptr_t), CLS(intptr_t), CLS(Number) }, REF("0001"));
+	array_class->add_method(get_field_string, array_get_field, { CLS(Array<double>), CLS(String) });
 
 	// Regex
 	auto regex_class = Class::get<Regex>();
 	regex_class->add_initializer(regex_new1, {CLS(String)});
 	regex_class->add_initializer(regex_new2, {CLS(String), CLS(String)});
+	regex_class->add_method(get_field_string, regex_get_field, {CLS(Regex), CLS(String)});
 	add_global("match", regex_match1, { CLS(Regex), CLS(String) });
 	add_global("match", regex_match2, { CLS(Regex), CLS(String), CLS(intptr_t) });
 	add_global("has_match", regex_has_match, { CLS(Regex) });
@@ -249,6 +258,7 @@ void Runtime::set_global_namespace()
 	add_global("subtract", set_subtract, { CLS(Set), CLS(Set) });
 	auto set_class = Class::get<Set>();
 	set_class->add_initializer(set_init, {});
+	set_class->add_method(get_field_string, set_get_field, { CLS(Set), CLS(String) });
 }
 
 } // namespace phonometrica

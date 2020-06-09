@@ -206,13 +206,13 @@ void Compiler::visit_binary(BinaryExpression *node)
 				return; // SetIndex will be added by the assignment once we visit the RHS.
 			}
 			if (visiting_reference) {
-				EMIT(Opcode::GetMemberRef);
+				EMIT(Opcode::GetFieldRef);
 			}
 			else if (parsing_argument()) {
-				EMIT(Opcode::GetMemberArg, Instruction(visit_arg));
+				EMIT(Opcode::GetFieldArg, Instruction(visit_arg));
 			}
 			else {
-				EMIT(Opcode::GetMember);
+				EMIT(Opcode::GetField);
 			}
 			return;
 		}

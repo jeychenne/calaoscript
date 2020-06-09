@@ -19,6 +19,26 @@
 
 namespace phonometrica {
 
+static Variant array_get_field(Runtime &rt, std::span<Variant> args)
+{
+	auto &array = raw_cast<Array<double>>(args[0]);
+	auto &key = raw_cast<String>(args[1]);
+	if (key == rt.length_string) {
+		return array.size();
+	}
+	else if (key == "dim_count") {
+		return array.ndim();
+	}
+	else if (key == "row_count") {
+		return array.nrow();
+	}
+	else if (key == "col_count") {
+		return array.ncol();
+	}
+
+	throw error("[Index error] String type has no member named \"%\"", key);
+}
+
 static Variant array_zeros1(Runtime &, std::span<Variant> args)
 {
 	intptr_t size = raw_cast<intptr_t>(args[0]);

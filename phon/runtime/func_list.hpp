@@ -40,6 +40,18 @@ static Variant list_get_item(Runtime &rt, std::span<Variant> args)
 	return rt.needs_reference() ? lst.at(i).make_alias() : lst.at(i).resolve();
 }
 
+static Variant list_get_field(Runtime &rt, std::span<Variant> args)
+{
+	auto &lst = raw_cast<List>(args[0]).items();
+	auto &key = raw_cast<String>(args[1]);
+
+	if (key == rt.length_string) {
+		return lst.size();
+	}
+
+	throw error("[Index error] List type has no member named \"%\"", key);
+}
+
 static Variant list_set_item(Runtime &, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();

@@ -59,6 +59,7 @@ void Class::add_initializer(NativeCallback cb, std::initializer_list<Handle<Clas
 void Class::add_method(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref)
 {
 	auto it = members.find(name);
+	// This is fine as long as we have a single runtime.
 	auto rt = static_cast<Collectable*>(object())->runtime;
 	if (it == members.end())
 	{

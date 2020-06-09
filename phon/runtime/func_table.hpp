@@ -31,6 +31,24 @@ static Variant table_get_item(Runtime &, std::span<Variant> args)
 	return tab.get(args[1]);
 }
 
+static Variant table_get_field(Runtime &rt, std::span<Variant> args)
+{
+	auto &tab = raw_cast<Table>(args[0]);
+	auto &key = raw_cast<String>(args[1]);
+
+	if (key == rt.length_string) {
+		return tab.size();
+	}
+	else if (key == "keys") {
+		return make_handle<List>(&rt, tab.keys());
+	}
+	else if (key == "values") {
+		return make_handle<List>(&rt, tab.values());
+	}
+
+	throw error("[Index error] Table type has no member named \"%\"", key);
+}
+
 static Variant table_set_item(Runtime &, std::span<Variant> args)
 {
 	auto &map = raw_cast<Table>(args[0]).map();
@@ -57,18 +75,6 @@ static Variant table_clear(Runtime &, std::span<Variant> args)
 	map.clear();
 
 	return Variant();
-}
-
-static Variant table_get_keys(Runtime &rt, std::span<Variant> args)
-{
-	auto &tab = raw_cast<Table>(args[0]);
-	return make_handle<List>(&rt, tab.keys());
-}
-
-static Variant table_get_values(Runtime &rt, std::span<Variant> args)
-{
-	auto &tab = raw_cast<Table>(args[0]);
-	return make_handle<List>(&rt, tab.values());
 }
 
 static Variant table_remove(Runtime &, std::span<Variant> args)

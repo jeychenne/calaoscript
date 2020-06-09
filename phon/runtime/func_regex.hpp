@@ -20,6 +20,20 @@
 
 namespace phonometrica {
 
+static Variant regex_get_field(Runtime &rt, std::span<Variant> args)
+{
+	auto &re = raw_cast<Regex>(args[0]);
+	auto &key = raw_cast<String>(args[1]);
+	if (key == rt.length_string) {
+		return re.count();
+	}
+	else if (key == "pattern") {
+		return re.pattern();
+	}
+
+	throw error("[Index error] String type has no member named \"%\"", key);
+}
+
 static Variant regex_new1(Runtime &, std::span<Variant> args)
 {
 	auto &pattern = raw_cast<String>(args[0]);

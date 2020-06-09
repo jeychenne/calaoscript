@@ -20,6 +20,20 @@
 
 namespace phonometrica {
 
+static Variant file_get_field(Runtime &rt, std::span<Variant> args)
+{
+	auto &f = raw_cast<File>(args[0]);
+	auto &key = raw_cast<String>(args[1]);
+	if (key == rt.length_string) {
+		return f.size();
+	}
+	else if (key == "path") {
+		return f.path();
+	}
+
+	throw error("[Index error] String type has no member named \"%\"", key);
+}
+
 static Variant file_open1(Runtime &, std::span<Variant> args)
 {
 	auto &path = raw_cast<String>(args[0]);

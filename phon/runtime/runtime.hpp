@@ -275,7 +275,7 @@ private:
 
 	void get_index(int count, bool by_ref);
 
-	void get_member(bool by_ref);
+	void get_field(bool by_ref);
 
 	void report_call_error(const Function &func, std::span<Variant> args);
 
@@ -338,8 +338,6 @@ private:
 	// Current call frame.
 	CallFrame *current_frame = nullptr;
 
-	String get_item_string, set_item_string;
-
 	// Root for garbage collection
 	Collectable *gc_root = nullptr;
 
@@ -364,6 +362,12 @@ private:
 
 	// Global initialization.
 	static bool initialized;
+
+public:
+	const String get_item_string, set_item_string;
+	const String get_field_string, set_field_string;
+	const String length_string;
+
 };
 
 } // namespace phonometrica

@@ -43,6 +43,8 @@ public:
 
 	void insert(value_type v) { members.insert(std::move(v)); }
 
+	Variant &get(const String &key);
+
 private:
 
 	friend class Runtime;
