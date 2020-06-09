@@ -100,7 +100,7 @@ class Runtime final
 
 public:
 
-	explicit Runtime(intptr_t stack_size = 1024);
+	explicit Runtime(intptr_t stack_size = 4096);
 
 	~Runtime();
 

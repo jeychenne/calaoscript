@@ -206,7 +206,14 @@ AutoAst Parser::parse_statement()
 	}
 	else
 	{
-		return parse_expression_statement();
+		auto stmt = parse_expression_statement();
+		CallExpression *e;
+		if ((e = dynamic_cast<CallExpression*>(stmt.get())))
+		{
+			e->discard_result = true;
+		}
+
+		return stmt;
 	}
 }
 

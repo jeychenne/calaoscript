@@ -334,6 +334,11 @@ void Compiler::visit_call(CallExpression *node)
 
 	// Finally, make the call.
 	EMIT(Opcode::Call, narg|flag);
+
+	// Discard result if it's not used.
+	if (node->discard_result) {
+		EMIT(Opcode::Pop);
+	}
 }
 
 void Compiler::visit_variable(Variable *node)

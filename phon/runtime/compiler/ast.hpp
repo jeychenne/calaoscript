@@ -372,7 +372,9 @@ struct CallExpression final : public Ast
 
 	AutoAst expr;
 	AstList args;
-	bool return_reference = false; // flag for the compiler
+	// Flags for the compiler.
+	bool return_reference = false;
+	bool discard_result = false;
 };
 
 struct IndexedExpression final : public Ast
