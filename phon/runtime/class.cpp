@@ -59,14 +59,15 @@ void Class::add_initializer(NativeCallback cb, std::initializer_list<Handle<Clas
 void Class::add_method(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref)
 {
 	auto it = members.find(name);
+	auto rt = static_cast<Collectable*>(object())->runtime;
 	if (it == members.end())
 	{
-		members.insert({ name, make_handle<Function>(name, std::move(cb), sig, ref) });
+		members.insert({ name, make_handle<Function>(rt, rt, name, std::move(cb), sig, ref) });
 	}
 	else
 	{
 		auto ctor = it->second.handle<Function>();
-		ctor->add_closure(make_handle<Closure>(std::make_shared<NativeRoutine>(name, std::move(cb), sig, ref)));
+		ctor->add_closure(make_handle<Closure>(rt, std::make_shared<NativeRoutine>(name, std::move(cb), sig, ref)));
 	}
 
 }
@@ -88,5 +89,11 @@ void Class::finalize()
 	}
 }
 
+void Class::traverse_members(const GCCallback &callback)
+{
+	for (auto &pair : members) {
+		pair.second.traverse(callback);
+	}
+}
 
 } // namespace phonometrica

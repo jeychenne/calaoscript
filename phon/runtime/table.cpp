@@ -44,6 +44,7 @@ String Table::to_string() const
 	}
 
 	bool flag = this->seen;
+	this->seen = true;
 	String s("{");
 
 	for (auto &pair : _map)

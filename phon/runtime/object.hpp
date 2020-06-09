@@ -22,10 +22,15 @@ namespace phonometrica {
 class Class;
 class Runtime;
 
-// Color for the garbage collector. Objects that are acyclic (i.e. contain no cyclic reference)
-// are green. Base types such as String and Regex are acyclic because there is no way they
-// can store a reference to themselves. Collections (List, Table, etc.) are considered cyclic
-// and are therefore candidates for GC.
+// Flag for the backup garbage collector.  The algorithm implements the synchronous Recycler
+// described in _The Garbage Collection Handbook. The Art of Automatic Memory Management_, by R. Jones,
+// A. Hosking & E. Moss. (See p. 66 ff.). This algorithm was first proposed by Bacon & Rajan (2001). It is
+// used to break reference cycles.
+// Objects that are acyclic (i.e. contain no cyclic reference) are marked as green and are not attached to
+// the GC chain. Base types such as String and Regex are considered acyclic because there is no way they
+// can store a reference to themselves. Collections (List, Table, etc.) are GC candidates because they are
+// considered potentially cyclic. Collectable objects start their life as white, and are marked as black
+// during the mark phase. The remaining white objects are deleted during the sweep phase.
 enum class GCColor : uint8_t
 {
 	Green,      // object which is not collectable
@@ -69,6 +74,8 @@ public:
 
 	bool collectable() const noexcept;
 
+	bool gc_candidate() const noexcept;
+
 	bool clonable() const noexcept;
 
 	bool comparable() const noexcept;
@@ -94,6 +101,8 @@ public:
 	bool unique() const noexcept;
 
 	int32_t use_count() const noexcept;
+
+	bool is_used() const { return use_count() > 0; }
 
 	Class *get_class() const { return klass; }
 
@@ -122,39 +131,7 @@ protected:
 
 	Object(Class *klass, bool collectable);
 
-	// Pointer to the object's class. This provides runtime type information and polymorphic methods.
-	Class *klass;
-
-	// Reference count. The object is automatically destroyed when this reaches 0.
-	int32_t ref_count;
-
-	// Information for the garbage collector.
-	GCColor gc_color;
-};
-
-
-//---------------------------------------------------------------------------------------------------------------------
-
-// Abstract base class for all non-collectable objects (e.g. Regex, File). An atomic object cannot contain cyclic
-// references (i.e. references to itself).
-class Atomic : public Object
-{
-protected:
-
-	Atomic(Class *klass);
-};
-
-
-//---------------------------------------------------------------------------------------------------------------------
-
-// Abstract base class for all collectable objects (e.g. List, Table). Such objects may contain cyclic references.
-class Collectable : public Object
-{
-public:
-
-	Collectable(Class *klass, Runtime *runtime);
-
-	~Collectable();
+	void destroy();
 
 	bool is_black() const
 	{
@@ -205,17 +182,55 @@ public:
 		gc_color = GCColor::Purple;
 	}
 
+	// Pointer to the object's class. This provides runtime type information and polymorphic methods.
+	Class *klass;
+
+	// Reference count. The object is automatically destroyed when this reaches 0.
+	int32_t ref_count;
+
+	// Information for the garbage collector.
+	GCColor gc_color;
+};
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+// Abstract base class for all non-collectable objects (e.g. Regex, File). An atomic object cannot contain cyclic
+// references (i.e. references to itself).
+class Atomic : public Object
+{
+protected:
+
+	Atomic(Class *klass);
+};
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+// Abstract base class for all collectable objects (e.g. List, Table). Such objects may contain cyclic references.
+class Collectable : public Object
+{
+public:
+
+	Collectable(Class *klass, Runtime *runtime);
+
+	~Collectable();
+
+	bool is_candidate() const { return next != nullptr || previous != nullptr; }
+
 private:
 
 	friend class Runtime;
-	friend class Recycler;
+	friend class Class;
+	friend class Object;
 
 	// Runtime this object is attached to. If this is null, the object is not considered for garbage collection and
 	// must not contain cyclic references.
 	Runtime *runtime;
 
 	// Doubly linked list for the GC.
-	Collectable *previous, *next;
+	Collectable *previous = nullptr;
+	Collectable *next = nullptr;
 };
 
 } // namespace phonometrica

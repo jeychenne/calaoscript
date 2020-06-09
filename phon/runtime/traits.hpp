@@ -21,13 +21,10 @@
 namespace phonometrica {
 
 class Object;
-class Class;
 class String;
 class File;
 class Regex;
 class Variant;
-class Function;
-class Closure;
 class Iterator;
 class ListIterator;
 class TableIterator;
@@ -53,8 +50,6 @@ template<typename T> struct maybe_cyclic : std::true_type
 NON_CYCLIC(String);
 NON_CYCLIC(File);
 NON_CYCLIC(Regex);
-NON_CYCLIC(Function);
-NON_CYCLIC(Closure);
 NON_CYCLIC(Iterator);
 NON_CYCLIC(ListIterator);
 NON_CYCLIC(TableIterator);

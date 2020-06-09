@@ -24,7 +24,7 @@
 #define CATCH_ERROR catch (std::runtime_error &e) { RUNTIME_ERROR(e.what()); }
 #define RUNTIME_ERROR(...) throw RuntimeError(get_current_line(), __VA_ARGS__)
 
-#if 0
+#if 1
 #	define trace_op() std::cerr << std::setw(6) << std::left << (ip-1-code->data()) << "\t" << std::setw(15) << Code::get_opcode_name(*(ip-1)) << "stack size = " << intptr_t(top - stack.data()) << std::endl;
 #else
 #	define trace_op()
@@ -33,12 +33,11 @@
 
 namespace phonometrica {
 
-static const int STACK_SIZE = 1024;
 bool Runtime::initialized = false;
 
 
-Runtime::Runtime() :
-		stack(STACK_SIZE, Variant()), parser(this), compiler(this)
+Runtime::Runtime(intptr_t stack_size) :
+		stack(stack_size, Variant()), parser(this), compiler(this)
 {
 	srand(time(nullptr));
 
@@ -70,6 +69,8 @@ phonometrica::Runtime::~Runtime()
 	for (auto &cls : classes) {
 		cls->finalize();
 	}
+	collect();
+
 	for (size_t i = classes.size(); i-- > 2; )
 	{
 		auto ptr = classes[i].drop();
@@ -79,14 +80,49 @@ phonometrica::Runtime::~Runtime()
 	classes[1].drop()->release();
 }
 
-void phonometrica::Runtime::add_candidate(Collectable *obj)
+void Runtime::add_candidate(Collectable *obj)
 {
-	gc.add_candidate(obj);
+	if (is_full()) {
+		collect();
+	}
+	assert(obj->previous == nullptr);
+
+	// obj becomes the new root
+	auto *old_root = gc_root;
+	obj->next = old_root;
+
+	if (old_root != nullptr) {
+		old_root->previous = obj;
+	}
+	gc_root = obj;
+	gc_count++;
 }
 
-void phonometrica::Runtime::remove_candidate(Collectable *obj)
+void Runtime::remove_candidate(Collectable *obj)
 {
-	gc.remove_candidate(obj);
+	if (obj == gc_root)
+	{
+		assert(obj->previous == nullptr);
+		gc_root = obj->next;
+		if (gc_root) {
+			gc_root->previous = nullptr;
+		}
+		obj->next = nullptr;
+	}
+	else
+	{
+		if (obj->previous != nullptr)
+		{
+			obj->previous->next = obj->next;
+		}
+		if (obj->next != nullptr)
+		{
+			obj->next->previous = obj->previous;
+		}
+		obj->previous = nullptr;
+		obj->next = nullptr;
+	}
+	gc_count--;
 }
 
 void Runtime::create_builtins()
@@ -205,26 +241,16 @@ Variant *Runtime::var()
 void Runtime::check_capacity()
 {
 	if (this->top == this->limit) {
-		resize_stack();
+		throw error("[Runtime error] Stack overflow.");
 	}
-}
-
-void Runtime::resize_stack()
-{
-	auto size = stack.size();
-	auto new_size = size + STACK_SIZE;
-	this->stack.resize(new_size);
-	top = stack.begin() + size;
-	limit = stack.end();
 }
 
 void Runtime::ensure_capacity(int n)
 {
 	if (top + n >= limit) {
-		resize_stack();
+		throw error("[Runtime error] Stack overflow.");
 	}
 }
-
 
 void Runtime::check_underflow()
 {
@@ -421,13 +447,13 @@ void Runtime::check_float_error()
 	}
 }
 
-Variant Runtime::interpret(Closure &closure)
+Variant Runtime::interpret(Handle <Closure> &closure)
 {
 	if (current_frame) {
 		current_frame->previous_routine = current_routine;
 	}
-	assert(!closure.routine->is_native());
-	Routine &routine = *(reinterpret_cast<Routine*>(closure.routine.get()));
+	assert(!closure->routine->is_native());
+	Routine &routine = *(reinterpret_cast<Routine*>(closure->routine.get()));
 	current_routine = &routine;
 	code = &routine.code;
 	ip = routine.code.data();
@@ -478,8 +504,10 @@ Variant Runtime::interpret(Closure &closure)
 
 					if (c->routine->is_native())
 					{
-						try {
-							auto result = (*c)(*this, args);
+						try
+						{
+							auto &r = reinterpret_cast<NativeRoutine&>(*(c->routine));
+							auto result = r(*this, args);
 							pop(narg + 1);
 							push(std::move(result));
 						}
@@ -487,8 +515,10 @@ Variant Runtime::interpret(Closure &closure)
 					}
 					else
 					{
+						// The arguments are on top of the stack. We adjust the top of the stack accordingly.
+						top -= narg;
 						current_frame->ip = ip;
-						push((*c)(*this, args));
+						push(interpret(c));
 					}
 				}
 				CATCH_ERROR
@@ -682,20 +712,20 @@ Variant Runtime::interpret(Closure &closure)
 			case Opcode::GetUniqueUpvalue:
 			{
 				trace_op();
-				push(closure.upvalues[*ip++].unshare());
+				push(closure->upvalues[*ip++].unshare());
 				break;
 			}
 			case Opcode::GetUpvalue:
 			{
 				trace_op();
-				auto &v = closure.upvalues[*ip++];
+				auto &v = closure->upvalues[*ip++];
 				push(v.resolve());
 				break;
 			}
 			case Opcode::GetUpvalueArg:
 			{
 				trace_op();
-				auto &v = closure.upvalues[*ip++];
+				auto &v = closure->upvalues[*ip++];
 				bool by_ref = current_frame->ref_flags[*ip++];
 				if (by_ref) {
 					push(v.make_alias());
@@ -708,7 +738,7 @@ Variant Runtime::interpret(Closure &closure)
 			case Opcode::GetUpvalueRef:
 			{
 				trace_op();
-				Variant &v = closure.upvalues[*ip++];
+				Variant &v = closure->upvalues[*ip++];
 				push(v.make_alias());
 				break;
 			}
@@ -857,7 +887,7 @@ Variant Runtime::interpret(Closure &closure)
 				}
 				pop(narg);
 				auto rout = r.get();
-				auto c = make_handle<Closure>(std::move(r));
+				auto c = make_handle<Closure>(this, std::move(r));
 				for (int i = 0; i < rout->upvalue_count(); i++)
 				{
 					auto upvalue = rout->upvalues[i];
@@ -866,17 +896,18 @@ Variant Runtime::interpret(Closure &closure)
 						var = &current_frame->locals[upvalue.index];
 					}
 					else {
-						var = &closure.upvalues[upvalue.index];
+						var = &closure->upvalues[upvalue.index];
 					}
 					c->upvalues.emplace_back(var->make_alias());
 				}
-				push(make_handle<Function>(rout->name(), std::move(c)));
+				push(make_handle<Function>(this, rout->name(), std::move(c)));
 				break;
 			}
 			case Opcode::NewFrame:
 			{
 				trace_op();
-				push_call_frame(*ip++);
+				push_call_frame(closure.object(), *ip++);
+
 				break;
 			}
 			case Opcode::NewIterator:
@@ -1159,7 +1190,7 @@ Variant Runtime::interpret(Closure &closure)
 					report_call_error(*method, args);
 				}
 				try {
-					(*c)(*this, args);
+					call_method(c, args);
 				}
 				CATCH_ERROR
 				pop(count);
@@ -1179,7 +1210,7 @@ Variant Runtime::interpret(Closure &closure)
 			case Opcode::SetUpvalue:
 			{
 				trace_op();
-				Variant &v = closure.upvalues[*ip++];
+				Variant &v = closure->upvalues[*ip++];
 				try {
 					v = std::move(peek());
 				}
@@ -1669,7 +1700,7 @@ Handle<Closure> Runtime::compile_file(const String &path)
 Variant Runtime::do_file(const String &path)
 {
 	auto closure = compile_file(path);
-	return interpret(*closure);
+	return interpret(closure);
 }
 
 int Runtime::get_current_line() const
@@ -1684,12 +1715,13 @@ String Runtime::intern_string(const String &s)
 	return *result.first;
 }
 
-void Runtime::push_call_frame(int nlocal)
+void Runtime::push_call_frame(TObject<Closure> *closure, int nlocal)
 {
 	// FIXME: valgrind complains about a fishy size passed to malloc here when PHON_STD_UNORDERED_MAP is defined.
 	frames.push_back(std::make_unique<CallFrame>());
 	current_frame = frames.back().get();
 	ensure_capacity(nlocal);
+	current_frame->current_closure = closure;
 	current_frame->locals = top;
 	current_frame->nlocal = nlocal;
 	int argc = current_routine->arg_count();
@@ -1712,7 +1744,9 @@ Variant Runtime::pop_call_frame()
 	// Clean current frame.
 	auto n = int(top - current_frame->locals);
 	assert(n >= 0);
-	pop(n + 1); // pop the frame + the function that was left on the stack.
+	// Account for the function that was left on the stack, if there's one.
+	int extra = calling_method ? 0 : 1;
+	pop(n + extra); // pop the frame
 
 	// Restore previous frame.
 	frames.pop_back();
@@ -1741,18 +1775,9 @@ void Runtime::add_global(String name, Variant value)
 	globals->insert({ std::move(name), std::move(value) });
 }
 
-Variant Runtime::interpret(Closure &closure, std::span<Variant> args)
-{
-	// The arguments are on top of the stack. We adjust the top of the stack accordingly.
-	top -= args.size();
-
-	// Now we can just interpret the routine. The first opcode wil be NewFrame.
-	return interpret(closure);
-}
-
 void Runtime::add_global(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref)
 {
-	(*globals)[name] = make_handle<Function>(name, std::move(cb), sig, ref);
+	(*globals)[name] = make_handle<Function>(this, this, name, std::move(cb), sig, ref);
 }
 
 void Runtime::get_index(int count, bool by_ref)
@@ -1772,7 +1797,7 @@ void Runtime::get_index(int count, bool by_ref)
 		report_call_error(*method, args);
 	}
 	try {
-		result = (*closure)(*this, args);
+		result = call_method(closure, args);
 	}
 	CATCH_ERROR
 	pop(count);
@@ -1819,6 +1844,178 @@ void Runtime::report_call_error(const Function &func, std::span<Variant> args)
 	}
 	RUNTIME_ERROR("Cannot resolve call to function '%' with the following argument types: (%).\nCandidates are:\n%",
 				  func.name(), String::join(types, ", "), candidates);
+}
+
+
+void Runtime::collect()
+{
+	if (gc_paused) {
+		return;
+	}
+	mark_candidates();
+	auto candidate = gc_root;
+	while (candidate != nullptr)
+	{
+		scan(candidate);
+		candidate = candidate->next;
+	}
+	collect_candidates();
+}
+
+void Runtime::mark_candidates()
+{
+	auto candidate = gc_root;
+
+	while (candidate != nullptr)
+	{
+		if (candidate->is_purple())
+		{
+			mark_grey(candidate);
+		}
+		else
+		{
+			remove_candidate(candidate);
+
+			if (candidate->is_black() && !candidate->is_used()) {
+				candidate->destroy();
+			}
+		}
+		candidate = candidate->next;
+	}
+}
+
+void Runtime::mark_grey(Collectable *candidate)
+{
+	if (!candidate->is_grey())
+	{
+		candidate->mark_grey();
+		auto traverse = candidate->get_class()->traverse;
+
+		if (traverse)
+		{
+			// Run trial deletion on each child
+			auto lambda = [](Collectable *child) {
+				child->remove_reference();
+				mark_grey(child);
+			};
+
+			traverse(candidate, lambda);
+		}
+	}
+}
+
+void Runtime::scan(Collectable *candidate)
+{
+	if (candidate->is_grey())
+	{
+		if (candidate->is_used())
+		{
+			// There must be an external reference.
+			scan_black(candidate);
+		}
+		else
+		{
+			// This looks like garbage
+			candidate->mark_white();
+			auto traverse = candidate->get_class()->traverse;
+
+			if (traverse)
+			{
+				auto lambda = [](Collectable *child) {
+					scan(child);
+				};
+
+				traverse(candidate, lambda);
+			}
+		}
+	}
+}
+
+void Runtime::scan_black(Collectable *candidate)
+{
+	// Repair reference count of live data.
+	candidate->mark_black();
+	auto traverse = candidate->get_class()->traverse;
+
+	if (traverse)
+	{
+		auto lambda = [](Collectable *child) {
+			// Undo trial deletion
+			child->add_reference();
+
+			if (!child->is_black()) {
+				scan_black(child);
+			}
+		};
+
+		traverse(candidate, lambda);
+	}
+}
+
+void Runtime::collect_candidates()
+{
+	Collectable *candidate;
+
+	while ((candidate = pop_candidate())) {
+		collect_white(candidate);
+	}
+}
+
+void Runtime::collect_white(Collectable *ref)
+{
+	if (ref->is_white() && !ref->is_candidate())
+	{
+		// Free-list objects are black
+		ref->mark_black();
+		auto traverse = ref->get_class()->traverse;
+
+		if (traverse) {
+			traverse(ref, collect_white);
+		}
+		ref->destroy();
+	}
+}
+
+void Runtime::suspend_gc()
+{
+	gc_paused = true;
+}
+
+void Runtime::resume_gc()
+{
+	gc_paused = false;
+}
+
+Variant Runtime::call_method(Handle<Closure> &c, std::span<Variant> args)
+{
+	if (c->routine->is_native())
+	{
+		auto &r = reinterpret_cast<NativeRoutine&>(*(c->routine));
+		return r(*this, args);
+	}
+	else
+	{
+		auto flag = calling_method;
+		calling_method = true;
+		top -= args.size();
+		auto v = interpret(c);
+		calling_method = flag;
+
+		return v;
+	}
+}
+
+Collectable *Runtime::pop_candidate()
+{
+	auto cand = gc_root;
+	if (cand)
+	{
+		gc_root = cand->next;
+		cand->next = nullptr;
+		if (gc_root) gc_root->previous = nullptr;
+	}
+
+	return cand;
 }
 
 

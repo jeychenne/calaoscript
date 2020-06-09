@@ -178,6 +178,34 @@ Instruction Routine::add_upvalue(Instruction index, bool local)
 	return Instruction(upvalues.size() - 1);
 }
 
+
+//----------------------------------------------------------------------------------------------------------------------
+
+void Closure::traverse(const GCCallback &callback)
+{
+	for (auto &upvalue : upvalues) {
+		upvalue.traverse(callback);
+	}
+	if (!routine->is_native())
+	{
+		auto r = static_cast<Routine*>(routine.get());
+		traverse(*r, callback);
+	}
+}
+
+void Closure::traverse(Routine &rout, const GCCallback &callback)
+{
+	for (auto &cls : rout.signature) {
+		cls->traverse_members(callback);
+	}
+
+	for (auto &r : rout.routine_pool)
+	{
+		traverse(*r, callback);
+	}
+}
+
+
 //----------------------------------------------------------------------------------------------------------------------
 
 Function::Function(String name, Handle<Closure> c) :
@@ -285,32 +313,19 @@ Handle<Closure> Function::find_closure(std::span<Variant> args)
 	return candidate;
 }
 
-Function::Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags) :
+Function::Function(Runtime *rt, const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags) :
 	Function(name)
 {
+	// This is not pretty, but we need a pointer to the runtime here...
 	auto r = std::make_shared<NativeRoutine>(name, std::move(cb), sig, ref_flags);
-
-	add_closure(make_handle<Closure>(std::move(r)));
+	add_closure(make_handle<Closure>(rt, std::move(r)));
 }
 
-//----------------------------------------------------------------------------------------------------------------------
-Variant Closure::operator()(Runtime &rt, std::span<Variant> args)
+void Function::traverse(const GCCallback &callback)
 {
-	if (routine->is_native()) {
-		return call_native(rt, args);
-	}
-	else {
-		return call_user(rt, args);
+	for (auto &c : closures) {
+		c->traverse(callback);
 	}
 }
 
-Variant Closure::call_native(Runtime &rt, std::span<Variant> args)
-{
-	return (*reinterpret_cast<NativeRoutine*>(routine.get()))(rt, args);
-}
-
-Variant Closure::call_user(Runtime &rt, std::span<Variant> args)
-{
-	return rt.interpret(*this, args);
-}
 } // namespace phonometrica

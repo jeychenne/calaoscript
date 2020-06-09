@@ -46,7 +46,7 @@ Handle<Closure> Compiler::compile(AutoAst ast)
 	code->backpatch_instruction(offset, (Instruction)routine->local_count());
 	finalize();
 
-	return make_handle<Closure>(std::move(this->routine));
+	return make_handle<Closure>(runtime, std::move(this->routine));
 }
 
 void Compiler::initialize()

@@ -21,6 +21,8 @@
 #include <phon/runtime/func_set.hpp>
 #include <phon/runtime/func_math.hpp>
 #include <phon/runtime/func_array.hpp>
+#include "runtime.hpp"
+
 
 #define CLS(T) get_class<T>()
 #define REF(bits) ParamBitset(bits)
@@ -150,10 +152,8 @@ void Runtime::set_global_namespace()
 	add_global("right", list_right, { CLS(List), CLS(intptr_t) });
 	add_global("join", list_join, { CLS(List), CLS(String) });
 	add_global("clear", list_clear, { CLS(List) }, REF("1"));
-	add_global("append", list_append1, { CLS(List), CLS(Object) }, REF("01"));
-	add_global("append", list_append2, { CLS(List), CLS(List) }, REF("01"));
-	add_global("prepend", list_prepend1, { CLS(List), CLS(Object) }, REF("01"));
-	add_global("prepend", list_prepend2, { CLS(List), CLS(List) }, REF("01"));
+	add_global("append", list_append, {CLS(List), CLS(Object)}, REF("01"));
+	add_global("prepend", list_prepend, {CLS(List), CLS(Object)}, REF("01"));
 	add_global("is_empty", list_is_empty, {CLS(List)});
 	add_global("pop", list_pop, { CLS(List) }, REF("1"));
 	add_global("shift", list_shift, { CLS(List) }, REF("1"));

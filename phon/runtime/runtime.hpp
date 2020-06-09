@@ -22,7 +22,6 @@
 #include <phon/runtime/class.hpp>
 #include <phon/runtime/meta.hpp>
 #include <phon/runtime/typed_object.hpp>
-#include <phon/runtime/recycler.hpp>
 #include <phon/runtime/iterator.hpp>
 #include <phon/runtime/class.hpp>
 #include <phon/runtime/list.hpp>
@@ -101,7 +100,7 @@ class Runtime final
 
 public:
 
-	Runtime();
+	explicit Runtime(intptr_t stack_size = 1024);
 
 	~Runtime();
 
@@ -186,10 +185,7 @@ public:
 
 	Variant & peek(int n = -1);
 
-	Variant interpret(Closure &closure);
-
-	// Call a user-defined function in Opcode::Call.
-	Variant interpret(Closure &closure, std::span<Variant> args);
+	Variant interpret(Handle<Closure> &closure);
 
 	void disassemble(const Closure &closure, const String &name);
 
@@ -213,6 +209,10 @@ public:
 
 	void set_debug_mode(bool value);
 
+	void suspend_gc();
+
+	void resume_gc();
+
 private:
 
 	struct CallFrame
@@ -220,8 +220,11 @@ private:
 		// Return address in the caller.
 		const Instruction *ip = nullptr;
 
-		// Routine being called
+		// Routine being called.
 		const Routine *previous_routine = nullptr;
+
+		// For the GC.
+		TObject<Closure> *current_closure = nullptr;
 
 		// Arguments and local variables on the stack.
 		Variant *locals = nullptr;
@@ -233,6 +236,7 @@ private:
 		int nlocal = -1;
 	};
 
+	friend class Object;
 	friend class Collectable;
 
 	void clear();
@@ -248,8 +252,6 @@ private:
 	void check_capacity();
 
 	void ensure_capacity(int n);
-
-	void resize_stack();
 
 	void check_underflow();
 
@@ -267,7 +269,7 @@ private:
 
 	int get_current_line() const;
 
-	void push_call_frame(int nlocal);
+	void push_call_frame(TObject<Closure> *closure, int nlocal);
 
 	Variant pop_call_frame();
 
@@ -275,8 +277,25 @@ private:
 
 	void report_call_error(const Function &func, std::span<Variant> args);
 
-	// Garbage collector.
-	Recycler gc;
+	void collect();
+
+	void mark_candidates();
+
+	static void mark_grey(Collectable *candidate);
+
+	static void scan(Collectable *candidate);
+
+	static void scan_black(Collectable *candidate);
+
+	void collect_candidates();
+
+	static void collect_white(Collectable *ref);
+
+	Collectable *pop_candidate();
+
+	bool is_full() const { return gc_count == gc_threshold; }
+
+	Variant call_method(Handle<Closure> &c, std::span<Variant> args);
 
 	// Builtin classes (known at compile time).
 	std::vector<Handle<Class>> classes;
@@ -319,11 +338,27 @@ private:
 
 	String get_item_string, set_item_string;
 
+	// Root for garbage collection
+	Collectable *gc_root = nullptr;
+
+	// Number of allocated objects
+	int gc_count = 0;
+
+	// Maximum number of objects before the next collection cycle
+	int gc_threshold = 1024;
+
 	// Runtime options.
 	bool debugging = true;
 
 	// Flag to let functions know whether a reference is requested.
 	bool needs_ref = false;
+
+	// If true, the GC will be suspended until the next call to resume_gc().
+	bool gc_paused = false;
+
+	// For methods that are retrieved after the arguments have been pushed, we set this flag to true so that pop_call_frame() doesn't try
+	// to pop the function before the stack frame.
+	bool calling_method = false;
 
 	// Global initialization.
 	static bool initialized;

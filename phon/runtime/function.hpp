@@ -74,6 +74,7 @@ public:
 protected:
 
 	friend class Function;
+	friend class Closure;
 
 	// Type of positional arguments.
 	std::vector<Handle<Class>> signature;
@@ -168,6 +169,7 @@ private:
 
 	friend class Runtime;
 	friend class Compiler;
+	friend class Closure;
 
 	// Bytecode.
 	Code code;
@@ -220,16 +222,14 @@ public:
 
 	explicit Closure(std::shared_ptr<Callable> r) : routine(std::move(r)) { }
 
-	Variant operator()(Runtime &rt, std::span<Variant> args);
+	void traverse(const GCCallback &callback);
 
 private:
 
 	friend class Runtime;
 	friend class Function;
 
-	Variant call_native(Runtime &rt, std::span<Variant> args);
-
-	Variant call_user(Runtime &rt, std::span<Variant> args);
+	static void traverse(Routine &r, const GCCallback &callback);
 
 	std::shared_ptr<Callable> routine;
 
@@ -256,7 +256,7 @@ public:
 
 	Function(String name, Handle<Closure> c);
 
-	Function(const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags = 0);
+	Function(Runtime *rt, const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags = 0);
 
 	String name() const { return _name; }
 
@@ -265,6 +265,8 @@ public:
 	Handle<Closure> find_closure(std::span<Variant> args);
 
 	ParamBitset reference_flags() const { return ref_flags; }
+
+	void traverse(const GCCallback &callback);
 
 private:
 
@@ -307,6 +309,17 @@ String to_string(const Callable &c, bool quote, bool)
 	return s;
 }
 
+static inline
+void traverse(Function &f, const GCCallback &callback)
+{
+	f.traverse(callback);
+}
+
+static inline
+void traverse(Closure &c, const GCCallback &callback)
+{
+	c.traverse(callback);
+}
 
 } // namespace phonometrica::meta
 

@@ -108,6 +108,8 @@ public:
 
 	void add_method(const String &name, Handle<Function> f);
 
+	void traverse_members(const GCCallback &callback);
+
 private:
 
 	friend class Runtime;
@@ -162,6 +164,13 @@ String to_string(const Class &klass)
 {
 	return String::format("<class %s>", klass.name().data());
 }
+
+static inline
+void traverse(Class &cls, const GCCallback &callback)
+{
+	cls.traverse_members(callback);
+}
+
 
 } // namespace phonometrica::meta
 

@@ -151,7 +151,7 @@ static Variant list_clear(Runtime &, std::span<Variant> args)
 	return Variant();
 }
 
-static Variant list_append1(Runtime &, std::span<Variant> args)
+static Variant list_append(Runtime &, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();
 	lst.append(args[1]);
@@ -159,19 +159,19 @@ static Variant list_append1(Runtime &, std::span<Variant> args)
 	return Variant();
 }
 
-static Variant list_append2(Runtime &, std::span<Variant> args)
-{
-	auto &lst1 = raw_cast<List>(args[0]).items();
-	auto &lst2 = raw_cast<List>(args[0]).items();
+//static Variant list_append2(Runtime &, std::span<Variant> args)
+//{
+//	auto &lst1 = raw_cast<List>(args[0]).items();
+//	auto &lst2 = raw_cast<List>(args[0]).items();
+//
+//	for (auto &item : lst2) {
+//		lst1.append(item.resolve());
+//	}
+//
+//	return Variant();
+//}
 
-	for (auto &item : lst2) {
-		lst1.append(item.resolve());
-	}
-
-	return Variant();
-}
-
-static Variant list_prepend1(Runtime &, std::span<Variant> args)
+static Variant list_prepend(Runtime &, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();
 	lst.prepend(args[1]);
@@ -179,17 +179,17 @@ static Variant list_prepend1(Runtime &, std::span<Variant> args)
 	return Variant();
 }
 
-static Variant list_prepend2(Runtime &, std::span<Variant> args)
-{
-	auto &lst1 = raw_cast<List>(args[0]).items();
-	auto &lst2 = raw_cast<List>(args[0]).items();
-
-	for (intptr_t i = lst2.size(); i > 0; i--) {
-		lst1.prepend(lst2[i].resolve());
-	}
-
-	return Variant();
-}
+//static Variant list_prepend2(Runtime &, std::span<Variant> args)
+//{
+//	auto &lst1 = raw_cast<List>(args[0]).items();
+//	auto &lst2 = raw_cast<List>(args[0]).items();
+//
+//	for (intptr_t i = lst2.size(); i > 0; i--) {
+//		lst1.prepend(lst2[i].resolve());
+//	}
+//
+//	return Variant();
+//}
 
 static Variant list_is_empty(Runtime &, std::span<Variant> args)
 {

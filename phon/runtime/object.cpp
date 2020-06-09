@@ -24,18 +24,26 @@ Object::Object(Class *klass, bool collectable) :
 
 }
 
+void Object::destroy()
+{
+	assert(klass->destroy);
+	klass->destroy(this);
+}
+
 void Object::release()
 {
 	if (remove_reference())
 	{
-		if (klass->destroy) {
-			klass->destroy(this);
-		}
+		destroy();
 	}
-	else if (this->collectable())
+	else if (collectable() && !is_purple())
 	{
-		// This might be garbage.
-		reinterpret_cast<Collectable*>(this)->mark_purple();
+		mark_purple();
+		auto obj = static_cast<Collectable*>(this);
+		if (obj->runtime)
+		{
+			obj->runtime->add_candidate(obj);
+		}
 	}
 }
 
@@ -161,6 +169,12 @@ const std::type_info *Object::type_info() const
 	return klass->type_info();
 }
 
+bool Object::gc_candidate() const noexcept
+{
+	return gc_color == GCColor::White;
+}
+
+
 //---------------------------------------------------------------------------------------------------------------------
 
 Atomic::Atomic(Class *klass) :
@@ -173,21 +187,17 @@ Atomic::Atomic(Class *klass) :
 //---------------------------------------------------------------------------------------------------------------------
 
 Collectable::Collectable(Class *klass, Runtime *runtime) :
-	Object(klass, runtime != nullptr), runtime(runtime), previous(nullptr), next(nullptr)
+	Object(klass, runtime != nullptr), runtime(runtime)
 {
-	if (runtime)
-	{
-		runtime->add_candidate(this);
-	}
+
 }
 
 Collectable::~Collectable()
 {
-	if (runtime)
+	if (is_candidate() && runtime)
 	{
 		runtime->remove_candidate(this);
 	}
 }
-
 
 } // namespace phonometrica

@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 				auto closure = rt.compile_file(path);
 				rt.disassemble(*closure, "main");
 				puts("-------------------------------------------------------------------\n");
-				rt.interpret(*closure);
+				rt.interpret(closure);
 //				auto &map = cast<Table>(v).map();
 //				std::cout << "name: " << map["name"] << std::endl;
 //				std::cout << "age: " << map["age"] << std::endl;

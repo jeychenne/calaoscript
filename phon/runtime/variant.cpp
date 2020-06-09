@@ -199,9 +199,13 @@ String Variant::class_name() const
 
 void Variant::traverse(const GCCallback &callback)
 {
-	if (this->is_object() and as.object->collectable())
+	if (this->is_object() && as.object->collectable())
 	{
 		callback(reinterpret_cast<Collectable*>(as.object));
+	}
+	else if (this->is_alias())
+	{
+		resolve().traverse(callback);
 	}
 }
 
