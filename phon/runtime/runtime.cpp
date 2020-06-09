@@ -692,6 +692,28 @@ Variant Runtime::interpret(Handle <Closure> &closure)
 				push(v.make_alias());
 				break;
 			}
+			case Opcode::GetMember:
+			{
+				trace_op();
+				get_index(1, false);
+				break;
+			}
+			case Opcode::GetMemberArg:
+			{
+				trace_op();
+				bool by_ref = current_frame->ref_flags[*ip++];
+				if (by_ref) {
+					RUNTIME_ERROR("Passing dotted expression as an argument by reference is not yet supported");
+				}
+				get_index(1, by_ref);
+				break;
+			}
+			case Opcode::GetMemberRef:
+			{
+				trace_op();
+				get_index(1, true);
+				break;
+			}
 			case Opcode::GetUniqueGlobal:
 			{
 				trace_op();
@@ -1207,6 +1229,28 @@ Variant Runtime::interpret(Handle <Closure> &closure)
 				pop();
 				break;
 			}
+			case Opcode::SetMember:
+			{
+				trace_op();
+				auto &v = peek(-3);
+				if (!check_type<Table>(v)) {
+					RUNTIME_ERROR("[Type error] Member access is not supported for % values", v.class_name());
+				}
+				auto cls = v.get_class();
+				std::span<Variant> args(&v, 3);
+				auto method = cls->get_method(set_item_string);
+				assert(method);
+				auto c = method->find_closure(args);
+				if (!c) {
+					report_call_error(*method, args);
+				}
+				try {
+					call_method(c, args);
+				}
+				CATCH_ERROR
+				pop(3);
+				break;
+			}
 			case Opcode::SetUpvalue:
 			{
 				trace_op();
@@ -1414,6 +1458,20 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			String value = routine.get_local_name(index);
 			printf("GET_LOCAL_REF  %-5d      ; %s\n", index, value.data());
 			return 2;
+		}
+		case Opcode::GetMember:
+		{
+			return print_simple_instruction("GET_MEMBER");
+		}
+		case Opcode::GetMemberArg:
+		{
+			int index = routine.code[offset + 1];
+			printf("GET_MEMBER_ARG %-5d\n", index);
+			return 2;
+		}
+		case Opcode::GetMemberRef:
+		{
+			return print_simple_instruction("GET_MEMBER_REF");
 		}
 		case Opcode::GetUniqueGlobal:
 		{
@@ -1670,6 +1728,10 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			printf("SET_LOCAL      %-5d      ; %s\n", index, value.data());
 			return 2;
 		}
+		case Opcode::SetMember:
+		{
+			return print_simple_instruction("SET_MEMBER");
+		}
 		case Opcode::Subtract:
 		{
 			return print_simple_instruction("SUBTRACT");
@@ -1801,6 +1863,31 @@ void Runtime::get_index(int count, bool by_ref)
 	}
 	CATCH_ERROR
 	pop(count);
+	push(std::move(result));
+	needs_ref = false;
+}
+
+void Runtime::get_member(bool by_ref)
+{
+	needs_ref = by_ref;
+	auto &v = peek(-2);
+	if (!check_type<Table>(v)) {
+		RUNTIME_ERROR("[Type error] Member access is not supported for % values", v.class_name());
+	}
+	Variant result;
+	std::span<Variant> args(&v, 2);
+	auto cls = v.get_class();
+	auto method = cls->get_method(get_item_string);
+	assert(method);
+	auto closure = method->find_closure(args);
+	if (!closure) {
+		report_call_error(*method, args);
+	}
+	try {
+		result = call_method(closure, args);
+	}
+	CATCH_ERROR
+	pop(2);
 	push(std::move(result));
 	needs_ref = false;
 }

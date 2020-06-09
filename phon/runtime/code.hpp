@@ -47,6 +47,9 @@ enum class Opcode : Instruction
 	GetLocal,			// Get global by value
 	GetLocalArg,		// Get global either by value or by reference
 	GetLocalRef,		// Get global by reference
+	GetMember,
+	GetMemberArg,
+	GetMemberRef,
 	GetUniqueGlobal,	// Unshare and push a global
 	GetUniqueLocal,		// Unshare and push a local
 	GetUniqueUpvalue,	// Unshare and push a non-local variable
@@ -95,6 +98,7 @@ enum class Opcode : Instruction
 	SetGlobal,
 	SetIndex,
 	SetLocal,
+	SetMember,
 	SetUpvalue,
 	Subtract,
 	TestIterator,

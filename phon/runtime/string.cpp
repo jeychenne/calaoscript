@@ -1312,6 +1312,9 @@ String String::join(const Array<String> &strings, Substring separator)
 
 Array<String> String::split(Substring separator) const
 {
+	if (separator.empty()) {
+		throw error("[Runtime error] Cannot split string with empty delimiter");
+	}
 	Array<String> strings;
 	intptr_t substring_start;
 	intptr_t string_last; /* end position accounting for the size of the splitter */

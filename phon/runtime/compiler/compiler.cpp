@@ -193,6 +193,34 @@ void Compiler::visit_binary(BinaryExpression *node)
 		code->backpatch(jmp);
 		return;
 	}
+	if (node->op == Lexeme::Dot)
+	{
+		node->lhs->visit(*this);
+		auto var = dynamic_cast<Variable*>(node->rhs.get());
+		if (var)
+		{
+			auto name = routine->add_string_constant(var->name);
+			EMIT(Opcode::PushString, name);
+
+			if (visiting_assigned_lhs) {
+				return; // SetIndex will be added by the assignment once we visit the RHS.
+			}
+			if (visiting_reference) {
+				EMIT(Opcode::GetMemberRef);
+			}
+			else if (parsing_argument()) {
+				EMIT(Opcode::GetMemberArg, Instruction(visit_arg));
+			}
+			else {
+				EMIT(Opcode::GetMember);
+			}
+			return;
+		}
+		else
+		{
+			THROW("[Syntax error] Invalid index in dotted expression (expected an identifier)");
+		}
+	}
 
 	// Handle other operators.
 	node->lhs->visit(*this);
@@ -469,7 +497,7 @@ void Compiler::visit_assignment(Assignment *node)
 		return;
 	}
 
-	IndexedExpression *lhs;
+	IndexedExpression *lhs; BinaryExpression *dot;
 
 	if ((lhs = dynamic_cast<IndexedExpression*>(node->lhs.get())))
 	{
@@ -515,6 +543,14 @@ void Compiler::visit_assignment(Assignment *node)
 		}
 
 		EMIT(Opcode::SetIndex, Instruction(lhs->size()));
+	}
+	else if ((dot = dynamic_cast<BinaryExpression*>(node->lhs.get())) && dot->op == Lexeme::Dot)
+	{
+		visiting_assigned_lhs = true;
+		node->lhs->visit(*this);
+		visiting_assigned_lhs = false;
+		node->rhs->visit(*this);
+		EMIT(Opcode::SetMember);
 	}
 	else
 	{

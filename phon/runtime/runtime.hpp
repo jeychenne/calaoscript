@@ -275,6 +275,8 @@ private:
 
 	void get_index(int count, bool by_ref);
 
+	void get_member(bool by_ref);
+
 	void report_call_error(const Function &func, std::span<Variant> args);
 
 	void collect();
