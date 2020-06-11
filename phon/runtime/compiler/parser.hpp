@@ -146,6 +146,8 @@ private:
 
 	AutoAst parse_function_declaration(bool local);
 
+	AutoAst parse_function_expression();
+
 	AutoAst parse_return_statement();
 
 	AutoAst parse_member_expression();

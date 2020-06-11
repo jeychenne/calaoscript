@@ -22,6 +22,7 @@
 #include <phon/runtime/func_math.hpp>
 #include <phon/runtime/func_array.hpp>
 #include <phon/runtime/func_module.hpp>
+#include <phon/runtime/func_system.hpp>
 #include <phon/runtime/runtime.hpp>
 
 #define CLS(T) get_class<T>()
@@ -65,6 +66,7 @@ void Runtime::set_global_namespace()
 
 	// Module type.
 	auto module_class = Class::get<Module>();
+	module_class->add_initializer(module_init, { CLS(String) });
 	module_class->add_method(get_field_string, module_get_attr, {CLS(Module), CLS(String)});
 	module_class->add_method(set_field_string, module_set_attr, {CLS(Module), CLS(String), CLS(Object)}, REF("001"));
 
@@ -261,6 +263,36 @@ void Runtime::set_global_namespace()
 	auto set_class = Class::get<Set>();
 	set_class->add_initializer(set_init, {});
 	set_class->add_method(get_field_string, set_get_field, { CLS(Set), CLS(String) });
+
+	// System functions
+	add_global("get_user_directory", system_user_directory, {});
+	add_global("get_current_directory", system_current_directory, {});
+	add_global("set_current_directory", system_set_current_directory, { CLS(String) });
+	add_global("get_temp_directory", system_temp_directory, {});
+	add_global("get_path_separator", system_separator, {});
+	add_global("get_system_name", system_name, {});
+	add_global("get_full_path", system_full_path, { CLS(String) });
+	add_global("join_path", system_join, { CLS(String), CLS(String) });
+	add_global("get_temp_name", system_temp_name, {});
+	add_global("get_base_name", system_base_name, { CLS(String) });
+	add_global("get_directory", system_get_directory, { CLS(String) });
+	add_global("create_directory", system_create_directory, { CLS(String) });
+	add_global("remove_directory", system_remove_directory,  { CLS(String) });
+	add_global("remove_file", system_remove_file,  { CLS(String) });
+	add_global("remove", system_remove, { CLS(String) });
+	add_global("list_directory", system_list_directory1, { CLS(String) });
+	add_global("list_directory", system_list_directory2, { CLS(String), CLS(bool) });
+	add_global("exists", system_exists,  { CLS(String) });
+	add_global("is_file", system_is_file,  { CLS(String) });
+	add_global("is_directory", system_is_directory,  { CLS(String) });
+	add_global("clear_directory", system_clear_directory,  { CLS(String) });
+	add_global("rename", system_rename,  { CLS(String), CLS(String) });
+	add_global("split_extension", system_split_extension,  { CLS(String) });
+	add_global("get_extension", system_get_extension1,  { CLS(String) });
+	add_global("get_extension", system_get_extension2,  { CLS(String), CLS(bool) });
+	add_global("strip_extension", system_strip_extension,  { CLS(String) });
+	add_global("genericize", system_genericize,  { CLS(String) });
+	add_global("nativize", system_nativize,  { CLS(String) });
 }
 
 } // namespace phonometrica

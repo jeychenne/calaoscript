@@ -19,9 +19,15 @@
 
 namespace phonometrica {
 
+static Variant module_init(Runtime &rt, std::span<Variant>args)
+{
+	auto &name = raw_cast<String>(args[0]);
+	return make_handle<Module>(&rt, name);
+}
+
 static Variant module_get_attr(Runtime &, std::span<Variant> args)
 {
-	auto m = raw_cast<Module>(args[0]);
+	auto &m = raw_cast<Module>(args[0]);
 	auto key = raw_cast<String>(args[1]);
 
 	return m.get(key);
@@ -29,7 +35,7 @@ static Variant module_get_attr(Runtime &, std::span<Variant> args)
 
 static Variant module_set_attr(Runtime &, std::span<Variant> args)
 {
-	auto m = raw_cast<Module>(args[0]);
+	auto &m = raw_cast<Module>(args[0]);
 	auto key = raw_cast<String>(args[1]);
 	m[key] = args[2].resolve();
 

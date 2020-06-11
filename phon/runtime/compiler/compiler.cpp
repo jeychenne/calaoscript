@@ -551,7 +551,7 @@ void Compiler::visit_assignment(Assignment *node)
 		node->lhs->visit(*this);
 		visiting_assigned_lhs = false;
 		node->rhs->visit(*this);
-		EMIT(Opcode::SetMember);
+		EMIT(Opcode::SetField);
 	}
 	else
 	{
@@ -874,7 +874,7 @@ void Compiler::visit_routine(RoutineDefinition *node)
 		throw RuntimeError(node->line_no, "[Syntax error] Maximum number of parameters exceeded (limit is %)", PARAM_BITSET_SIZE);
 	}
 	auto ident = static_cast<Variable*>(node->name.get());
-	auto &name = ident->name;
+	String name = ident ? ident->name : String();
 	/////////////////////////auto func = create_function_symbol(node, name);
 
 	// Compile inner routine.
@@ -911,7 +911,9 @@ void Compiler::visit_routine(RoutineDefinition *node)
 		param->visit(*this);
 	}
 	EMIT(Opcode::NewClosure, routine_index, Instruction(node->params.size()));
-
+	if (node->is_expression()) {
+		return;
+	}
 	if (node->local || scope_depth > 1)
 	{
 		// We might be defining an overload of an already existing routine, so we first try find_local().

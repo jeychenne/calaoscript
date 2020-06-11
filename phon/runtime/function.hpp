@@ -258,7 +258,7 @@ public:
 
 	Function(Runtime *rt, const String &name, NativeCallback cb, std::initializer_list<Handle<Class>> sig, ParamBitset ref_flags = 0);
 
-	String name() const { return _name; }
+	String name() const { return _name.empty() ? "<anonymous>" : _name; }
 
 	void add_closure(Handle<Closure> c);
 

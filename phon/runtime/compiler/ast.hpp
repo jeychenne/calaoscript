@@ -359,6 +359,8 @@ struct RoutineDefinition final : public Ast
 
 	void visit(AstVisitor &v) override;
 
+	bool is_expression() const { return name == nullptr; }
+
 	AutoAst name, body;
 	AstList params;
 	bool local, method;

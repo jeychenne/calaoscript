@@ -30,6 +30,8 @@ public:
 
 	explicit Module(const String &name) : _name(name) { }
 
+	Module(const Module &) = delete;
+
 
 	String name() const { return _name; }
 

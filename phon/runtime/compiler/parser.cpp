@@ -483,6 +483,9 @@ AutoAst Parser::parse_ref_expression()
 	if (accept(Lexeme::Ref)) {
 		return make<ReferenceExpression>(parse_expression());
 	}
+	else if (accept(Lexeme::Function)) {
+		return parse_function_expression();
+	}
 
 	return parse_primary_expression();
 }
@@ -622,9 +625,13 @@ AutoAst Parser::parse_concat_expression(AutoAst e)
 	AstList lst;
 	lst.push_back(std::move(e));
 	lst.push_back(parse_multiplicative_expression());
-
-	while (accept(Lexeme::OpConcat)) {
+	skip_empty_lines();
+	
+	while (accept(Lexeme::OpConcat))
+	{
+		skip_empty_lines();
 		lst.push_back(parse_multiplicative_expression());
+		skip_empty_lines();
 	}
 
 	return make<ConcatExpression>(std::move(lst));
@@ -794,6 +801,20 @@ AutoAst Parser::parse_function_declaration(bool local)
 	auto body = parse_statements(false);
 
 	return std::make_unique<RoutineDefinition>(line, std::move(name), std::move(params), std::move(body), local, false);
+}
+
+
+AutoAst Parser::parse_function_expression()
+{
+	trace_ast();
+	int line = get_line();
+	constexpr const char *hint = "in function expression";
+	expect(Lexeme::LParen, hint);
+	auto params = parse_parameters();
+	// Don't open a scope for the block: the function will do it so that we include the parameters in the scope.
+	auto body = parse_statements(false);
+
+	return std::make_unique<RoutineDefinition>(line, nullptr, std::move(params), std::move(body), true, false);
 }
 
 AutoAst Parser::parse_return_statement()

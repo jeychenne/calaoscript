@@ -1172,6 +1172,27 @@ Variant Runtime::interpret(Handle <Closure> &closure)
 				trace_op();
 				return pop_call_frame();
 			}
+			case Opcode::SetField:
+			{
+				trace_op();
+				auto &v = peek(-3);
+				auto cls = v.get_class();
+				std::span<Variant> args(&v, 3);
+				auto method = cls->get_method(set_field_string);
+				if (!method) {
+					RUNTIME_ERROR("[Type error] Member access is not supported for % values", v.class_name());
+				}
+				auto c = method->find_closure(args);
+				if (!c) {
+					report_call_error(*method, args);
+				}
+				try {
+					call_method(c, args);
+				}
+				CATCH_ERROR
+				pop(3);
+				break;
+			}
 			case Opcode::SetGlobal:
 			{
 				trace_op();
@@ -1228,27 +1249,6 @@ Variant Runtime::interpret(Handle <Closure> &closure)
 				}
 				CATCH_ERROR
 				pop();
-				break;
-			}
-			case Opcode::SetMember:
-			{
-				trace_op();
-				auto &v = peek(-3);
-				auto cls = v.get_class();
-				std::span<Variant> args(&v, 3);
-				auto method = cls->get_method(set_field_string);
-				if (!method) {
-					RUNTIME_ERROR("[Type error] Member access is not supported for % values", v.class_name());
-				}
-				auto c = method->find_closure(args);
-				if (!c) {
-					report_call_error(*method, args);
-				}
-				try {
-					call_method(c, args);
-				}
-				CATCH_ERROR
-				pop(3);
 				break;
 			}
 			case Opcode::SetUpvalue:
@@ -1398,17 +1398,17 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		}
 		case Opcode::GetField:
 		{
-			return print_simple_instruction("GET_MEMBER");
+			return print_simple_instruction("GET_FIELD");
 		}
 		case Opcode::GetFieldArg:
 		{
 			int index = routine.code[offset + 1];
-			printf("GET_MEMBER_ARG %-5d\n", index);
+			printf("GET_FIELD_ARG  %-5d\n", index);
 			return 2;
 		}
 		case Opcode::GetFieldRef:
 		{
-			return print_simple_instruction("GET_MEMBER_REF");
+			return print_simple_instruction("GET_FIELD_REF");
 		}
 		case Opcode::GetGlobal:
 		{
@@ -1708,6 +1708,10 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 		{
 			return print_simple_instruction("RETURN");
 		}
+		case Opcode::SetField:
+		{
+			return print_simple_instruction("SET_FIELD");
+		}
 		case Opcode::SetGlobal:
 		{
 			int index = routine.code[offset + 1];
@@ -1727,10 +1731,6 @@ size_t Runtime::disassemble_instruction(const Routine &routine, size_t offset)
 			String value = routine.get_local_name(index);
 			printf("SET_LOCAL      %-5d      ; %s\n", index, value.data());
 			return 2;
-		}
-		case Opcode::SetMember:
-		{
-			return print_simple_instruction("SET_MEMBER");
 		}
 		case Opcode::Subtract:
 		{
