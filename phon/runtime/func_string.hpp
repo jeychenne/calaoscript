@@ -31,6 +31,12 @@ static Variant string_get_field(Runtime &rt, std::span<Variant> args)
 	if (key == rt.length_string) {
 		return s.grapheme_count();
 	}
+	else if (key == "first") {
+		return s.left(1);
+	}
+	else if (key == "last") {
+		return s.right(1);
+	}
 
 	throw error("[Index error] String type has no member named \"%\"", key);
 }
@@ -124,18 +130,6 @@ static Variant string_slice2(Runtime &, std::span<Variant> args)
 	auto count = raw_cast<intptr_t>(args[2]);
 
 	return s1.mid(from, count);
-}
-
-static Variant string_first(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = raw_cast<String>(args[0]);
-	return s1.left(1);
-}
-
-static Variant string_last(Runtime &, std::span<Variant> args)
-{
-	auto &s1 = raw_cast<String>(args[0]);
-	return s1.right(1);
 }
 
 static Variant string_count(Runtime &, std::span<Variant> args)

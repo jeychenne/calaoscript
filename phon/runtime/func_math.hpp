@@ -164,13 +164,23 @@ static Variant math_random(Runtime &, std::span<Variant>)
 	return double(std::rand()) / RAND_MAX;
 }
 
-static Variant math_round(Runtime &, std::span<Variant> args)
+static double round_float(double x)
 {
-	auto x = args[0].resolve().get_number();
 	if (!std::isfinite(x)) return std::nan("");
 	if (x == 0) return x;
 
-	return floor(x + 0.5);
+	return std::floor(x + 0.5);
+}
+
+static Variant math_round(Runtime &, std::span<Variant> args)
+{
+	auto &v = args[0].resolve();
+
+	if (check_type<intptr_t>(v)) {
+		return raw_cast<intptr_t>(v);
+	}
+
+	return round_float(raw_cast<double>(v));
 }
 
 static Variant math_roundn(Runtime &, std::span<Variant> args)

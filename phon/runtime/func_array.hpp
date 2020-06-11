@@ -26,13 +26,13 @@ static Variant array_get_field(Runtime &rt, std::span<Variant> args)
 	if (key == rt.length_string) {
 		return array.size();
 	}
-	else if (key == "dim_count") {
+	else if (key == "ndim") {
 		return array.ndim();
 	}
-	else if (key == "row_count") {
+	else if (key == "nrow") {
 		return array.nrow();
 	}
-	else if (key == "col_count") {
+	else if (key == "ncol") {
 		return array.ncol();
 	}
 
@@ -127,24 +127,6 @@ static Variant array_set_item2(Runtime &rt, std::span<Variant> args)
 	array.at(i,j) = value;
 
 	return Variant();
-}
-
-static Variant array_ndim(Runtime &, std::span<Variant> args)
-{
-	auto &array = raw_cast<Array<double>>(args[0]);
-	return array.ndim();
-}
-
-static Variant array_nrow(Runtime &, std::span<Variant> args)
-{
-	auto &array = raw_cast<Array<double>>(args[0]);
-	return array.nrow();
-}
-
-static Variant array_ncol(Runtime &, std::span<Variant> args)
-{
-	auto &array = raw_cast<Array<double>>(args[0]);
-	return array.ncol();
 }
 
 static Variant array_min(Runtime &, std::span<Variant> args)

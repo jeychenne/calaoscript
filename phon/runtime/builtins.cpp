@@ -77,7 +77,7 @@ void Runtime::set_global_namespace()
 	add_global("asin", math_array_func<std::asin>, { CLS(Array<double>) });
 	add_global("atan", math_atan, { CLS(Number) });
 	add_global("atan", math_array_func<std::atan>, { CLS(Array<double>) });
-	add_global("atan", math_atan2, { CLS(Number), CLS(Number) });
+	add_global("atan2", math_atan2, { CLS(Number), CLS(Number) });
 	add_global("ceil", math_ceil, { CLS(Number) });
 	add_global("ceil", math_array_func<std::ceil>, { CLS(Array<double>) });
 	add_global("cos", math_cos, { CLS(Number) });
@@ -98,7 +98,7 @@ void Runtime::set_global_namespace()
 	add_global("min", math_min2, { CLS(intptr_t), CLS(intptr_t) });
 	add_global("random", math_random, { });
 	add_global("round", math_round, { CLS(Number) });
-	add_global("round", math_array_func<std::round>, { CLS(Array<double>) });
+	add_global("round", math_array_func<round_float>, { CLS(Array<double>) });
 	add_global("round", math_roundn, { CLS(Number), CLS(Number) });
 	add_global("sin", math_sin, { CLS(Number) });
 	add_global("sin", math_array_func<std::sin>, { CLS(Array<double>) });
@@ -106,6 +106,10 @@ void Runtime::set_global_namespace()
 	add_global("sqrt", math_array_func<std::sqrt>, { CLS(Array<double>) });
 	add_global("tan", math_tan, { CLS(Number) });
 	add_global("tan", math_array_func<std::tan>, { CLS(Array<double>) });
+	add_global("E", 2.7182818284590452354);
+	add_global("PI", 3.1415926535897932);
+	add_global("SQRT2", 1.4142135623730951);
+	add_global("PHI", 1.6180339887498948);
 
 	// String
 	add_global("contains", string_contains, { CLS(String), CLS(String) });
@@ -119,8 +123,6 @@ void Runtime::set_global_namespace()
 	add_global("right", string_right, { CLS(String), CLS(intptr_t) });
 	add_global("slice", string_slice1, {CLS(String), CLS(intptr_t)});
 	add_global("slice", string_slice2, {CLS(String), CLS(intptr_t), CLS(intptr_t)});
-	add_global("first", string_first, {CLS(String)});
-	add_global("last", string_last, {CLS(String)});
 	add_global("count", string_count,  { CLS(String), CLS(String) });
 	add_global("to_upper", string_to_upper, {CLS(String)});
 	add_global("to_lower", string_to_lower, {CLS(String)});

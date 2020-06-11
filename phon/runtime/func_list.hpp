@@ -48,6 +48,12 @@ static Variant list_get_field(Runtime &rt, std::span<Variant> args)
 	if (key == rt.length_string) {
 		return lst.size();
 	}
+	else if (key == "first") {
+		return lst.at(1);
+	}
+	else if (key == "last") {
+		return lst.at(-1);
+	}
 
 	throw error("[Index error] List type has no member named \"%\"", key);
 }
