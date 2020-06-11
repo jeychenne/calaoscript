@@ -76,7 +76,7 @@ static Variant string_find2(Runtime &, std::span<Variant> args)
 	return s1.find(s2, i);
 }
 
-static Variant string_rfind1(Runtime &, std::span<Variant> args)
+static Variant string_find_back1(Runtime &, std::span<Variant> args)
 {
 	auto &s1 = raw_cast<String>(args[0]);
 	auto &s2 = raw_cast<String>(args[1]);
@@ -84,7 +84,7 @@ static Variant string_rfind1(Runtime &, std::span<Variant> args)
 	return s1.rfind(s2);
 }
 
-static Variant string_rfind2(Runtime &, std::span<Variant> args)
+static Variant string_find_back2(Runtime &, std::span<Variant> args)
 {
 	auto &s1 = raw_cast<String>(args[0]);
 	auto &s2 = raw_cast<String>(args[1]);
@@ -109,7 +109,7 @@ static Variant string_right(Runtime &, std::span<Variant> args)
 	return s1.right(count);
 }
 
-static Variant string_mid1(Runtime &, std::span<Variant> args)
+static Variant string_slice1(Runtime &, std::span<Variant> args)
 {
 	auto &s1 = raw_cast<String>(args[0]);
 	auto from = raw_cast<intptr_t>(args[1]);
@@ -117,7 +117,7 @@ static Variant string_mid1(Runtime &, std::span<Variant> args)
 	return s1.mid(from);
 }
 
-static Variant string_mid2(Runtime &, std::span<Variant> args)
+static Variant string_slice2(Runtime &, std::span<Variant> args)
 {
 	auto &s1 = raw_cast<String>(args[0]);
 	auto from = raw_cast<intptr_t>(args[1]);

@@ -45,7 +45,7 @@ static Variant set_contains(Runtime &, std::span<Variant> args)
 
 static Variant set_insert(Runtime &, std::span<Variant> args)
 {
-	auto &set = raw_cast<Set>(args[0]).items();
+	auto &set = raw_cast<Set>(args[0].unshare()).items();
 	set.insert(args[1].resolve());
 
 	return Variant();
@@ -53,7 +53,7 @@ static Variant set_insert(Runtime &, std::span<Variant> args)
 
 static Variant set_remove(Runtime &, std::span<Variant> args)
 {
-	auto &set = raw_cast<Set>(args[0]).items();
+	auto &set = raw_cast<Set>(args[0].unshare()).items();
 	set.erase(args[1].resolve());
 
 	return Variant();
@@ -67,7 +67,7 @@ static Variant set_is_empty(Runtime &, std::span<Variant> args)
 
 static Variant set_clear(Runtime &, std::span<Variant> args)
 {
-	auto &set = raw_cast<Set>(args[0]).items();
+	auto &set = raw_cast<Set>(args[0].unshare()).items();
 	set.clear();
 
 	return Variant();

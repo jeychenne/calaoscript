@@ -91,7 +91,15 @@ static Variant file_close(Runtime &, std::span<Variant> args)
 	return Variant();
 }
 
-static Variant file_read_all1(Runtime &, std::span<Variant> args)
+static Variant file_rewind(Runtime &, std::span<Variant> args)
+{
+	auto &f = raw_cast<File>(args[0]);
+	f.rewind();
+
+	return Variant();
+}
+
+static Variant file_read(Runtime &, std::span<Variant> args)
 {
 	auto &f = raw_cast<File>(args[0]);
 	String line, text;
@@ -104,7 +112,7 @@ static Variant file_read_all1(Runtime &, std::span<Variant> args)
 	return text;
 }
 
-static Variant file_read_all2(Runtime &, std::span<Variant> args)
+static Variant read_file(Runtime &, std::span<Variant> args)
 {
 	auto &path = raw_cast<String>(args[0]);
 	return File::read_all(path);

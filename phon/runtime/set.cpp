@@ -52,4 +52,9 @@ void Set::traverse(const GCCallback &callback)
 	}
 }
 
+bool Set::operator==(const Set &other) const
+{
+	return this->_items == other._items;
+}
+
 } // namespace phonometrica

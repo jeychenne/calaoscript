@@ -38,6 +38,8 @@ public:
 
 	List(Storage items) : _items(std::move(items)) { }
 
+	bool operator==(const List &other) const;
+
 	intptr_t size() const { return _items.size(); }
 
 	Variant *data() { return _items.data(); }
@@ -82,6 +84,7 @@ static inline String to_string(const List &lst)
 {
 	return lst.to_string();
 }
+
 } // namespace phonometrica::meta
 
 } // namespace phonometrica

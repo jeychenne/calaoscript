@@ -54,7 +54,7 @@ static Variant list_get_field(Runtime &rt, std::span<Variant> args)
 
 static Variant list_set_item(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	intptr_t i = raw_cast<intptr_t>(args[1]);
 	lst.at(i) = std::move(args[2].resolve());
 
@@ -79,23 +79,23 @@ static Variant list_first(Runtime &, std::span<Variant> args)
 static Variant list_find1(Runtime &, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();
-	return lst.find(args[1]);
+	return lst.find(args[1].resolve());
 }
 
 static Variant list_find2(Runtime &, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();
 	intptr_t i = raw_cast<intptr_t>(args[1]);
-	return lst.find(args[1], i);
+	return lst.find(args[1].resolve(), i);
 }
 
-static Variant list_rfind1(Runtime &, std::span<Variant> args)
+static Variant list_rfind_back1(Runtime &, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();
 	return lst.rfind(args[1]);
 }
 
-static Variant list_rfind2(Runtime &, std::span<Variant> args)
+static Variant list_rfind_back2(Runtime &, std::span<Variant> args)
 {
 	auto &lst = raw_cast<List>(args[0]).items();
 	intptr_t i = raw_cast<intptr_t>(args[1]);
@@ -157,7 +157,7 @@ static Variant list_join(Runtime &, std::span<Variant> args)
 
 static Variant list_clear(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	lst.clear();
 
 	return Variant();
@@ -165,8 +165,8 @@ static Variant list_clear(Runtime &, std::span<Variant> args)
 
 static Variant list_append(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
-	lst.append(args[1]);
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
+	lst.append(args[1].resolve());
 
 	return Variant();
 }
@@ -185,8 +185,8 @@ static Variant list_append(Runtime &, std::span<Variant> args)
 
 static Variant list_prepend(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
-	lst.prepend(args[1]);
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
+	lst.prepend(args[1].resolve());
 
 	return Variant();
 }
@@ -212,21 +212,21 @@ static Variant list_is_empty(Runtime &, std::span<Variant> args)
 
 static Variant list_pop(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 
 	return lst.take_last().resolve();
 }
 
 static Variant list_shift(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 
 	return lst.take_first().resolve();
 }
 
 static Variant list_sort(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	std::sort(lst.begin(), lst.end());
 
 	return Variant();
@@ -234,13 +234,13 @@ static Variant list_sort(Runtime &, std::span<Variant> args)
 
 static Variant list_is_sorted(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	return std::is_sorted(lst.begin(), lst.end());
 }
 
 static Variant list_reverse(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	std::reverse(lst.begin(), lst.end());
 
 	return Variant();
@@ -248,7 +248,7 @@ static Variant list_reverse(Runtime &, std::span<Variant> args)
 
 static Variant list_remove(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	lst.remove(args[1].resolve());
 
 	return Variant();
@@ -256,7 +256,7 @@ static Variant list_remove(Runtime &, std::span<Variant> args)
 
 static Variant list_remove_first(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	lst.remove_first(args[1].resolve());
 
 	return Variant();
@@ -264,7 +264,7 @@ static Variant list_remove_first(Runtime &, std::span<Variant> args)
 
 static Variant list_remove_last(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	lst.remove_last(args[1].resolve());
 
 	return Variant();
@@ -272,7 +272,7 @@ static Variant list_remove_last(Runtime &, std::span<Variant> args)
 
 static Variant list_remove_at(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	intptr_t pos = raw_cast<intptr_t>(args[1]);
 	lst.remove_at(pos);
 
@@ -281,7 +281,7 @@ static Variant list_remove_at(Runtime &, std::span<Variant> args)
 
 static Variant list_shuffle(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	std::random_device rd;
 	std::mt19937 g(rd());
 	std::shuffle(lst.begin(), lst.end(), g);
@@ -303,9 +303,9 @@ static Variant list_sample(Runtime &rt, std::span<Variant> args)
 
 static Variant list_insert(Runtime &, std::span<Variant> args)
 {
-	auto &lst = raw_cast<List>(args[0]).items();
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
 	intptr_t pos = raw_cast<intptr_t>(args[1]);
-	lst.insert(pos, args[2]);
+	lst.insert(pos, args[2].resolve());
 
 	return Variant();
 }
@@ -339,6 +339,28 @@ static Variant list_subtract(Runtime &rt, std::span<Variant> args)
 
 	return make_handle<List>(&rt, std::move(result));
 }
+
+static Variant list_sorted_find(Runtime &, std::span<Variant> args)
+{
+	auto &lst = raw_cast<List>(args[0]).items();
+	auto it = std::lower_bound(lst.begin(), lst.end(), args[1].resolve());
+	intptr_t pos = 0; // not found
+	if (it != lst.end()) pos = (it - lst.begin()) + 1;
+
+	return pos;
+}
+
+static Variant list_sorted_insert(Runtime &, std::span<Variant> args)
+{
+	auto &lst = raw_cast<List>(args[0].unshare()).items();
+	auto &value = args[1].resolve();
+	auto it = std::lower_bound(lst.begin(), lst.end(), value);
+	if (it == lst.end() || value < *it)
+		lst.insert(it, value);
+
+	return Variant();
+}
+
 } // namespace phonometrica
 
 #endif // PHONOMETRICA_FUNC_LIST_HPP

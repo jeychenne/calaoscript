@@ -104,4 +104,9 @@ String Table::to_json() const
 	return s;
 }
 
+bool Table::operator==(const Table &other) const
+{
+	return this->map() == other.map();
+}
+
 } // namespace phonometrica

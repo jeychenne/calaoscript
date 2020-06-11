@@ -126,7 +126,8 @@ void Compiler::visit_float(FloatLiteral *node)
 
 void Compiler::visit_string(StringLiteral *node)
 {
-	auto index = routine->add_string_constant(std::move(node->value));
+	// Don't move the node's value here, because we might revisit the node in case of a self-assignment.
+	auto index = routine->add_string_constant(node->value);
 	EMIT(Opcode::PushString, index);
 }
 

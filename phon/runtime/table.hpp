@@ -37,6 +37,8 @@ public:
 
 	Table(const Table &other);
 
+	bool operator==(const Table &other) const;
+
 	Storage &data() { return _map; }
 
 	intptr_t size() const { return intptr_t(_map.size()); }

@@ -280,6 +280,24 @@ public:
 		return *this;
 	}
 
+	bool operator==(const Hashmap &other) const
+	{
+		if (this->size() != other.size()) {
+			return false;
+		}
+		// We can't assume that items are in the same order,
+		// so we check that each item in this is also in other.
+		for (auto &pair : *this)
+		{
+			auto it = other.find(pair.first);
+			if (it == other.end() || pair.second != it.value()) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	size_type size() const noexcept
 	{
 		return m_size;

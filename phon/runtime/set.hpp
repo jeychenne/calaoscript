@@ -35,6 +35,8 @@ public:
 
 	Set(Set &&other) = default;
 
+	bool operator==(const Set &other) const;
+
 	iterator begin() { return _items.begin(); }
 
 	iterator end() { return _items.end(); }

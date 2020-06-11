@@ -727,7 +727,13 @@ AutoAst Parser::parse_foreach_statement()
 	trace_ast();
 	constexpr const char *hint = "in foreach loop";
 	auto line = get_line();
-	auto key = parse_identifier(hint);
+	AutoAst key;
+	if (accept(Lexeme::Ref)) {
+		key = make<ReferenceExpression>(parse_identifier(hint));
+	}
+	else {
+		key = parse_identifier(hint);
+	}
 	AutoAst val;
 
 	if (accept(Lexeme::Comma))
@@ -742,6 +748,9 @@ AutoAst Parser::parse_foreach_statement()
 	else
 	{
 		std::swap(key, val);
+	}
+	if (dynamic_cast<ReferenceExpression*>(key.get())) {
+		report_error("Key in \"foreach\" loop cannot be grabbed by reference");
 	}
 	expect(Lexeme::In, hint);
 	auto coll = parse_expression();
@@ -922,7 +931,8 @@ AutoAst Parser::parse_table_literal()
 void Parser::parse_option()
 {
 	trace_ast();
-	if (!token.is(Lexeme::StringLiteral) || token.spelling != "debug")
+	//if (!token.is(Lexeme::StringLiteral) || token.spelling != "debug")
+	if (!check(Lexeme::Debug))
 	{
 		auto msg = utils::format("Invalid option: expected \"debug\", got %", token.spelling);
 		report_error(msg);

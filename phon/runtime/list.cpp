@@ -54,4 +54,9 @@ String List::to_string() const
 	return s;
 }
 
+bool List::operator==(const List &other) const
+{
+	return this->items() == other.items();
+}
+
 } // namespace phonometrica

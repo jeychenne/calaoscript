@@ -113,12 +113,12 @@ void Runtime::set_global_namespace()
 	add_global("ends_with", string_ends_with, {CLS(String), CLS(String)});
 	add_global("find", string_find1, { CLS(String), CLS(String) });
 	add_global("find", string_find2, { CLS(String), CLS(String), CLS(intptr_t) });
-	add_global("rfind", string_rfind1, { CLS(String), CLS(String) });
-	add_global("rfind", string_rfind2, { CLS(String), CLS(String), CLS(intptr_t) });
+	add_global("find_back", string_find_back1, {CLS(String), CLS(String)});
+	add_global("find_back", string_find_back2, {CLS(String), CLS(String), CLS(intptr_t)});
 	add_global("left", string_left, { CLS(String), CLS(intptr_t) });
 	add_global("right", string_right, { CLS(String), CLS(intptr_t) });
-	add_global("mid", string_mid1, { CLS(String), CLS(intptr_t) });
-	add_global("mid", string_mid2, { CLS(String), CLS(intptr_t), CLS(intptr_t) });
+	add_global("slice", string_slice1, {CLS(String), CLS(intptr_t)});
+	add_global("slice", string_slice2, {CLS(String), CLS(intptr_t), CLS(intptr_t)});
 	add_global("first", string_first, {CLS(String)});
 	add_global("last", string_last, {CLS(String)});
 	add_global("count", string_count,  { CLS(String), CLS(String) });
@@ -152,8 +152,8 @@ void Runtime::set_global_namespace()
 	add_global("last", list_last, { CLS(List) });
 	add_global("find", list_find1, { CLS(List), CLS(Object) });
 	add_global("find", list_find2, { CLS(List), CLS(Object), CLS(intptr_t) });
-	add_global("rfind", list_rfind1, { CLS(List), CLS(Object) });
-	add_global("rfind", list_rfind2, { CLS(List), CLS(Object), CLS(intptr_t) });
+	add_global("find_back", list_rfind_back1, {CLS(List), CLS(Object)});
+	add_global("find_back", list_rfind_back2, {CLS(List), CLS(Object), CLS(intptr_t)});
 	add_global("left", list_left, { CLS(List), CLS(intptr_t) });
 	add_global("right", list_right, { CLS(List), CLS(intptr_t) });
 	add_global("join", list_join, { CLS(List), CLS(String) });
@@ -164,6 +164,8 @@ void Runtime::set_global_namespace()
 	add_global("pop", list_pop, { CLS(List) }, REF("1"));
 	add_global("shift", list_shift, { CLS(List) }, REF("1"));
 	add_global("sort", list_sort, { CLS(List) }, REF("1"));
+	add_global("sorted_find", list_sorted_find, { CLS(List), CLS(Object) });
+	add_global("sorted_insert", list_sorted_insert, { CLS(List), CLS(Object) }, REF("01"));
 	add_global("is_sorted", list_is_sorted, { CLS(List) });
 	add_global("reverse", list_reverse, { CLS(List) }, REF("1"));
 	add_global("remove", list_remove, { CLS(List), CLS(Object) }, REF("01"));
@@ -191,8 +193,9 @@ void Runtime::set_global_namespace()
 	add_global("write_lines", file_write_lines, {CLS(File), CLS(List) });
 	add_global("write", file_write, {CLS(File), CLS(String) });
 	add_global("close", file_close, {CLS(File) });
-	add_global("read", file_read_all1, { CLS(File) });
-	add_global("read", file_read_all2, { CLS(String) });
+	add_global("read", file_read, {CLS(File)});
+	add_global("read_file", read_file, {CLS(String)});
+	add_global("rewind", file_rewind, {CLS(File) });
 	add_global("tell", file_tell, { CLS(File) });
 	add_global("seek", file_seek, { CLS(File), CLS(intptr_t) });
 	add_global("eof", file_eof, { CLS(File) });
@@ -219,9 +222,6 @@ void Runtime::set_global_namespace()
 	add_global("zeros", array_zeros2, { CLS(intptr_t), CLS(intptr_t) });
 	add_global("ones", array_ones1, { CLS(intptr_t) });
 	add_global("ones", array_ones2, { CLS(intptr_t), CLS(intptr_t) });
-	add_global("ndim", array_ndim, { CLS(Array<double>) });
-	add_global("nrow", array_nrow, { CLS(Array<double>) });
-	add_global("ncol", array_ncol, { CLS(Array<double>) });
 	add_global("min", array_min, { CLS(Array<double>) });
 	add_global("max", array_max, { CLS(Array<double>) });
 	add_global("clear", array_clear, { CLS(Array<double>) }, REF("1"));

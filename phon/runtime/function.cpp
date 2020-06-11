@@ -306,7 +306,7 @@ Handle<Closure> Function::find_closure(std::span<Variant> args)
 				signatures.append(r->get_definition());
 			}
 		}
-		throw error("[Runtime error] Cannot resolve call to function '%' with the following argument types: (%).\nCandidates are:\n%",
+		throw error("[Runtime error] Cannot resolve ambiguity in call to function '%' with the following argument types: (%).\nCandidates are:\n%",
 				name(), String::join(types, ", "), String::join(signatures, "\n"));
 	}
 

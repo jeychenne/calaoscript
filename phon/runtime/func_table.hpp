@@ -51,7 +51,7 @@ static Variant table_get_field(Runtime &rt, std::span<Variant> args)
 
 static Variant table_set_item(Runtime &, std::span<Variant> args)
 {
-	auto &map = raw_cast<Table>(args[0]).map();
+	auto &map = raw_cast<Table>(args[0].unshare()).map();
 	map[args[1].resolve()] = std::move(args[2].resolve());
 
 	return Variant();
@@ -71,7 +71,7 @@ static Variant table_is_empty(Runtime &, std::span<Variant> args)
 
 static Variant table_clear(Runtime &, std::span<Variant> args)
 {
-	auto &map = raw_cast<Table>(args[0]).map();
+	auto &map = raw_cast<Table>(args[0].unshare()).map();
 	map.clear();
 
 	return Variant();
@@ -79,7 +79,7 @@ static Variant table_clear(Runtime &, std::span<Variant> args)
 
 static Variant table_remove(Runtime &, std::span<Variant> args)
 {
-	auto &map = raw_cast<Table>(args[0]).map();
+	auto &map = raw_cast<Table>(args[0].unshare()).map();
 	map.erase(args[1]);
 
 	return Variant();
