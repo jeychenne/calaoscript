@@ -1759,9 +1759,23 @@ Handle<Closure> Runtime::compile_file(const String &path)
 	return compiler.compile(std::move(ast));
 }
 
+Handle<Closure> Runtime::compile_string(const String &code)
+{
+	this->clear();
+	auto ast = parser.parse_string(code);
+
+	return compiler.compile(std::move(ast));
+}
+
 Variant Runtime::do_file(const String &path)
 {
 	auto closure = compile_file(path);
+	return interpret(closure);
+}
+
+Variant Runtime::do_string(const String &code)
+{
+	auto closure = compile_string(code);
 	return interpret(closure);
 }
 

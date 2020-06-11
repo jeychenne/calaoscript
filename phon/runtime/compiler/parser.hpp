@@ -46,7 +46,7 @@ public:
 
 	AutoAst parse_file(const String &path);
 
-	AutoAst do_string(const String &path);
+	AutoAst parse_string(const String &path);
 
 private:
 

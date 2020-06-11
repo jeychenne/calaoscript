@@ -193,7 +193,11 @@ public:
 
 	Variant do_file(const String &path);
 
+	Variant do_string(const String &code);
+
 	Handle<Closure> compile_file(const String &path);
+
+	Handle<Closure> compile_string(const String &code);
 
 	String intern_string(const String &s);
 

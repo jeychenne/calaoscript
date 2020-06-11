@@ -84,9 +84,9 @@ AutoAst Parser::parse_file(const String &path)
 	return parse();
 }
 
-AutoAst Parser::do_string(const String &text)
+AutoAst Parser::parse_string(const String &path)
 {
-	scanner.load_string(text);
+	scanner.load_string(path);
 	return parse();
 }
 
