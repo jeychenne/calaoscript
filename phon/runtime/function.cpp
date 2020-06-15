@@ -278,10 +278,7 @@ Handle<Closure> Function::find_closure(std::span<Variant> args)
 			break; // routines are sorted by their number of arguments, so we won't find a better match at this point.
 		}
 		int cost = r->get_cost(args);
-
-		if (cost == 0) {
-			return c; // there can only be 1 exact match, so we're done.
-		}
+		
 		if (cost <= best_cost)
 		{
 			conflict = (cost == best_cost);
