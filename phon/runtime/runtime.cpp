@@ -156,8 +156,8 @@ void Runtime::create_builtins()
 	auto file_class = create_type<File>("File", raw_object_class, Class::Index::File);
 	auto module_class = create_type<Module>("Module", raw_object_class, Class::Index::Module);
 	// Function and Closure have the same name because the difference is an implementation detail.
-	create_type<Function>("Function", raw_object_class, Class::Index::Function);
-	auto func_class = create_type<Closure>("Function", raw_object_class, Class::Index::Closure);
+	auto func_class = create_type<Function>("Function", raw_object_class, Class::Index::Function);
+	create_type<Closure>("Function", raw_object_class, Class::Index::Closure);
 	auto set_class = create_type<Set>("Set", raw_object_class, Class::Index::Set);
 
 	// Iterators are currently not exposed to users.
@@ -177,6 +177,7 @@ void Runtime::create_builtins()
 
 #define GLOB(T, h) add_global(Class::get_name<T>(), std::move(h));
 	GLOB(Object, object_class);
+	GLOB(Class, class_class);
 	GLOB(bool, bool_class);
 	GLOB(Number, num_class);
 	GLOB(intptr_t, int_class);
@@ -187,7 +188,7 @@ void Runtime::create_builtins()
 	GLOB(Array<double>, array_class);
 	GLOB(Table, table_class);
 	GLOB(File, file_class);
-	GLOB(Closure, func_class);
+	GLOB(Function, func_class);
 	GLOB(Module, module_class);
 	GLOB(Set, set_class);
 #undef GLOB

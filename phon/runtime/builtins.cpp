@@ -279,7 +279,7 @@ void Runtime::set_global_namespace()
 	add_global("create_directory", system_create_directory, { CLS(String) });
 	add_global("remove_directory", system_remove_directory,  { CLS(String) });
 	add_global("remove_file", system_remove_file,  { CLS(String) });
-	add_global("remove", system_remove, { CLS(String) });
+	add_global("remove_path", system_remove, { CLS(String) });
 	add_global("list_directory", system_list_directory1, { CLS(String) });
 	add_global("list_directory", system_list_directory2, { CLS(String), CLS(bool) });
 	add_global("exists", system_exists,  { CLS(String) });
